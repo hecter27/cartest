@@ -131,6 +131,15 @@ header{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1
 #coach .lab::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:10px;background:rgba(255,255,255,.7)}
 #coach .note{position:absolute;left:50%;top:38%;transform:translateX(-50%);color:#fff;font-size:12.5px;text-shadow:0 1px 3px rgba(0,0,0,.9);text-align:center;white-space:nowrap}
 #rain{z-index:1}
+.lb h3{margin:14px 0 4px;font-size:17px}
+.lbform{display:flex;gap:8px;margin:6px 0}
+.lbform input{flex:1;min-width:0;font-size:16px;padding:9px 10px;border-radius:10px;border:1px solid rgba(127,127,127,.4);background:transparent;color:inherit}
+.lblist{list-style:none;margin:6px 0 0;padding:0;max-height:42vh;overflow:auto}
+.lblist li{display:grid;grid-template-columns:2.2em 1fr auto 3.6em;gap:6px;align-items:center;padding:7px 4px;border-bottom:1px solid rgba(127,127,127,.18);font-size:14px}
+.lblist li b{text-align:center;font-weight:900}.lblist li:nth-child(1) b{color:#d4a017}.lblist li:nth-child(2) b{color:#9aa3a8}.lblist li:nth-child(3) b{color:#b06a3a}
+.lblist li em{font-style:normal;font-weight:800}.lblist li i{font-style:normal;opacity:.65;text-align:right}
+.lblist li.me{background:rgba(242,179,61,.18);border-radius:8px}
+.lblist li.lbmsg{display:block;text-align:center;opacity:.7}
 .unoff{display:inline-block;vertical-align:middle;font-size:12px;font-weight:700;color:#c2352b;border:1.5px solid #c2352b;border-radius:6px;padding:1px 6px;margin-left:4px}
 #sjoy{position:absolute;width:150px;height:150px;margin:-75px 0 0 -75px;box-shadow:inset 0 0 0 20px rgba(255,255,255,.06);border-radius:50%;border:2px solid rgba(255,255,255,.55);background:rgba(0,0,0,.14);pointer-events:none;z-index:2}
 #sjoyK{position:absolute;left:47px;top:47px;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.5)}
@@ -195,6 +204,7 @@ body.walking #pedals,body.walking #checklist,body.walking #startTag,body.walking
   </div>
   <p class="note">本遊戲為個人製作的非官方練習工具，與新竹客運駕訓班、監理所無關。扣分參考新竹區監理所公布之小型車評分標準，場地為示意，實際規定以監理所與駕訓班公告為準。</p>
   <button class="big primary" id="goBtn">開始：上車前檢查</button>
+  <button class="big" id="boardBtn" style="margin-top:8px">🏆 世界排行榜</button>
 </div></div>
 
 <div class="overlay" id="ovPre"><div class="sheet">
@@ -230,10 +240,15 @@ body.walking #pedals,body.walking #checklist,body.walking #startTag,body.walking
   </div>
 </div></div>
 
+<div class="overlay" id="ovBoard"><div class="sheet"><h2>🏆 世界排行榜</h2><p class="note">模擬考試成績，分數高者在前，同分比用時短。每個暱稱只顯示最佳成績。</p><ol class="lblist" id="bdList"></ol><div class="choice"><button class="primary" id="bdClose">關閉</button></div></div></div>
+
 <div class="overlay" id="ovResult"><div class="sheet">
   <div class="result" id="resBox"><div class="big-stamp"><div><b id="resScore">100</b><small id="resText">及格</small></div></div>
     <div><h2 id="resTitle">考驗結束</h2><p class="note" id="resBest"></p></div></div>
   <ul class="loglist" id="resLog"></ul>
+  <div id="lbBox" class="lb" hidden><h3>🏆 世界排行榜</h3><p class="note" id="lbHint"></p>
+    <div id="lbForm" class="lbform"><input id="lbName" maxlength="10" placeholder="暱稱（最多 10 字）" autocomplete="nickname"><button class="primary" id="lbSend">登錄</button></div><p class="note" id="lbStat"></p>
+    <ol class="lblist" id="lbList"></ol></div>
   <p class="note">此成績僅供練習參考，非官方考試結果。</p>
   <div class="choice"><button class="primary" id="rAgain">再考一次</button><button id="rHome">回主選單</button></div>
 </div></div>
@@ -1988,7 +2003,27 @@ $('#fP').onclick=()=>{if(Math.abs(S.v)<.3){S.gear='P';sfx('click');syncUI()}sync
 $('#fEng').onclick=()=>{if(S.gear!=='P')toast('先排 P 檔再熄火','bad');else{S.engine=false;sfx('off');syncUI()}syncFinish()};
 $('#fBack').onclick=()=>{show('#ovFinish',false);setTimeout(()=>finishShown=false,2500)};
 $('#fDoor2').onclick=()=>{show('#ovFinish',false);finalize(true)};$('#fDoor1').onclick=()=>{show('#ovFinish',false);finalize(false)};
-function finalize(two){if(ended)return;const isFail=two==='fail';if(isFail)two=null;
+
+/* ============ 世界排行榜（Supabase，與 ZOO LINE / HYPERFLY 同一專案） ============ */
+const CLOUD={url:'https://eyhqfkbajoltsyxbneps.supabase.co',key:'sb_publishable_UQ1KJiNvlOaInbguwZxrjA_KmvH-WfV',table:'cartest_scores'};
+let RANKABLE=null,lbCache=null,lbAt=0;
+function cloudFetch(path,opts,ms){const ctrl=typeof AbortController!=='undefined'?new AbortController():null,timer=setTimeout(()=>{try{ctrl&&ctrl.abort()}catch(e){}},ms||7000);
+  const o=Object.assign({},opts||{}),hdr={apikey:CLOUD.key,'Content-Type':'application/json'};if(/^eyJ/.test(CLOUD.key))hdr.Authorization='Bearer '+CLOUD.key;o.headers=Object.assign(hdr,o.headers||{});if(ctrl)o.signal=ctrl.signal;
+  return fetch(CLOUD.url.replace(/\/+$/,'')+'/rest/v1/'+path,o).then(r=>{clearTimeout(timer);if(!r.ok)return null;return r.status===201||r.status===204?true:r.json().catch(()=>true)}).catch(()=>{clearTimeout(timer);return null})}
+function cleanName(n){return String(n||'').replace(/[<>"'`&\\\/]/g,'').replace(/\s+/g,' ').trim().slice(0,10)}
+function lbTop(force){if(!force&&lbCache&&Date.now()-lbAt<30000)return Promise.resolve(lbCache);
+  return cloudFetch(CLOUD.table+'?select=name,score,secs&order=score.desc,secs.asc&limit=200').then(rows=>{if(!Array.isArray(rows))return null;const seen=new Set(),out=[];for(const r of rows){const k=r.name;if(seen.has(k))continue;seen.add(k);out.push(r);if(out.length>=20)break}lbCache=out;lbAt=Date.now();return out})}
+function lbRender(el,rows,hi){if(!rows){el.innerHTML='<li class="lbmsg">目前連不上排行榜，請稍後再試</li>';return}if(!rows.length){el.innerHTML='<li class="lbmsg">還沒有人登錄，成為第一名吧！</li>';return}
+  el.innerHTML=rows.map((r,i)=>`<li class="${hi&&r.name===hi?'me':''}"><b>${i+1}</b><span>${String(r.name).replace(/[<>&]/g,'')}</span><em>${r.score} 分</em><i>${Math.floor(r.secs/60)}:${String(r.secs%60).padStart(2,'0')}</i></li>`).join('')}
+function lbShowResult(){const box=$('#lbBox');box.hidden=false;const can=!!RANKABLE;$('#lbForm').hidden=!can;$('#lbHint').textContent=can?'輸入暱稱登錄你的成績（每個暱稱只顯示最佳成績）':'只有模擬考試完整跑完的成績可以登錄世界排行榜';
+  try{$('#lbName').value=localStorage.getItem('cartest-name')||''}catch(e){}$('#lbList').innerHTML='<li class="lbmsg">讀取中…</li>';lbTop(true).then(r=>lbRender($('#lbList'),r))}
+$('#lbSend').onclick=async()=>{if(!RANKABLE)return;const n=cleanName($('#lbName').value);if(!n){$('#lbStat').textContent='請先輸入暱稱';return}try{localStorage.setItem('cartest-name',n)}catch(e){}
+  $('#lbSend').disabled=true;$('#lbStat').textContent='登錄中…';const ok=await cloudFetch(CLOUD.table,{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({name:n,score:RANKABLE.score,secs:RANKABLE.secs})},9000);
+  if(ok){RANKABLE=null;$('#lbForm').hidden=true;$('#lbStat').textContent='已登錄！';lbTop(true).then(r=>lbRender($('#lbList'),r,n))}else{$('#lbSend').disabled=false;$('#lbStat').textContent='登錄失敗，請檢查網路後再試一次'}};
+$('#boardBtn').onclick=()=>{show('#ovBoard',true);$('#bdList').innerHTML='<li class="lbmsg">讀取中…</li>';let me='';try{me=localStorage.getItem('cartest-name')||''}catch(e){}lbTop(true).then(r=>lbRender($('#bdList'),r,me))};
+$('#bdClose').onclick=()=>show('#ovBoard',false);
+
+function finalize(two){if(ended)return;const isFail=two==='fail';if(isFail)two=null;const finished=two!==null;
   if(two!==null){if(S.engine||S.gear!=='P')pen(16,'終點：下車前未排入 P 檔或未熄火');if(!two)pen(32,'下車開門前未留意人車（應兩段式開門）')}
   if(!isFail)STN.forEach(s=>{if(['start','accel','finish'].includes(s.id))return;if(!ST[s.id].done)pen(32,`未能完成或漏考：${s.name}`)});
   ended=true;running=false;paused=true;const pass=score>=70&&!noScore;if(!noScore)setTimeout(()=>announce(`考驗結束，成績${Math.max(0,score)}分，${pass?'及格':'不及格'}`,true),400);
@@ -1996,7 +2031,8 @@ function finalize(two){if(ended)return;const isFail=two==='fail';if(isFail)two=n
   $('#resTitle').textContent=noScore?'練習結束':pass?'恭喜通過場考':'這次沒過，再練一次';
   let best=null;try{best=+localStorage.getItem('hccar3d-best')||null;if(!noScore&&mode==='exam'&&(best==null||score>best)){localStorage.setItem('hccar3d-best',score);best=score}}catch(e){}
   $('#resBest').textContent=(mode==='exam'?'模擬考試':'練習模式')+(best!=null?`・最佳模擬考 ${best} 分`:'')+`・用時 ${Math.floor(time/60)} 分 ${Math.round(time%60)} 秒`;
-  $('#resLog').innerHTML=LOG.length?LOG.map(l=>`<li><b>−${l.pts}</b><span>${l.msg}</span></li>`).join(''):'<li><b>✓</b><span>零扣分，完美的一圈</span></li>';show('#ovResult',true)}
+  $('#resLog').innerHTML=LOG.length?LOG.map(l=>`<li><b>−${l.pts}</b><span>${l.msg}</span></li>`).join(''):'<li><b>✓</b><span>零扣分，完美的一圈</span></li>';
+  RANKABLE=(mode==='exam'&&!noScore&&!isFail&&finished&&time>60)?{score:Math.max(0,Math.min(100,score|0)),secs:Math.round(time)}:null;$('#lbSend').disabled=false;$('#lbStat').textContent='';lbShowResult();show('#ovResult',true)}
 $('#rAgain').onclick=()=>{show('#ovResult',false);newRun();show('#ovPre',true)};$('#rHome').onclick=()=>{show('#ovResult',false);show('#ovIntro',true)};
 resetState();resetStations();syncUI();resize();drawCluster();$('#loading').remove();requestAnimationFrame(frame);
 </script>
