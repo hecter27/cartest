@@ -549,7 +549,7 @@ const inNewArea=(x,y)=>(x>-152&&x<-28&&y>-27&&y<102)||(x>-152&&x<-58&&y>-107&&y<
 
 const TAGS={edge:{pts:32,msg:'行駛中車輪壓實線（路面邊線）'},garage:{pts:16,msg:'倒車入庫：車輪壓管線'},bay:{pts:16,msg:'平行路邊停車：車輪壓管線'},
   S:{pts:32,msg:'曲線進退：前進時車輪壓管線'},hill:{pts:16,msg:'上下坡道：車輪壓管線'}};
-function rtOnRoad(x,y){return !(x>=-163&&x<=503&&y>=-118&&y<=112.7)}
+function rtOnRoad(x,y){if(x>104&&typeof N27!=='undefined'&&N27&&N27.d&&N27.d(x,y)<8.5)return true;return !(x>=-163&&x<=503&&y>=-118&&y<=112.7)}
 function hAt(x,y){if(x>63.3&&x<76.7&&y>104&&y<116)return -1.5*(y-104)/12;if(y>112.7||x<-163||x>503||y<-118)return -1.5;const bx=x-205,by=y+75;if(bx>=233&&bx<=247&&by>=68&&by<=100){if(by>=88)return(100-by)*.08;if(by>=80)return .96;return(by-68)*.08}return hSmall(x,y)}
 function hSmall(x,y){if(x<127.5||x>136.5)return 0;if(y>48||y<26)return 0;if(y>=40)return(48-y)*.12;if(y>=34)return .96;return(y-26)*.12}
 
@@ -1879,7 +1879,8 @@ const RSP=[[-131,4],[-157,-10],[-192,-17],[-217,-17],[-287,-11],[-304,-8],[-371,
 const RDEN=(P,st=4)=>{const o=[];for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/st));for(let k=0;k<n;k++)o.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n])}o.push(P[P.length-1]);return o};
 const KEYA={};// 客雅大道路口（第五次採點）：K 路口中心、P 中心線、v 方向、vN/vS 明湖路南北向、d(x,z) 到中心線距離
 // 明湖路中段（駕訓班南側 x −99～−300）：原始點被 REALT 夾住而向西彎出 10–17 公尺，依 OpenStreetMap 中心線（客雅大道口已與遊戲吻合 1 公尺內）改正
-{const a=RSP.findIndex(p=>p[0]<-99),b=RSP.findIndex(p=>p[0]<=-300);if(a>=0&&b>a)RSP.splice(a,b-a,[-123,117.2],[-158,120],[-193,123],[-210,126],[-240,126.6],[-270,126.4])}
+{const a=RSP.findIndex(p=>p[0]<-99),b=RSP.length-1;if(a>=0&&b>a)RSP.splice(a,b-a,[-123,117.2],[-158,120],[-192.5,123.2],[-203.1,125.1],[-209.2,126.2],[-243,133.1],[-262,137.6],[-276.8,140],[-292.8,140],[-321.9,132.9],[-350.9,125.8],[-376.8,123],[-418.5,121.2],[-460.2,119.3],[-483.9,115.2],[-507.3,106.8],[-524.3,102.2],[-570.5,79.9],[-616.8,57.6],[-621.9,55.6],[-670.5,39.9],[-681.2,36.3],[-702.3,29.2]);RSP[RSP.length-1]=[-737.3,17.5]}
+// 第二十七次：x −192 以南到柴橋路口，全段改用 OpenStreetMap 中心線（已用 Google 衛星圖、街景抽查：x −300 一帶往東彎約 12 m、飯店前約 13 m）；柴橋路口 C 也移到實景 (−737.3,17.5)（原本偏約 28 m）
 const MH={};(function(){const pts=[];// 北段依實際線形：大門北側往東北彎，駕訓班出入車道向東接明湖路
   RDEN([[420.0,118.6],[415.8,118.6],[411.7,118.6],[407.5,118.6],[403.3,118.6],[399.2,118.6],[395.0,118.6],[390.8,118.6],[386.7,118.6],[382.5,118.6],[378.3,118.6],[374.2,118.6],[370.0,118.6],[365.8,118.6],[361.7,118.6],[357.5,118.6],[353.3,118.6],[349.2,118.6],[345.0,118.6],[340.8,118.6],[336.7,118.6],[332.5,118.6],[328.3,118.6],[324.2,118.6],[320.0,118.6],[315.8,118.6],[311.7,118.6],[307.5,118.6],[303.3,118.6],[299.2,118.6],[295.0,118.6],[290.8,118.6],[286.7,118.6],[282.5,118.6],[278.3,118.6],[274.2,118.6],[270.0,118.6],[265.8,118.6],[261.5,118.6],[257.1,118.6],[252.8,118.6],[248.4,118.6],[244.1,118.6],[239.8,118.6],[235.6,118.6],[231.4,118.6],[227.5,118.6],[223.6,118.6],[220.0,118.6],[214.8,118.6],[210.0,118.6],[205.3,118.6],[200.9,118.6],[196.7,118.6],[192.7,118.6],[188.8,118.6],[185.0,118.6],[180.1,118.6],[175.5,118.5],[171.1,118.5],[167.1,118.4],[163.4,118.4],[160.0,118.3],[154.7,118.2],[150.7,118.1],[146.6,118.0],[142.1,118.0],[137.9,118.1],[133.8,118.2],[129.6,118.5],[125.4,118.9],[121.2,119.4],[117.0,120.1],[112.8,121.0],[108.9,122.2],[104.9,123.7],[101.4,125.6],[98.1,128.2],[94.8,131.1],[91.9,133.9],[89.0,137.1],[86.2,140.6],[83.5,144.2],[80.8,147.7],[78.1,151.4],[75.7,154.6],[73.2,157.8],[70.5,161.1],[67.7,164.1],[64.1,166.6],[60.4,168.1],[56.4,169.4],[52.2,170.3],[48.1,171.0],[43.6,171.6],[39.2,172.0],[34.9,172.2],[30.6,172.2],[26.2,171.8],[21.9,171.0],[17.5,170.2],[13.1,169.2],[8.9,167.9],[5.1,165.8],[1.6,163.4],[-1.9,160.7],[-5.4,157.9],[-8.9,155.2],[-12.4,152.6],[-16.0,150.0],[-19.6,147.4],[-23.3,144.9],[-27.0,142.3],[-30.6,140.0],[-34.3,137.7],[-38.0,135.6],[-41.7,133.8],[-45.4,132.2],[-51.4,129.9],[-60.6,126.8],[-68.8,124.0],[-76.1,121.6],[-83.7,119.8]]).forEach(p=>pts.push(p));RDEN(RSP.slice(1)).forEach(p=>{const l=pts[pts.length-1];if(!l||Math.hypot(l[0]-p[0],l[1]-p[1])>.5)pts.push(p)});
   const lane=pts.slice();
@@ -2082,12 +2083,12 @@ function nearestBorrow(){if(!LIFE.cars)return null;let best=null,bd=2.8;for(cons
 function takeVehicle(it){if(BORROW.cur)return;BORROW.park={x:S.x,y:S.y,th:S.th};BORROW.noScore0=noScore;noScore=true;
   const tc=car.clone(true);tc.children.forEach((ch,i)=>{const o=car.children[i];if(o===inside||o===HUDP||o.isCamera)ch.visible=false});scene.add(tc);BORROW.clone=tc;
   const cb=carBox(S.x,S.y,S.th);BORROW.obr={x0:cb.cx-2.4,y0:cb.cy-2.4,x1:cb.cx+2.4,y1:cb.cy+2.4};
-  const model=it.g.children[0];it.g.remove(model);car.add(model);model.position.set(0,0,0);model.rotation.set(0,0,0);it.model=model;it.taken=true;it.parked=false;
+  const model=it.g.children[0];it.g.remove(model);car.add(model);model.position.set(0,0,0);model.rotation.set(0,0,0);it.model=model;it.taken=true;it.parked=false;model.traverse(o=>{if(o.userData&&o.userData.drv)o.visible=false});
   S.x=it.g.position.x;S.y=it.g.position.z;S.th=-it.g.rotation.y;S.v=0;S.steer=0;S.engine=true;S.crank=0;S.rpm=800;S.gear='D';S.hb=false;S.brakeChk=true;
   if(it.kind==='scoot'){Object.assign(CAR,{L:1.29,fo:.12,ro:.22,hw:.4});if(it.H)it.H.g.visible=false;WH.forEach(o=>o.piv.visible=false)}
-  // 原本的駕駛下車站到路邊
-  const side=P2(.6,it.kind==='car'?-2.2:-1.1);const H=makeHuman(['#e8e4da','#5b86ad','#c2352b','#2d2d2d'][Math.floor(Math.random()*4)],'#333','#1d1b1a',it.kind==='scoot'?{helmet:'#ffffff'}:{});
-  PEOPLE.push({H,route:[[side[0],side[1]],[side[0]+.3,side[1]]],seg:0,dir:1,x:side[0],y:side[1],sp:.3,ph:0,state:'walk',t:0});
+  // 原本的駕駛下車站到路邊（只有第一次）
+  if(!it.stolen){const side=P2(.6,it.kind==='car'?-2.2:-1.1);const H=makeHuman(['#e8e4da','#5b86ad','#c2352b','#2d2d2d'][Math.floor(Math.random()*4)],'#333','#1d1b1a',it.kind==='scoot'?{helmet:'#ffffff'}:{});
+  PEOPLE.push({H,route:[[side[0],side[1]],[side[0]+.3,side[1]]],seg:0,dir:1,x:side[0],y:side[1],sp:.3,ph:0,state:'walk',t:0})}it.stolen=true;
   ext.visible=false;WALK.on=false;document.body.classList.remove('walking');camMode='gta';GTA.yaw=null;GTA.p=null;HEAD.orbit=0;HEAD.yaw=0;HEAD.pitch=HEAD.base;BORROW.cur=it;sfx('door');if(it.kind==='scoot'&&BORROW.mkRider){BORROW.rider=BORROW.rider||BORROW.mkRider();it.model.add(BORROW.rider.g)}
   toast(it.kind==='scoot'?'🛵 借到一台機車（自由騎乘，不計分）':'🚗 借到一台車（自由駕駛，不計分）','good');syncUI();syncWalkUI()}
 function leaveBorrowed(){const it=BORROW.cur;if(!it)return;if(BORROW.rider&&BORROW.rider.g.parent)BORROW.rider.g.parent.remove(BORROW.rider.g);const wp=P2(it.kind==='scoot'?.6:1.0,it.kind==='scoot'?-1.0:-1.75);
@@ -2236,12 +2237,12 @@ function drawLED(){if(!LED.c)return;const g=LED.c.getContext('2d'),w=512,h=192;g
 /* ============ 道路考試（新竹客運駕訓班 藍線／紅線） ============ */
 const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{},guide:null,devT:0,devPen:false,lane:0};
 (function(){const Y=-1.5,T=REALT,d=[-1,0],L=[0,1];const add=(a,v,k)=>[a[0]+v[0]*k,a[1]+v[1]*k];
-  const C=T(-832,-116),P0=T(-131,4),Pend=T(-300,-9),EAST=[[-832,-116],[-896,-34],[-897,-16],[-894,0],[-897,20],[-907,32],[-922,45],[-947,72],[-967,107],[-990,152],[-1004,211],[-1011,252],[-1017,288],[-1019,314],[-1016,363],[-1013,392],[-1004,462],[-1004,516],[-1014,536],[-1046,577],[-1079,603],[-1105,610],[-1130,635],[-1137,659],[-1132,707],[-1127,760],[-1122,837],[-1122,878],[-1124,949],[-1134,978],[-1156,991],[-1235,995],[-1261,1009],[-1308,1050],[-1340,1101]].map(q=>T(...q));
-  const F=T(-1235,995),D=T(-1308,1050),E=T(-1391,947),E2=T(-1249,986),J=T(-1369,-409),U=T(-854,-666);
-  const CHQ=[[-832,-116],[-915,-155],[-951,-160],[-985,-155],[-1027,-169],[-1061,-170],[-1107,-142],[-1134,-124],[-1184,-87],[-1212,-116],[-1224,-198],[-1231,-247],[-1239,-286],[-1267,-328],[-1288,-354],[-1333,-391],[-1369,-409]].map(q=>T(...q));
-  const DXS=[[-1369,-409],[-1409,-476],[-1449,-524],[-1468,-560],[-1473,-591],[-1465,-633],[-1436,-663],[-1394,-673],[-1341,-666],[-1282,-636],[-1248,-633],[-1218,-642],[-1170,-647],[-1122,-659],[-1084,-658],[-1051,-656],[-1021,-651],[-968,-669],[-906,-667],[-854,-666]].map(q=>T(...q));
-  const L08P=[[-1391,947],[-1396,984],[-1382,988],[-1345,987],[-1299,985],[-1249,986],[-1235,995]].map(q=>T(...q));
-  RTX.nodes={P0,Pend,C,U,D,E,E2,F,J};RTX.HPOS=T(-563,31);RTX.RG={EAST,CHQ,DXS,L08P};
+  const C=[-737.3,17.5],P0=T(-131,4),Pend=T(-300,-9),EAST=[[-737.3,17.5],[-793.1,82.8],[-797.7,89.3],[-801.3,99.7],[-802.4,104.9],[-802,118.6],[-799,134.8],[-799.4,147.5],[-802.3,154.4],[-812,166.1],[-827,179],[-837.5,189.7],[-852,206.5],[-864.4,229.3],[-872.2,241.6],[-885.6,264.8],[-895.9,287.3],[-902.9,310.9],[-909,346.3],[-911.7,364],[-916.2,387.6],[-919.6,407.5],[-922.1,423.8],[-924.6,449.7],[-923.3,474.7],[-921.7,498.8],[-918.4,527.8],[-909.4,598.2],[-906.5,617],[-909.6,651.8],[-919.3,672.3],[-935.1,692.2],[-951,713.6],[-967.5,730.2],[-984.7,739],[-1009.9,746.5],[-1025.5,756.3],[-1035.8,771.4],[-1041.9,795.3],[-1041.1,813.1],[-1037.2,844],[-1034.3,868.5],[-1032,897.3],[-1031.6,909],[-1029.2,936.2],[-1027.5,974.4],[-1027.1,1015.9],[-1027.9,1057.7],[-1028.8,1086.7],[-1031.5,1102.3],[-1039.3,1116],[-1049.1,1124.9],[-1061.5,1129.4],[-1140.4,1132.6],[-1166,1146.9],[-1213,1187.7],[-1224,1202.2],[-1235.8,1216.3],[-1245.1,1238.9],[-1253.7,1262.9],[-1282.8,1288.4],[-1303.1,1304.4]],_E0=[[-832,-116],[-896,-34],[-897,-16],[-894,0],[-897,20],[-907,32],[-922,45],[-947,72],[-967,107],[-990,152],[-1004,211],[-1011,252],[-1017,288],[-1019,314],[-1016,363],[-1013,392],[-1004,462],[-1004,516],[-1014,536],[-1046,577],[-1079,603],[-1105,610],[-1130,635],[-1137,659],[-1132,707],[-1127,760],[-1122,837],[-1122,878],[-1124,949],[-1134,978],[-1156,991],[-1235,995],[-1261,1009],[-1308,1050],[-1340,1101]].map(q=>T(...q));
+  const D=[-1140.4,1132.6],F=[-1213,1187.7],E=[-1250.1,1124.7],E2=[-1242.4,1157.3],J=[-1274.7,-275.8],U=[-759.8,-534.2];
+  const CHQ=[[-737.3,17.5],[-820.6,-21.7],[-840.4,-26.3],[-856.2,-26.2],[-885.1,-20.6],[-890.2,-21.7],[-909.2,-25.8],[-932.8,-35.8],[-955.3,-39.1],[-966.7,-36.2],[-992.2,-22],[-1012.5,-8.7],[-1030.8,3.9],[-1039.4,9.9],[-1076.6,42.6],[-1089,46.8],[-1101.5,42.7],[-1111.3,32.4],[-1117.4,18.2],[-1125.8,-40.7],[-1128.3,-55.9],[-1129.2,-64.1],[-1135.9,-113.6],[-1140.6,-140.1],[-1144.7,-153.1],[-1157.8,-176.1],[-1172,-195.3],[-1192.9,-220.6],[-1217.2,-242.7],[-1238.4,-258],[-1251.5,-266.3],[-1274.7,-275.8]],_C0=[[-832,-116],[-915,-155],[-951,-160],[-985,-155],[-1027,-169],[-1061,-170],[-1107,-142],[-1134,-124],[-1184,-87],[-1212,-116],[-1224,-198],[-1231,-247],[-1239,-286],[-1267,-328],[-1288,-354],[-1333,-391],[-1369,-409]].map(q=>T(...q));
+  const DXS=[[-1274.7,-275.8],[-1282,-290.3],[-1314.6,-343.2],[-1354,-391.4],[-1365.4,-408.1],[-1373.6,-427.9],[-1376.6,-443.1],[-1377.8,-458.4],[-1376.2,-482.9],[-1370.3,-501.4],[-1360.9,-514.1],[-1352.9,-523],[-1340.8,-531.5],[-1328.2,-537.1],[-1311.9,-540.3],[-1298.8,-540.8],[-1271,-538.7],[-1246.6,-534.5],[-1228.1,-526.6],[-1187.5,-503.6],[-1175.3,-499.6],[-1163.6,-499.4],[-1153.1,-501],[-1123.5,-510.4],[-1106.3,-513.2],[-1075.7,-515],[-1054.9,-519.3],[-1027.6,-526.9],[-1013.8,-528.8],[-989.5,-525.9],[-956.4,-523.6],[-926.2,-519.3],[-902.5,-523.1],[-873.8,-536.9],[-862.9,-537.9],[-851,-537.9],[-811.5,-535.6],[-759.8,-534.2]],_D0=[[-1369,-409],[-1409,-476],[-1449,-524],[-1468,-560],[-1473,-591],[-1465,-633],[-1436,-663],[-1394,-673],[-1341,-666],[-1282,-636],[-1248,-633],[-1218,-642],[-1170,-647],[-1122,-659],[-1084,-658],[-1051,-656],[-1021,-651],[-968,-669],[-906,-667],[-854,-666]].map(q=>T(...q));
+  const L06P=[D,[-1154.6,1123.9],[-1162.1,1121.6],[-1204.2,1122.6],E],L08P=[E,[-1247.7,1140.4],E2,F],_L0=[[-1391,947],[-1396,984],[-1382,988],[-1345,987],[-1299,985],[-1249,986],[-1235,995]].map(q=>T(...q));
+  RTX.nodes={P0,Pend,C,U,D,E,E2,F,J};RTX.HPOS=T(-563,31);RTX.RG={EAST,CHQ,DXS,L08P,L06P};
   const unit=(a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;return[dx/l,dz/l]};
   const line=(a,b,step=4)=>{const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/step)),o=[];for(let i=0;i<=n;i++)o.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]);return o};
   const mat=(c)=>{const m=M({color:c});m.side=THREE.DoubleSide;return m};const asph=matAsph.clone();asph.side=THREE.DoubleSide;
@@ -2257,9 +2258,9 @@ const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{}
     RTX.roads.push({P,hw,center:!!opt.center,lanes:opt.lanes||0,name:opt.name||''})};
   // 明湖路（既有直線與彎道）登錄為考驗道路
   RTX.roads.push({P:MH.main.P.filter(p=>p[0]>-170&&p[0]<=-26),hw:6.6,center:true,lanes:3.3,name:'明湖路'});RTX.roads.push({P:MH.main.P.filter(p=>p[0]>-30),hw:4.6,center:true,lanes:0,name:'明湖路'});RTX.roads.push({P:[[39,113.4],[39,167.2]],hw:3.3,center:false,lanes:0,name:'明湖路486巷（駕訓班出入）'});{const P=MH.main.P.filter(p=>p[0]>-178&&p[0]<=-116);if(P.length>1){ribbon(P,-6.6,6.6,.003,asph);RTX.roads.push({P,hw:6.6,center:true,lanes:3.3,name:'明湖路'})}}
-  const Mx=RDEN(RSP.filter(p=>p[0]<-150)),Mu=RDEN(CHQ),E1=RDEN(EAST),L06=line(D,E),L08=RDEN(L08P),L08b=[],DX=RDEN(DXS);
+  const Mx=RDEN(RSP.filter(p=>p[0]<-150)),Mu=RDEN(CHQ),E1=RDEN(EAST),L06=RDEN(L06P),L08=RDEN(L08P),L08b=[],DX=RDEN(DXS);
   road(Mx,6.6,{center:true,lanes:3.3,name:'明湖路'});ribbon(RDEN(RSP.filter(p=>p[0]<-130&&p[0]>-175)),-6.6,6.6,.003,asph);road(DX,3.4,{name:'東香路一段'});{const n=DX.length;for(const back of[48,170]){let acc=0,i=n-1;while(i>1&&acc<back){acc+=Math.hypot(DX[i][0]-DX[i-1][0],DX[i][1]-DX[i-1][1]);i--}const a=DX[i],b=DX[i+1],ddx=b[0]-a[0],ddz=b[1]-a[1],ll=Math.hypot(ddx,ddz)||1;groundText('慢',a[0]-ddz/ll*1.7,a[1]+ddx/ll*1.7,1.9,Math.atan2(ddz,ddx))}}
-  road(Mu,4.6,{center:true,name:'柴橋路'});road(E1,4.2,{center:true,name:'明湖路（東段）'});{const ix=E1.map((p,i)=>p[0]<-1040?i:-1).filter(i=>i>=0);if(ix.length>4){const sub=E1.slice(ix[0],ix[ix.length-1]+1);ribbon(sub,-4.2-1.35,-4.2+.02,.0035,mat('#3d8c70'));const yb=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.05,.75,6),new THREE.MeshLambertMaterial({color:'#f0c419'}),sub.length);const m4=new THREE.Matrix4();let k=0;for(let i=0;i<sub.length-1;i++){const a=sub[i],b=sub[i+1],ddx=b[0]-a[0],ddz=b[1]-a[1],ll=Math.hypot(ddx,ddz)||1;m4.makeTranslation(a[0]+ddz/ll*4.12,Y+.375,a[1]-ddx/ll*4.12);yb.setMatrixAt(k++,m4)}yb.count=k;yb.castShadow=true;scene.add(yb)}}road(L06,3,{cdash:false,name:'明湖路1006巷'});road(L08,3,{name:'明湖路1008巷'});
+  road(Mu,4.6,{center:true,name:'柴橋路'});road(E1,4.2,{center:true,name:'明湖路（東段）'});{const ix=E1.map((p,i)=>p[0]<-1120?i:-1).filter(i=>i>=0);if(ix.length>4){const sub=E1.slice(ix[0],ix[ix.length-1]+1);ribbon(sub,-4.2-1.35,-4.2+.02,.0035,mat('#3d8c70'));const yb=new THREE.InstancedMesh(new THREE.CylinderGeometry(.045,.05,.75,6),new THREE.MeshLambertMaterial({color:'#f0c419'}),sub.length);const m4=new THREE.Matrix4();let k=0;for(let i=0;i<sub.length-1;i++){const a=sub[i],b=sub[i+1],ddx=b[0]-a[0],ddz=b[1]-a[1],ll=Math.hypot(ddx,ddz)||1;m4.makeTranslation(a[0]+ddz/ll*4.12,Y+.375,a[1]-ddx/ll*4.12);yb.setMatrixAt(k++,m4)}yb.count=k;yb.castShadow=true;scene.add(yb)}}road(L06,3,{cdash:false,name:'明湖路1006巷'});road(L08,3,{name:'明湖路1008巷'});road(RDEN([E,[-1286.8,1126.1],[-1301.4,1122.4],[-1324.2,1102.8],[-1348,1091.1]]),3,{name:'明湖路1008巷'});
   // 客雅大道（路口段）：先清掉路廊上原有的物件
   if(KEYA.P){road(KEYA.P,KEYA.hw,{center:true,lanes:KEYA.hw/2,name:'客雅大道'});const inK=(x,z)=>KEYA.d(x,z)<KEYA.hw+2.2;scene.children.forEach(o=>{if(!(o.isMesh||o.isGroup)||o.userData.noShift||!o.visible||o===car)return;const p=o.position;if(p.y<-1.95||p.y>30||!inK(p.x,p.z))return;const b=new THREE.Box3().setFromObject(o);if(!b.isEmpty()&&Math.max(b.max.x-b.min.x,b.max.z-b.min.z)>30)return;o.visible=false});
     for(let i=OBO.length-1;i>=0;i--)if(inK(OBO[i].cx,OBO[i].cy))OBO.splice(i,1);for(let i=OBC.length-1;i>=0;i--)if(inK(OBC[i].x,OBC[i].y))OBC.splice(i,1)}
@@ -2267,7 +2268,7 @@ const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{}
   const plaza=(c,r)=>{const g=new THREE.CircleGeometry(r,24);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,asph);m.position.set(c[0],Y+.006,c[1]);m.receiveShadow=true;scene.add(m)};
   plaza(C,11);plaza(U,10);plaza(D,7);plaza(E,5);plaza(F,7);plaza(J,9);
   if(KEYA.K){const c=add(KEYA.K,KEYA.v,5.5),g=new THREE.CircleGeometry(9.5,28);g.rotateX(-Math.PI/2);const p=g.attributes.position,uv=g.attributes.uv;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)+c[0],-(p.getZ(i)+c[1]));const m=new THREE.Mesh(g,asph);m.position.set(c[0],Y+.005,c[1]);m.receiveShadow=true;scene.add(m)}// 客雅大道口轉角鋪面（世界座標貼圖，與路面接縫一致）
-  const crossRoad=(c,v,len,hw,name)=>{const P=line(add(c,v,-len),add(c,v,len));road(P,hw,{center:true,name})};const vU=unit(U,DXS[DXS.length-2]);{const XS=[[-854,-666],[-836,-658],[-817,-654],[-795,-656],[-742,-667],[-722,-674],[-692,-692],[-681,-694],[-654,-685],[-636,-682]].map(q=>T(...q)),DN=[[-854,-666],[-836,-667],[-825,-670],[-794,-696],[-778,-728],[-770,-752],[-770,-774],[-778,-798],[-781,-811]].map(q=>T(...q));road(RDEN(XS),3.2,{name:'新香街'});road(RDEN(DN),3.4,{name:'東香路一段'});RTX.RG.XS=XS;RTX.RG.DN=DN}
+  const crossRoad=(c,v,len,hw,name)=>{const P=line(add(c,v,-len),add(c,v,len));road(P,hw,{center:true,name})};const vU=unit(U,DXS[DXS.length-2]);{const XS=[U,[-741.8,-525.9],[-722.6,-522.1],[-701.1,-524.5],[-687.6,-527.4],[-666.9,-532],[-648.7,-535.6],[-628,-542.6],[-612.3,-551.9],[-598,-559.7],[-587.9,-562.3],[-573.3,-558.2],[-560.9,-553.1]],DN=[U,[-742.1,-535.2],[-731.1,-538.3],[-700.3,-563.7],[-684.1,-596.2],[-676.4,-620.2],[-676.4,-641.9],[-684.5,-665.9],[-686.8,-678.9]];/* 第二十七次：新香街、東香路南段改用 OSM 中心線（遊戲座標） */road(RDEN(XS),3.2,{name:'新香街'});road(RDEN(DN),3.4,{name:'東香路一段'});RTX.RG.XS=XS;RTX.RG.DN=DN}
   // 號誌、停止線、行人穿越道
   const xwalk=(c,dir,off,hw)=>{const nx=-dir[1],nz=dir[0];const cc=add(c,dir,off);for(let k=-hw+.5;k<hw;k+=1.1){const p=[cc[0]+nx*k,cc[1]+nz*k];const zg=new THREE.PlaneGeometry(.55,3.2);zg.rotateX(-Math.PI/2);const z=new THREE.Mesh(zg,wl);z.rotation.y=Math.atan2(dir[0],dir[1]);z.position.set(p[0],Y+.012,p[1]);scene.add(z)}
     RTX.xw.push({c:cc,dir,hw,peds:[]})};
@@ -2304,16 +2305,16 @@ const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{}
       if(r()<.12){const t=[ctr[0]+nx*sg*(hw+2.1)+dx/l*3,ctr[1]+nz*sg*(hw+2.1)+dz/l*3];if(roadClear(t[0],t[1],1.2)){const tk=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,2.6,7),tr);tk.position.set(t[0],Y+1.3,t[1]);scene.add(tk);const c2=new THREE.Mesh(new THREE.IcosahedronGeometry(1.5,1),cr);c2.position.set(t[0],Y+3.4,t[1]);c2.castShadow=true;scene.add(c2);OBC.push({x:t[0],y:t[1],r:.2})}}
       for(const half of[0]){const fl=2+Math.floor(r()*4),H=fl*3.2,w=l+.02,dep=11,off=hw+2.4+dep/2;const cx=ctr[0]+nx*off*sg,cz=ctr[1]+nz*off*sg;if(!roadClear(cx,cz,6.6))continue;if(zf){const dens=zf(ctr);if(r()>dens){(RTX.rural||(RTX.rural=[])).push([cx,cz,Math.atan2(dz,dx),dens>.15&&r()<.45?'shed':'veg']);continue}}
       const _rx=Math.max(1,Math.round(w/3.2)),_ci=Math.floor(r()*4);const mt=MATC('fv'+_rx+'_'+fl+'_'+_ci,()=>{const t=TEXC('fvT'+_ci,()=>{const tt=new THREE.CanvasTexture(FACV[_ci]);tt.wrapS=tt.wrapT=THREE.RepeatWrapping;tt.anisotropy=4;return tt}).clone();t.needsUpdate=true;t.repeat.set(_rx,fl);return new THREE.MeshLambertMaterial({map:t,color:'#ffffff'})});
-      const bx=new THREE.Mesh(new THREE.BoxGeometry(w,H,dep),[mt,mt,roofM,roofM,mt,mt]);bx.position.set(cx,Y+H/2,cz);bx.rotation.y=-Math.atan2(dz,dx);bx.castShadow=bx.receiveShadow=true;scene.add(bx);{const a=Math.atan2(dz,dx);addOBB(cx,cz,a,w/2,dep/2);const fz=-sg*dep/2;
+      const bx=new THREE.Mesh(new THREE.BoxGeometry(w,H,dep),[mt,mt,roofM,roofM,mt,mt]);bx.position.set(cx,Y+H/2,cz);bx.rotation.y=-Math.atan2(dz,dx);bx.castShadow=bx.receiveShadow=true;scene.add(bx);const _b0=BDET.length;{const a=Math.atan2(dz,dx);addOBB(cx,cz,a,w/2,dep/2);const fz=-sg*dep/2;
         for(let f=1;f<fl;f++){if(r()<.55){BDET.push({t:'slab',cx,cz,a,lx:0,y:Y+f*3.2+.05,lz:fz-sg*.5,sx:w*.7,sy:.12,sz:1});BDET.push({t:'rail',cx,cz,a,lx:0,y:Y+f*3.2+.55,lz:fz-sg*1,sx:w*.7,sy:.9,sz:.04})}else BDET.push({t:'grille',cx,cz,a,lx:-w*.2,y:Y+f*3.2+1.6,lz:fz-sg*.12,sx:w*.35,sy:1.2,sz:.12});
           if(r()<.7)BDET.push({t:'ac',cx,cz,a,lx:(r()-.5)*w*.7,y:Y+f*3.2+1.1,lz:fz-sg*.2,sx:.75,sy:.45,sz:.32})}
         BDET.push({t:'pillar',cx,cz,a,lx:-w/2+.2,y:Y+1.4,lz:fz-sg*1.8,sx:.35,sy:2.8,sz:.35});if(r()<.5)BDET.push({t:'pot',cx,cz,a,lx:(r()-.5)*w*.6,y:Y+.3,lz:fz-sg*1.2,sx:.55,sy:.6,sz:.55});if(r()<.6)BDET.push({t:'meter',cx,cz,a,lx:w/2-.8,y:Y+1.6,lz:fz-sg*.08,sx:.5,sy:.7,sz:.16});BDET.push({t:'pillar',cx,cz,a,lx:w/2-.2,y:Y+1.4,lz:fz-sg*1.8,sx:.35,sy:2.8,sz:.35});
-        if(r()<.45)BDET.push({t:'shed',cx,cz,a,lx:0,y:Y+H+1.1,lz:sg*dep*.15,sx:w*.6,sy:2.2,sz:dep*.5});if(r()<.5)BDET.push({t:'tank',cx,cz,a,lx:w*.25,y:Y+H+.6,lz:sg*dep*.25,sx:1.1,sy:1.1,sz:1.1})}
+        if(r()<.45)BDET.push({t:'shed',cx,cz,a,lx:0,y:Y+H+1.1,lz:sg*dep*.15,sx:w*.6,sy:2.2,sz:dep*.5});if(r()<.5)BDET.push({t:'tank',cx,cz,a,lx:w*.25,y:Y+H+.6,lz:sg*dep*.25,sx:1.1,sy:1.1,sz:1.1})}for(let _k=_b0;_k<BDET.length;_k++)BDET[_k].host=bx;
       const fx=cx-nx*sg*(dep/2),fz=cz-nz*sg*(dep/2),ry=bx.rotation.y;(RTX.fronts||(RTX.fronts=[])).push([fx,fz,ry,w,-nx*sg,-nz*sg]);
-      const awn=new THREE.Mesh(new THREE.BoxGeometry(w*.96,.06,2),MCOL(['#2f6fb3','#2f8a5c','#c9d6dd','#c2352b','#9fb3bd'][Math.floor(r()*5)]));awn.position.set(fx-nx*sg*1,Y+2.9,fz-nz*sg*1);awn.rotation.y=ry;scene.add(awn);
-      const sh=new THREE.Mesh(new THREE.PlaneGeometry(w*.85,2.3),BM.shutter);sh.position.set(fx-nx*sg*.03,Y+1.15,fz-nz*sg*.03);sh.rotation.y=Math.atan2(-nx*sg,-nz*sg);scene.add(sh);
+      const awn=new THREE.Mesh(new THREE.BoxGeometry(w*.96,.06,2),MCOL(['#2f6fb3','#2f8a5c','#c9d6dd','#c2352b','#9fb3bd'][Math.floor(r()*5)]));awn.position.set(fx-nx*sg*1,Y+2.9,fz-nz*sg*1);awn.rotation.y=ry;awn.userData.host=bx;scene.add(awn);
+      const sh=new THREE.Mesh(new THREE.PlaneGeometry(w*.85,2.3),BM.shutter);sh.position.set(fx-nx*sg*.03,Y+1.15,fz-nz*sg*.03);sh.rotation.y=Math.atan2(-nx*sg,-nz*sg);sh.userData.host=bx;scene.add(sh);
       const [txt,col]=SHOPS[Math.floor(r()*SHOPS.length)];const st=TEXC('shop'+txt+col,()=>ctex(256,64,(g,W,Hh)=>{g.fillStyle=col;g.fillRect(0,0,W,Hh);g.fillStyle='#fff';g.font='900 40px "Noto Sans TC",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,W/2,Hh/2+2)}));
-      const sp=new THREE.Mesh(new THREE.PlaneGeometry(w*.7,.55),MATC('sm'+st.uuid,()=>new THREE.MeshBasicMaterial({map:st})));sp.position.set(fx-nx*sg*.06,Y+3.35,fz-nz*sg*.06);sp.rotation.y=Math.atan2(-nx*sg,-nz*sg);scene.add(sp);
+      const sp=new THREE.Mesh(new THREE.PlaneGeometry(w*.7,.55),MATC('sm'+st.uuid,()=>new THREE.MeshBasicMaterial({map:st})));sp.position.set(fx-nx*sg*.06,Y+3.35,fz-nz*sg*.06);sp.rotation.y=Math.atan2(-nx*sg,-nz*sg);sp.userData.host=bx;scene.add(sp);
       if(r()<.05){const sc=makeScooter(['#4fb3e0','#c2352b','#ffffff','#1d1d1d','#9aa3a8'][Math.floor(r()*5)]);sc.root.position.set(fx-nx*sg*2.2,Y,fz-nz*sg*2.2);sc.root.rotation.y=ry+Math.PI/2+(sg>0?Math.PI:0)+(r()-.5)*.3}}}}
     const _pl=[];for(let i=6;i<P.length;i+=9){const a=P[i];const p=new THREE.Mesh(new THREE.CylinderGeometry(.14,.2,10,8),M({color:'#bdb8ad'}));const b=P[Math.min(i+1,P.length-1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;const px=a[0]+(-dz/l)*(hw+1.6),pz=a[1]+(dx/l)*(hw+1.6);if(!roadClear(px,pz,1.2)){_pl.push(null);continue}p.position.set(px,Y+5,pz);scene.add(p);OBC.push({x:px,y:pz,r:.2});_pl.push([px,pz])}
     {let seg=[];_pl.forEach(q=>{if(q)seg.push(q);else{if(seg.length>1)(RTX.polePts||(RTX.polePts=[])).push(seg);seg=[]}});if(seg.length>1)(RTX.polePts||(RTX.polePts=[])).push(seg)}};
@@ -2324,7 +2325,7 @@ const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{}
   const join=(...arrs)=>{const o=[];arrs.forEach(a=>a.forEach(p=>{const l=o[o.length-1];if(!l||Math.hypot(l[0]-p[0],l[1]-p[1])>.5)o.push(p)}));return o};
   const out=join([[70,104],[70,112],[70,118.5],[70,130],[70,142],[70,154],[70,166],[70,174]],MH.main.P.filter(p=>p[0]<=64));const back=out.slice().reverse();const rv=a=>a.slice().reverse();
   const steps=(arr)=>arr;RTX.ROUTES={
-   blue:{name:'藍線',color:'#1f5fb4',P:join(out,RDEN(EAST.slice(0,EAST.findIndex(p=>Math.hypot(p[0]-D[0],p[1]-D[1])<.5)+1)),line(D,E),RDEN(L08P),rv(RDEN(EAST.slice(0,EAST.findIndex(p=>Math.hypot(p[0]-F[0],p[1]-F[1])<.5)+1))),back),
+   blue:{name:'藍線',color:'#1f5fb4',P:join(out,RDEN(EAST.slice(0,EAST.findIndex(p=>Math.hypot(p[0]-D[0],p[1]-D[1])<.5)+1)),RDEN(L06P),RDEN(L08P),rv(RDEN(EAST.slice(0,EAST.findIndex(p=>Math.hypot(p[0]-F[0],p[1]-F[1])<.5)+1))),back),
      ins:[['B',[70,169],'出大門直行，路口右轉明湖路','right'],['C',C,'明湖路與柴橋路口左轉','left'],['D',D,'靠右駛入明湖路1006巷','right'],['E',E,'左轉明湖路1008巷','left'],['F',F,'左轉回明湖路','left'],['G',C,'柴橋路口右轉明湖路','right'],['H',[70,172],'左轉進入駕訓班出入車道','left']],
      stop:['C','D'],speed:['F','G'],lane:['G','H']},
    red:{name:'紅線',color:'#c2352b',P:join(out,RDEN(CHQ),RDEN(DXS),rv(RDEN(DXS)),rv(RDEN(CHQ)),back),
@@ -2478,7 +2479,7 @@ function makeTruck(color){const root=new THREE.Group(),paint=new THREE.MeshStand
 (function(){const N=RTX.nodes,d=[-Math.cos(1.2),Math.sin(1.2)],L=[d[1],-d[0]];const line=(a,b)=>{const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/4)),o=[];for(let i=0;i<=n;i++)o.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]);return o};
   const loop=(...segs)=>{const o=[];segs.forEach(sg=>sg.forEach(p=>{const l=o[o.length-1];if(!l||Math.hypot(l[0]-p[0],l[1]-p[1])>.5)o.push(p)}));const T={P:o,L:[0]};for(let i=1;i<o.length;i++)T.L.push(T.L[i-1]+Math.hypot(o[i][0]-o[i-1][0],o[i][1]-o[i-1][1]));T.len=T.L[T.L.length-1];return T};
   const add=(a,v,k)=>[a[0]+v[0]*k,a[1]+v[1]*k];
-  const G_=RTX.RG,sp=RDEN(RSP.filter(p=>p[0]<-150)),ch=RDEN(G_.CHQ),ea=RDEN(G_.EAST),dx=RDEN(G_.DXS),lp=RDEN([N.D,N.E].concat(G_.L08P).concat([N.D]));
+  const G_=RTX.RG,sp=RDEN(RSP.filter(p=>p[0]<-150)),ch=RDEN(G_.CHQ),ea=RDEN(G_.EAST),dx=RDEN(G_.DXS),lp=RDEN(G_.L06P.concat(G_.L08P).concat(G_.EAST.slice(G_.EAST.findIndex(p=>Math.hypot(p[0]-N.D[0],p[1]-N.D[1])<.5),G_.EAST.findIndex(p=>Math.hypot(p[0]-N.F[0],p[1]-N.F[1])<.5)+1).reverse()));
   const PM=loop(sp,ch,ch.slice().reverse(),sp.slice().reverse()),PE=loop(ea,ea.slice().reverse()),PS=loop(lp),PX=loop(dx,dx.slice().reverse()),PU=loop(sp.slice(0,60),sp.slice(0,60).reverse());
   RTX.trafficPaths=[PM,PE,PS,PX,PU];
   const specs=[[PM,'car','sedan','#e8e8e6',1.65],[PM,'truck',null,'#2f6fb3',1.65],[PM,'car','suv','#1d1d1d',4.95],[PM,'scoot',null,'#4fb3e0',5.6],[PM,'car','prius','#2f9bd6',1.65],[PM,'car','van','#f4f4f2',4.95],[PM,'scoot',null,'#c2352b',5.6],
@@ -2498,7 +2499,7 @@ function rtTrafficBlock(c,px,pz,hx,hy,force){if(!c.rt&&!force)return false;let b
 (function(){if(!window.BDET)return;const types={ac:[M({color:'#eeeeea'}),[.75,.45,.32]],slab:[M({color:'#cfc7b6'}),[1,.12,1]],rail:[new THREE.MeshStandardMaterial({color:'#6f777d',metalness:.6,roughness:.4}),[1,1,1]],
   shed:[M({color:'#8fa3ad'}),[1,1,1]],pillar:[M({color:'#d6cfc0'}),[1,1,1]],grille:[new THREE.MeshStandardMaterial({color:'#4d5459',metalness:.5,roughness:.5}),[1,1,1]],tank:[new THREE.MeshStandardMaterial({color:'#e8ecef',metalness:.7,roughness:.3}),[1,1,1]],pot:[new THREE.MeshLambertMaterial({color:'#4f7a3c'}),[1,1,1]],meter:[new THREE.MeshLambertMaterial({color:'#9aa3a8'}),[1,1,1]]};
   const by={};BDET.forEach(d=>(by[d.t]||(by[d.t]=[])).push(d));const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),V=new THREE.Vector3(),Sc=new THREE.Vector3();
-  for(const t in by){const [mat]=types[t];const list=by[t];const im=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,list.length);list.forEach((d,i)=>{const ca=Math.cos(d.a),sa=Math.sin(d.a);V.set(d.cx+d.lx*ca-d.lz*sa,d.y,d.cz+d.lx*sa+d.lz*ca);e.set(0,-d.a,0);q.setFromEuler(e);Sc.set(d.sx,d.sy,d.sz);m4.compose(V,q,Sc);im.setMatrixAt(i,m4)});im.castShadow=true;im.receiveShadow=true;scene.add(im)}})();
+  for(const t in by){const [mat]=types[t];const list=by[t];const im=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,list.length);list.forEach((d,i)=>{const ca=Math.cos(d.a),sa=Math.sin(d.a);V.set(d.cx+d.lx*ca-d.lz*sa,d.y,d.cz+d.lx*sa+d.lz*ca);e.set(0,-d.a,0);q.setFromEuler(e);Sc.set(d.sx,d.sy,d.sz);m4.compose(V,q,Sc);im.setMatrixAt(i,m4)});im.castShadow=true;im.receiveShadow=true;im.userData.bdet=list;scene.add(im)}})();
 let NOISEBUF=null;function crashSound(imp){const C=AU.c;if(!C||!sound)return;const k=Math.min(1.6,.35+imp*.12),t0=C.currentTime;
   if(!NOISEBUF){NOISEBUF=C.createBuffer(1,C.sampleRate*1.2,C.sampleRate);const d=NOISEBUF.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
   const out=C.createGain();out.gain.value=.55*k;out.connect(C.destination);
@@ -2659,12 +2660,12 @@ function makeSausage(withStick){const g=new THREE.Group(),len=.12,r=.019;const b
   if(withStick){const st=new THREE.Mesh(new THREE.CylinderGeometry(.0035,.0035,.25,6),STICK_M);st.rotation.z=Math.PI/2;st.position.x=-.07;g.add(st)}return g}
 function makeGarlic(){const g=new THREE.Group();const c=new THREE.Mesh(new THREE.SphereGeometry(.011,10,8),GARLIC_M);c.scale.set(1,1.45,.9);g.add(c);const sk=new THREE.Mesh(new THREE.SphereGeometry(.0125,10,8,0,Math.PI*1.3),PEEL_M);sk.scale.set(1,1.45,.9);g.add(sk);g.userData.skin=sk;return g}
 
-const LAKE={on:false,sausage:0,poi:[],ghosts:[],people:[],stalls:[],boats:[]};window.LAKE=LAKE;
-(function(){const Y=-1.5,T=REALT;const P=a=>a.map(q=>T(q[0],q[1]));
+const LKD=[24.7,15.5],LKT=(N,E)=>{const r=REALT(N,E);return[r[0]+LKD[0],r[1]+LKD[1]]};window.LKT=LKT;const LAKE={on:false,sausage:0,poi:[],ghosts:[],people:[],stalls:[],boats:[]};window.LAKE=LAKE;
+(function(){const Y=-1.5,T=LKT;const P=a=>a.map(q=>T(q[0],q[1]));
   const LAKE_OUT=P([[-554,231],[-578,245],[-591,272],[-616,270],[-713,307],[-691,349],[-689,373],[-662,415],[-721,469],[-758,534],[-752,557],[-662,601],[-650,620],[-633,605],[-614,598],[-574,577],[-548,554],[-523,524],[-497,442],[-484,378],[-503,371],[-506,342],[-505,319],[-491,303],[-504,277],[-500,254],[-517,239],[-533,227]]);
   const ISLE=P([[-576,427],[-597,435],[-618,432],[-622,456],[-607,479],[-601,500],[-590,522],[-580,498],[-567,451]]);
   const R755=P([[-619,-32],[-633,8],[-639,31],[-636,74],[-633,92],[-626,125],[-619,142],[-569,187]]);
-  const LOOPN=[[-569,187],[-534,220],[-496,252],[-480,265],[-470,279],[-463,297],[-457,316],[-455,340],[-455,356],[-459,405],[-474,478],[-475,497],[-458,517],[-441,532],[-433,554],[-446,574],[-464,582],[-465,607],[-520,628],[-590,640],[-634,643],[-655,667],[-730,801],[-737,839],[-749,877],[-775,910],[-819,944],[-836,953],[-862,956],[-892,956],[-910,948],[-921,931],[-922,908],[-911,881],[-898,860],[-876,830],[-860,799],[-861,751],[-865,691],[-828,629],[-795,557],[-797,504],[-802,470],[-812,432],[-822,401],[-804,365],[-776,323],[-745,301],[-714,286],[-684,271],[-660,259],[-636,247],[-625,242],[-618,229],[-569,187]];
+  const LOOPN=[[-569,187],[-534,220],[-496,252],[-480,265],[-470,279],[-463,297],[-457,316],[-455,340],[-455,356],[-459,405],[-491.3,474.5],[-493.8,521.7],[-499.1,544.4],[-518.8,565.2],[-541.3,585.9],[-555.9,598.6],[-582.3,611.9],[-614.2,627.4],[-634,643],[-655,667],[-730,801],[-737,839],[-749,877],[-775,910],[-819,944],[-836,953],[-862,956],[-892,956],[-910,948],[-921,931],[-922,908],[-911,881],[-898,860],[-876,830],[-860,799],[-861,751],[-865,691],[-828,629],[-795,557],[-797,504],[-802,470],[-812,432],[-822,401],[-804,365],[-776,323],[-745,301],[-714,286],[-684,271],[-660,259],[-636,247],[-625,242],[-618,229],[-569,187]];
   const LOOP=RDEN(P(LOOPN),4);LAKE.loop=LOOP;LAKE.L=[0];for(let i=1;i<LOOP.length;i++)LAKE.L.push(LAKE.L[i-1]+Math.hypot(LOOP[i][0]-LOOP[i-1][0],LOOP[i][1]-LOOP[i-1][1]));LAKE.len=LAKE.L[LAKE.L.length-1];
   LAKE.r755=RDEN(R755,4);
   // 湖面（取代原本的橢圓湖）
@@ -2754,7 +2755,7 @@ const LAKE={on:false,sausage:0,poi:[],ghosts:[],people:[],stalls:[],boats:[]};wi
   LAKE.poi.unshift({name:'煙波大飯店',p:RTX.HPOS});
 })();
 /* ============ 環湖街景還原：林地、別墅、木棧步道、欄杆、湖面波紋、涼亭、石碑、溢洪道、碼頭、遠山；香腸攤細節與購買流程 ============ */
-(function(){if(!LAKE.loop)return;const Y=-1.5,T=REALT,LOOP=LAKE.loop,c0=T(-590,428);let sd=4242;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+(function(){if(!LAKE.loop)return;const Y=-1.5,T=LKT,LOOP=LAKE.loop,c0=T(-590,428);let sd=4242;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
   const lakeSide=(a,nx,nz)=>((a[0]+nx*5-c0[0])**2+(a[1]+nz*5-c0[1])**2)<((a[0]-nx*5-c0[0])**2+(a[1]-nz*5-c0[1])**2)?1:-1;
   const near=(p,list,rr)=>list.some(q=>Math.hypot(p[0]-q[0],p[1]-q[1])<rr);
   const keep=[LAKE.temple,LAKE.park,RTX.HPOS,...LAKE.stalls.map(s=>[s.x,s.z])];
@@ -2799,7 +2800,7 @@ const LAKE={on:false,sausage:0,poi:[],ghosts:[],people:[],stalls:[],boats:[]};wi
     const h=T(-522,168);const hill=new THREE.Mesh(new THREE.SphereGeometry(11,18,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:'#567d3f'}));hill.scale.y=.38;hill.position.set(h[0],Y-.2,h[1]);scene.add(hill);
     const ob=new THREE.Mesh(new THREE.BoxGeometry(.8,3.4,.8),M({color:'#d9d2c2'}));ob.position.set(h[0],Y+5.6,h[1]);scene.add(ob);const cap=new THREE.Mesh(new THREE.ConeGeometry(.6,.7,4),M({color:'#cfc9bc'}));cap.rotation.y=Math.PI/4;cap.position.set(h[0],Y+7.6,h[1]);scene.add(cap)}
   // 溢洪道（鳳凰橋外側）
-  {const a=T(-534,220),b=T(-496,252),dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz),nx=-dz/l,nz=dx/l,ls=lakeSide(a,nx,nz);const g=new THREE.Group();g.position.set((a[0]+b[0])/2-nx*ls*7,Y,(a[1]+b[1])/2-nz*ls*7);g.rotation.y=-Math.atan2(dz,dx);scene.add(g);
+  {const a=LKT(-534,220),b=LKT(-496,252),dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz),nx=-dz/l,nz=dx/l,ls=lakeSide(a,nx,nz);const g=new THREE.Group();g.position.set((a[0]+b[0])/2-nx*ls*7,Y,(a[1]+b[1])/2-nz*ls*7);g.rotation.y=-Math.atan2(dz,dx);scene.add(g);
     for(let k=0;k<5;k++){const s2=new THREE.Mesh(new THREE.BoxGeometry(l*.7,.5,1.4),M({color:'#b9b4aa'}));s2.position.set(0,-k*.55-.2,(-ls)*(k*1.3));g.add(s2)}const wt=ctex(64,64,(c,W,H)=>{c.fillStyle='rgba(240,248,255,.85)';c.fillRect(0,0,W,H);c.strokeStyle='rgba(180,205,220,.9)';for(let y=0;y<H;y+=6){c.beginPath();c.moveTo(0,y);c.lineTo(W,y+3);c.stroke()}});wt.wrapS=wt.wrapT=THREE.RepeatWrapping;
     const wf=new THREE.Mesh(new THREE.PlaneGeometry(l*.68,7),new THREE.MeshBasicMaterial({map:wt,transparent:true,opacity:.75,side:THREE.DoubleSide}));wf.rotation.x=-Math.PI/2+(-ls)*.38;wf.position.set(0,-1.1,(-ls)*2.6);g.add(wf);LAKE.fall=wt}
   // 浮筒碼頭、獨木舟、天鵝船、水域遊憩中心
@@ -2842,7 +2843,7 @@ function buySausage(st){if(LAKE.buy)return;const sa=makeSausage(true);sa.positio
   LAKE.buy={st,t:0,sa,ga,flakes:[],vp,done:false,said:0};say('你','老闆，香腸一支，加蒜頭！',1600);tone(1320,.08,'square',.05);setTimeout(()=>tone(1760,.12,'square',.05),90)}
 
 /* ============ 環湖美化與補完：草叢、花叢灌木、荷花池、SUP 立槳、映月橋上拍照的遊客、湖面質感 ============ */
-(function(){if(!LAKE.loop)return;const Y=-1.5,T=REALT,LOOP=LAKE.loop,c0=T(-590,428);let sd=9191;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
+(function(){if(!LAKE.loop)return;const Y=-1.5,T=LKT,LOOP=LAKE.loop,c0=T(-590,428);let sd=9191;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;
   const lakeSide=(a,nx,nz)=>((a[0]+nx*5-c0[0])**2+(a[1]+nz*5-c0[1])**2)<((a[0]-nx*5-c0[0])**2+(a[1]-nz*5-c0[1])**2)?1:-1;
   const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),V=new THREE.Vector3(),Sv=new THREE.Vector3(),col=new THREE.Color();
   // 草叢（道路兩側）、花叢灌木（步道邊）
@@ -2877,7 +2878,7 @@ function buySausage(st){if(LAKE.buy)return;const sa=makeSausage(true);sa.positio
   // 湖面質感
   {const wm=LAKE.water.material;wm.color.set('#3c7790');wm.roughness=.06;wm.metalness=.3;wm.envMapIntensity=1.7;wm.normalScale.set(.32,.32)}
 })();
-function lakeUpdate3(dt){if(LAKE.sups){const c0=REALT(-600,420);LAKE.sups.forEach((s,i)=>{s.a+=dt*.035*(i%2?1:-1);const x=c0[0]+Math.cos(s.a)*s.rx,z=c0[1]+Math.sin(s.a)*s.rz;s.g.position.set(x,-1.52+Math.sin(time*1.4+i)*.02,z);
+function lakeUpdate3(dt){if(LAKE.sups){const c0=LKT(-600,420);LAKE.sups.forEach((s,i)=>{s.a+=dt*.035*(i%2?1:-1);const x=c0[0]+Math.cos(s.a)*s.rx,z=c0[1]+Math.sin(s.a)*s.rz;s.g.position.set(x,-1.52+Math.sin(time*1.4+i)*.02,z);
     const dx=-Math.sin(s.a)*s.rx*(i%2?1:-1),dz=Math.cos(s.a)*s.rz*(i%2?1:-1);s.g.rotation.y=-Math.atan2(dz,dx);s.g.rotation.z=Math.sin(time*1.1+i)*.02;s.pd.rotation.z=Math.sin(time*1.6+i)*.7;s.pd.position.z=Math.sin(time*1.6+i)>0?.35:-.35;s.H.arms[1].rotation.x=-.9+Math.sin(time*1.6+i)*.4})}
   if(LAKE.photo)LAKE.photo.forEach(p=>{if(p.k==='pose')p.H.body.rotation.y=Math.sin(time*.7+p.ph)*.12;else p.H.body.rotation.y=Math.sin(time*.4+p.ph)*.05})}
 
@@ -2913,7 +2914,7 @@ function lakeUpdate3(dt){if(LAKE.sups){const c0=REALT(-600,420);LAKE.sups.forEac
   LAKE.domes=domes;
   // 4) 觀光入口布置：歡迎旗幟、導覽地圖看板、停車場與機車
   {const L0=LOOP,st=LAKE.stalls[0];const flagT=['#d23c3c','#f2c21a','#2f6fb3','#2f8a5c','#ff6fa8'];
-    for(let i=0;i<8;i++){const p=L0[Math.min(L0.length-1,2+i*3)],b=L0[Math.min(L0.length-1,3+i*3)],dx=b[0]-p[0],dz=b[1]-p[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;const c1=REALT(-590,428),land=((p[0]+nx*5-c1[0])**2+(p[1]+nz*5-c1[1])**2)<((p[0]-nx*5-c1[0])**2+(p[1]-nz*5-c1[1])**2)?-1:1;for(const sg of[land]){const x=p[0]+nx*sg*7.2,z=p[1]+nz*sg*7.2;
+    for(let i=0;i<8;i++){const p=L0[Math.min(L0.length-1,2+i*3)],b=L0[Math.min(L0.length-1,3+i*3)],dx=b[0]-p[0],dz=b[1]-p[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;const c1=LKT(-590,428),land=((p[0]+nx*5-c1[0])**2+(p[1]+nz*5-c1[1])**2)<((p[0]-nx*5-c1[0])**2+(p[1]-nz*5-c1[1])**2)?-1:1;for(const sg of[land]){const x=p[0]+nx*sg*7.2,z=p[1]+nz*sg*7.2;
       const pole=new THREE.Mesh(new THREE.CylinderGeometry(.04,.05,4.2,6),M({color:'#d9d2c2'}));pole.position.set(x,Y+2.1,z);scene.add(pole);const fl=new THREE.Mesh(new THREE.PlaneGeometry(.5,1.5),new THREE.MeshLambertMaterial({color:flagT[i%5],side:THREE.DoubleSide}));fl.position.set(x+dx/l*.27,Y+3.3,z+dz/l*.27);fl.rotation.y=-Math.atan2(dz,dx);scene.add(fl);(LAKE.flags||(LAKE.flags=[])).push(fl)}}
     const mp=T=>T;const bp=L0[12],bq=L0[13],dx=bq[0]-bp[0],dz=bq[1]-bp[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
     const mt=ctex(512,320,(c,W,H)=>{c.fillStyle='#2f5d3a';c.fillRect(0,0,W,H);c.fillStyle='#f4efe0';c.fillRect(14,58,W-28,H-72);c.fillStyle='#fff';c.font='900 40px "Noto Sans TC",sans-serif';c.textAlign='center';c.fillText('青草湖風景區 導覽圖',W/2,44);
@@ -3092,14 +3093,14 @@ function lakeUpdate3(dt){if(LAKE.sups){const c0=REALT(-600,420);LAKE.sups.forEac
         const wl=box(w,1.4,.45,stoneM(w),a[0]+nx*sg*(4.2+2.6),Y+.7,a[1]+nz*sg*(4.2+2.6),-Math.atan2(dz,dx),true)}}
     groundText('慢',...add(add(C,unit(C,G.EAST[2]),34),[-unit(C,G.EAST[2])[1],unit(C,G.EAST[2])[0]],2.1),1.8,Math.atan2(unit(C,G.EAST[2])[1],unit(C,G.EAST[2])[0]))}
   // 3) 鳳凰橋：白色水泥護欄牆、灰色石塊擋土牆＋樹叢竹林、紅線、紅色直條旗
-  {const a=T(-534,220),b=T(-496,252),dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz),ux=dx/l,uz=dz/l,nx=-uz,nz=ux;const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  {const a=LKT(-534,220),b=LKT(-496,252),dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz),ux=dx/l,uz=dz/l,nx=-uz,nz=ux;const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
     for(const sg of[1,-1])box(l+4,.95,.3,M({color:'#f0eee8'}),mid[0]+nx*sg*3.75,Y+.48,mid[1]+nz*sg*3.75,-Math.atan2(dz,dx),true);
-    const L0=LAKE.loop,c0=T(-590,428);for(let i=0;i<20;i+=2){const p=L0[i],q=L0[i+2],ddx=q[0]-p[0],ddz=q[1]-p[1],ll=Math.hypot(ddx,ddz)||1,mx=-ddz/ll,mz=ddx/ll;const ls=((p[0]+mx*5-c0[0])**2+(p[1]+mz*5-c0[1])**2)<((p[0]-mx*5-c0[0])**2+(p[1]-mz*5-c0[1])**2)?1:-1;
+    const L0=LAKE.loop,c0=LKT(-590,428);for(let i=0;i<20;i+=2){const p=L0[i],q=L0[i+2],ddx=q[0]-p[0],ddz=q[1]-p[1],ll=Math.hypot(ddx,ddz)||1,mx=-ddz/ll,mz=ddx/ll;const ls=((p[0]+mx*5-c0[0])**2+(p[1]+mz*5-c0[1])**2)<((p[0]-mx*5-c0[0])**2+(p[1]-mz*5-c0[1])**2)?1:-1;
       if(Math.hypot(p[0]-mid[0],p[1]-mid[1])<l/2+3)continue;if(LAKE.stalls.some(st=>Math.hypot(st.x-p[0],st.z-p[1])<40))continue;const o=-ls*5.2;box(ll+.2,2.3,.8,stoneM(ll),p[0]+ddx/2+mx*o,Y+1.15,p[1]+ddz/2+mz*o,-Math.atan2(ddz,ddx),true);clump(p[0]+mx*(-ls*8.2),p[1]+mz*(-ls*8.2),10)}
     for(const k of[-1,1]){const pp=[mid[0]+ux*k*(l/2+6)+nx*4.6,mid[1]+uz*k*(l/2+6)+nz*4.6];const po=new THREE.Mesh(new THREE.CylinderGeometry(.1,.12,6,8),M({color:'#bdb8ad'}));po.position.set(pp[0],Y+3,pp[1]);scene.add(po);
       const fl=new THREE.Mesh(new THREE.PlaneGeometry(.55,1.7),new THREE.MeshLambertMaterial({map:ctex(64,192,(c,W,H)=>{c.fillStyle='#d23c3c';c.fillRect(0,0,W,H);c.fillStyle='#fff';c.font='900 30px "Noto Sans TC",sans-serif';c.textAlign='center';['青','草','湖'].forEach((ch,i)=>c.fillText(ch,W/2,48+i*52))}),side:THREE.DoubleSide}));fl.position.set(pp[0]+.35,Y+4.4,pp[1]);fl.rotation.y=-Math.atan2(dz,dx);scene.add(fl)}}
   // 4) 靈隱寺外牆段：白牆、黃色花窗、紅磚柱、石塊牆基；牆後竹林；對側地磚步道、矮柱、現代路燈
-  {const L0=LAKE.loop,tc=LAKE.temple,c0=T(-590,428);const latT=ctex(64,64,(c,W,H)=>{c.fillStyle='#e9c46a';c.fillRect(0,0,W,H);c.strokeStyle='#b8862e';c.lineWidth=5;for(let i=-W;i<W*2;i+=16){c.beginPath();c.moveTo(i,0);c.lineTo(i+W,H);c.stroke();c.beginPath();c.moveTo(i+W,0);c.lineTo(i,H);c.stroke()}});
+  {const L0=LAKE.loop,tc=LAKE.temple,c0=LKT(-590,428);const latT=ctex(64,64,(c,W,H)=>{c.fillStyle='#e9c46a';c.fillRect(0,0,W,H);c.strokeStyle='#b8862e';c.lineWidth=5;for(let i=-W;i<W*2;i+=16){c.beginPath();c.moveTo(i,0);c.lineTo(i+W,H);c.stroke();c.beginPath();c.moveTo(i+W,0);c.lineTo(i,H);c.stroke()}});
     const whiteM=M({color:'#f2f0ea'}),brickM=M({color:'#a8452e'}),latM=new THREE.MeshLambertMaterial({map:latT});const idx=L0.map((p,i)=>[Math.hypot(p[0]-tc[0],p[1]-tc[1]),i]).sort((a,b)=>a[0]-b[0])[0][1];
     for(let i=Math.max(1,idx-28);i<Math.min(L0.length-2,idx+28);i+=1){const p=L0[i],q=L0[i+1],ddx=q[0]-p[0],ddz=q[1]-p[1],ll=Math.hypot(ddx,ddz)||1,mx=-ddz/ll,mz=ddx/ll;const ls=((p[0]+mx*5-c0[0])**2+(p[1]+mz*5-c0[1])**2)<((p[0]-mx*5-c0[0])**2+(p[1]-mz*5-c0[1])**2)?1:-1;
       const o=-ls*5.6,cx=p[0]+ddx/2+mx*o,cz=p[1]+ddz/2+mz*o,ry=-Math.atan2(ddz,ddx);if(LAKE.nearDrive&&LAKE.nearDrive(cx,cz,6.5))continue;box(ll+.05,.6,.5,stoneM(ll),cx,Y+.3,cz,ry,true);box(ll+.05,1.5,.32,whiteM,cx,Y+1.35,cz,ry);box(ll+.1,.12,.42,M({color:'#9a8f7a'}),cx,Y+2.15,cz,ry);
@@ -3120,7 +3121,7 @@ function lakeUpdate3(dt){if(LAKE.sups){const c0=REALT(-600,420);LAKE.sups.forEac
 function realismUpdate(dt){if(LAKE.flash){const on=Math.floor(time*1.6)%2===0;LAKE.flash.forEach(l=>l.material.color.set(on?'#ffc21a':'#4a3a0a'))}}
 
 /* ---- 環湖入口攤販廣場：地磚、塑膠桌椅、串燈、垃圾桶；靈隱寺香爐裊裊香煙；文字對話框 ---- */
-(function(){if(!LAKE.loop||!LAKE.stalls.length)return;const Y=-1.5,L0=LAKE.loop,c0=REALT(-590,428);
+(function(){if(!LAKE.loop||!LAKE.stalls.length)return;const Y=-1.5,L0=LAKE.loop,c0=LKT(-590,428);
   const sx=LAKE.stalls.reduce((a,s)=>a+s.x,0)/LAKE.stalls.length,sz=LAKE.stalls.reduce((a,s)=>a+s.z,0)/LAKE.stalls.length;
   const pav=ctex(64,64,(c,W,H)=>{c.fillStyle='#b9b4aa';c.fillRect(0,0,W,H);c.strokeStyle='#9e998f';c.lineWidth=2;for(let i=0;i<=W;i+=16){c.beginPath();c.moveTo(i,0);c.lineTo(i,H);c.stroke();c.beginPath();c.moveTo(0,i);c.lineTo(W,i);c.stroke()}});pav.wrapS=pav.wrapT=THREE.RepeatWrapping;pav.repeat.set(.5,.5);
   const pm=new THREE.MeshLambertMaterial({map:pav,side:THREE.DoubleSide});const pos=[],uv=[];
@@ -3145,7 +3146,7 @@ function plazaUpdate(dt){if(LAKE.incSm&&Math.abs(S.x-LAKE.incense.x)<200&&Math.a
 let DLG_T=0;function say(who,text,ms=2800){const d=$('#dlg');if(!d)return;d.innerHTML=`<b>${who}</b>${text}`;d.classList.add('on');clearTimeout(DLG_T);DLG_T=setTimeout(()=>d.classList.remove('on'),ms)}
 
 /* ---- 湖邊生態與休憩：白鷺鷥（站岸邊、低空飛過）、步道長椅與坐著休息的人 ---- */
-(function(){if(!LAKE.loop)return;const Y=-1.5,T=REALT;let sd=8080;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;LAKE.birds=[];
+(function(){if(!LAKE.loop)return;const Y=-1.5,T=LKT;let sd=8080;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;LAKE.birds=[];
   const egret=()=>{const g=new THREE.Group(),w=MCOL('#fbfbf6'),y=MCOL('#e8b33a'),k=MCOL('#2a2a2a');const b=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),w);b.scale.set(1.6,.8,.8);b.position.y=.62;g.add(b);
     const n=new THREE.Mesh(new THREE.CylinderGeometry(.035,.05,.45,6),w);n.position.set(.28,.85,0);n.rotation.z=-.5;g.add(n);const hd=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),w);hd.position.set(.4,1.05,0);g.add(hd);const bk=new THREE.Mesh(new THREE.ConeGeometry(.025,.2,6),y);bk.rotation.z=-Math.PI/2;bk.position.set(.54,1.05,0);g.add(bk);
     for(const z of[-.06,.06]){const l=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.5,4),k);l.position.set(0,.25,z);g.add(l)}const wings=[];for(const sgn of[-1,1]){const wg=new THREE.Mesh(new THREE.PlaneGeometry(.5,.6),w);wg.position.set(0,.66,sgn*.3);wg.rotation.x=Math.PI/2;g.add(wg);wings.push(wg)}g.userData.wings=wings;return g};
@@ -3158,7 +3159,7 @@ let DLG_T=0;function say(who,text,ms=2800){const d=$('#dlg');if(!d)return;d.inne
     if(r()<.75){const n=r()<.4?2:1;for(let k=0;k<n;k++){const H=makeHuman(['#e8e4da','#c2352b','#2f5d8a','#8a5aa8','#e07b39'][(i+k)%5],['#2a2a2a','#1f3f6b'][k],'#1d1b1a',k===0&&r()<.4?{hat:'#e8d36a'}:{});H.g.position.set(-.35+k*.7,-.42,.05);g.add(H.g);poseHuman(H,0,0);
       H.legs[0].rotation.x=-1.5;H.legs[1].rotation.x=-1.5;H.knees[0].rotation.x=1.5;H.knees[1].rotation.x=1.5;H.arms[0].rotation.x=-.3;H.arms[1].rotation.x=-.3;H.elbows[0].rotation.x=-.6;H.elbows[1].rotation.x=-.6}}}
 })();
-function faunaUpdate(dt){if(!LAKE.birds)return;const c0=REALT(-600,430);LAKE.birds.forEach((b,i)=>{if(b.kind==='stand'){b.g.children[2].position.y=1.05+Math.max(0,Math.sin(time*.7+b.ph))*.05;return}
+function faunaUpdate(dt){if(!LAKE.birds)return;const c0=LKT(-600,430);LAKE.birds.forEach((b,i)=>{if(b.kind==='stand'){b.g.children[2].position.y=1.05+Math.max(0,Math.sin(time*.7+b.ph))*.05;return}
   b.a+=dt*b.sp;const x=c0[0]+Math.cos(b.a)*b.rad,z=c0[1]+Math.sin(b.a)*b.rad*.6;b.g.position.set(x,-1.5+b.h+Math.sin(time*.8+i)*.6,z);b.g.rotation.y=-b.a-Math.PI/2+Math.PI;const f=Math.sin(time*7+i)*.7;b.g.userData.wings[0].rotation.x=Math.PI/2+f;b.g.userData.wings[1].rotation.x=Math.PI/2-f})}
 
 /* ============ 路考街景精緻化：電線、路燈、機車停放列、樹冠升級 ============ */
@@ -3197,7 +3198,7 @@ function faunaUpdate(dt){if(!LAKE.birds)return;const c0=REALT(-600,430);LAKE.bir
 })();
 
 /* ============ 環湖道路車流（機車＋汽車，靠右行駛）與步道上更多遊客 ============ */
-(function(){if(!LAKE.loop)return;const Y=-1.5,L=LAKE.loop,Lc=[0];for(let i=1;i<L.length;i++)Lc.push(Lc[i-1]+Math.hypot(L[i][0]-L[i-1][0],L[i][1]-L[i-1][1]));const len=Lc[Lc.length-1],c0=REALT(-590,428);
+(function(){if(!LAKE.loop)return;const Y=-1.5,L=LAKE.loop,Lc=[0];for(let i=1;i<L.length;i++)Lc.push(Lc[i-1]+Math.hypot(L[i][0]-L[i-1][0],L[i][1]-L[i-1][1]));const len=Lc[Lc.length-1],c0=LKT(-590,428);
   const at=s=>{s=((s%len)+len)%len;let lo=0,hi=Lc.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(Lc[m]<s)lo=m;else hi=m}const a=L[lo],b=L[hi],f=(s-Lc[lo])/Math.max(.01,Lc[hi]-Lc[lo]);return{x:a[0]+(b[0]-a[0])*f,z:a[1]+(b[1]-a[1])*f,th:Math.atan2(b[1]-a[1],b[0]-a[0])}};LAKE.atS=at;LAKE.lenS=len;
   let sd=4711;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;LAKE.trf=[];const cols=['#4fb3e0','#c2352b','#f4f4f2','#1d1d1d','#f2c21a','#9aa3a8','#2f6fb3'],ccols=['#f4f4f2','#1d1f22','#9aa3a8','#8a1c14','#2f4f7a','#c9b48a'],types=Object.keys(CARTYPES);
   for(let k=0;k<14;k++){const scoot=k<10,dir=k%2?1:-1;const g=new THREE.Group();scene.add(g);let wheels=null;
@@ -3207,7 +3208,7 @@ function faunaUpdate(dt){if(!LAKE.birds)return;const c0=REALT(-600,430);LAKE.bir
   // 步道遊客
   LAKE.walk2=[];for(let k=0;k<16;k++){const H=makeHuman(['#e8e4da','#f2c21a','#8a5aa8','#2f8a5c','#c2352b','#2f5d8a','#e07b39','#ffffff'][k%8],['#2a2a2a','#1f3f6b','#7a8796'][k%3],'#1d1b1a',k%5===0?{umb:['#ff9cc2','#7fc8ff','#ffd56a'][k%3]}:k%3===0?{hat:'#e8d36a'}:{});scene.add(H.g);LAKE.walk2.push({H,s:r()*len,dir:k%2?1:-1,v:1.0+r()*.5,ph:r()*6,pause:0,next:r()*12})}
 })();
-function lakeTraffic(dt){if(!LAKE.trf)return;const at=LAKE.atS,len=LAKE.lenS,c0=REALT(-590,428);
+function lakeTraffic(dt){if(!LAKE.trf)return;const at=LAKE.atS,len=LAKE.lenS,c0=LKT(-590,428);
   LAKE.trf.forEach((c,i)=>{if(c.taken||c.parked)return;const p0=at(c.s),hd=c.dir>0?p0.th:p0.th+Math.PI;let tgt=c.v;const fx=Math.cos(hd),fz=Math.sin(hd);
     const dxp=S.x-p0.x,dzp=S.y-p0.z,ahead=dxp*fx+dzp*fz,lat=Math.abs(-dxp*fz+dzp*fx);if(ahead>0&&ahead<13&&lat<3.2)tgt=ahead<6?0:tgt*.4;
     LAKE.trf.forEach(o=>{if(o===c||o.dir!==c.dir)return;let ds=(o.s-c.s)*c.dir;ds=((ds%len)+len)%len;if(ds<9)tgt=Math.min(tgt,ds<5?0:o.cur)});
@@ -3334,7 +3335,7 @@ let BD_T=-1;function bikeDash(){if(time-BD_T<.05&&time>=BD_T)return;BD_T=time;co
   cars.slice(0,26).forEach(([x,z,a],k)=>{const m=makeCarModel(types[k%types.length],cc[k%cc.length]);m.position.set(x-Math.cos(a)*1.35,Y,z-Math.sin(a)*1.35);m.rotation.y=-a;scene.add(m);addOBB(x,z,a,2.3,.95)});
   // 重機：改停在路考道路路邊（可直接騎走），不再放在香腸攤旁
   HEAVY.list.forEach(h=>{scene.remove(h.g)});HEAVY.list.length=0;const spots=[];RTX.roads.forEach(Rd=>{if(Rd.name==='環湖道路'||Rd.name==='靈隱寺車道'||!Rd.hw)return;for(let i=20;i<Rd.P.length-2;i+=55){const a=Rd.P[i],b=Rd.P[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;const x=a[0]+(-dz/l)*(Rd.hw-.7),z=a[1]+(dx/l)*(Rd.hw-.7);if(rtInJunction&&rtInJunction(x,z))continue;spots.push([x,z,Math.atan2(dz,dx)])}});
-  {const L=LAKE.loop;if(L){for(const i of[60,180,300]){const a=L[i],b=L[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,c0=REALT(-590,428);const ls=((a[0]-dz/l*5-c0[0])**2+(a[1]+dx/l*5-c0[1])**2)<((a[0]+dz/l*5-c0[0])**2+(a[1]-dx/l*5-c0[1])**2)?1:-1;spots.push([a[0]+(-dz/l)*-ls*2.7,a[1]+(dx/l)*-ls*2.7,Math.atan2(dz,dx)])}}}
+  {const L=LAKE.loop;if(L){for(const i of[60,180,300]){const a=L[i],b=L[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,c0=LKT(-590,428);const ls=((a[0]-dz/l*5-c0[0])**2+(a[1]+dx/l*5-c0[1])**2)<((a[0]+dz/l*5-c0[0])**2+(a[1]-dx/l*5-c0[1])**2)?1:-1;spots.push([a[0]+(-dz/l)*-ls*2.7,a[1]+(dx/l)*-ls*2.7,Math.atan2(dz,dx)])}}}
   spots.slice(0,10).forEach(([x,z,a],k)=>{const g=new THREE.Group();g.position.set(x,Y,z);g.rotation.y=-a+.35;scene.add(g);g.add(makeBigBike(['#1d1d1f','#c8102e','#2a6fd6','#e8e8ea','#f2c21a'][k%5]));HEAVY.list.push({kind:'scoot',heavy:true,g,v:0,parked:true,taken:false})});
 })();
 
@@ -3353,7 +3354,7 @@ let BD_T=-1;function bikeDash(){if(time-BD_T<.05&&time>=BD_T)return;BD_T=time;co
 
 function lakeUpdate(dt){if(!LAKE.loop)return;heavyRumble();lakeTraffic(dt);lakeUpdate2(dt);plazaUpdate(dt);faunaUpdate(dt);lakeHoldUpdate(dt);lakeUpdate3(dt);if(LAKE.rings&&LAKE.rings[0].visible!==LAKE.on)LAKE.showVista(LAKE.on);if(LAKE.on&&LAKE.vgrp)LAKE.vgrp.position.set(S.x,0,S.y);if(LAKE.flags&&LAKE.on)LAKE.flags.forEach((f,i)=>f.rotation.x=Math.sin(time*3+i)*.12);const near=(x,z,r)=>Math.abs(S.x-x)<r&&Math.abs(S.y-z)<r;
   LAKE.stalls.forEach(st=>{if(!near(st.x,st.z,140))return;st.smokes.forEach((o,i)=>{o.t+=dt;if(o.t>3.2)o.t=0;o.s.position.set(-.5+(i%5)*.25+Math.sin(o.t*1.6+i)*.25+o.t*.15,1.35+o.t*1.05,Math.cos(o.t*1.3+i)*.15);o.s.material.opacity=.55*(o.t<.3?o.t/.3:1-(o.t-.3)/2.9);const k=.45+o.t*.75;o.s.scale.set(k,k,1)})});
-  const c0=REALT(-590,428);
+  const c0=LKT(-590,428);
   LAKE.people.forEach((p,i)=>{if(p.k==='fish'){if(p.rod)p.rod.rotation.z=Math.sin(time*.8+i)*.04;return}if(!near(p.root.position.x,p.root.position.z,220)&&p.inited)return;p.inited=true;
     if(!p.nextP)p.nextP=time+4+Math.random()*12;if(time>p.nextP){p.pauseU=time+(p.k==='walk'||p.k==='dog'?2+Math.random()*3:0);p.nextP=time+10+Math.random()*16}const pz=p.pauseU>time;p.s=(p.s+p.v*(pz?0:1)*(p.H.startle>time?1.9:1)*(.92+.1*Math.sin(time*.3+i))*p.dir*dt+LAKE.len)%LAKE.len;let j=1;while(j<LAKE.L.length-1&&LAKE.L[j]<p.s)j++;const a=LAKE.loop[j-1],b=LAKE.loop[j],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l,f=(p.s-LAKE.L[j-1])/l;
     const sg=((a[0]+nx*5-c0[0])**2+(a[1]+nz*5-c0[1])**2)<((a[0]-nx*5-c0[0])**2+(a[1]-nz*5-c0[1])**2)?1:-1;const x=a[0]+dx*f+nx*sg*p.off,z=a[1]+dz*f+nz*sg*p.off;
@@ -3368,7 +3369,7 @@ function lakeUpdate(dt){if(!LAKE.loop)return;heavyRumble();lakeTraffic(dt);lakeU
   ghostAudio(creepy)}
 let GHA=null;function ghostAudio(k){const C=AU.c;if(!C||!sound)return;if(!GHA){const o=C.createOscillator(),o2=C.createOscillator(),g=C.createGain(),lf=C.createOscillator(),lg=C.createGain();o.type='sine';o.frequency.value=58;o2.type='triangle';o2.frequency.value=87.5;lf.frequency.value=.18;lg.gain.value=6;lf.connect(lg);lg.connect(o2.frequency);o.connect(g);o2.connect(g);g.gain.value=0;g.connect(C.destination);o.start();o2.start();lf.start();GHA={g}}GHA.g.gain.setTargetAtTime(LAKE.on?k*.05:0,C.currentTime,.4)}
 function lakeDrawMap(c,W,H){const sc=.36,cyR=H*.55;c.fillStyle='#e9ecdf';c.fillRect(0,0,W,H);c.save();c.translate(W/2,cyR);c.rotate(-S.th-Math.PI/2);c.scale(sc,sc);c.translate(-S.x,-S.y);c.lineCap='round';c.lineJoin='round';
-  c.fillStyle='#8fb1d4';c.beginPath();LAKE.water&&(()=>{})();const Lo=[[-554,231],[-578,245],[-591,272],[-616,270],[-713,307],[-691,349],[-689,373],[-662,415],[-721,469],[-758,534],[-752,557],[-662,601],[-650,620],[-633,605],[-614,598],[-574,577],[-548,554],[-523,524],[-497,442],[-484,378],[-503,371],[-506,342],[-505,319],[-491,303],[-504,277],[-500,254],[-517,239],[-533,227]].map(q=>REALT(q[0],q[1]));Lo.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();
+  c.fillStyle='#8fb1d4';c.beginPath();LAKE.water&&(()=>{})();const Lo=[[-554,231],[-578,245],[-591,272],[-616,270],[-713,307],[-691,349],[-689,373],[-662,415],[-721,469],[-758,534],[-752,557],[-662,601],[-650,620],[-633,605],[-614,598],[-574,577],[-548,554],[-523,524],[-497,442],[-484,378],[-503,371],[-506,342],[-505,319],[-491,303],[-504,277],[-500,254],[-517,239],[-533,227]].map(q=>LKT(q[0],q[1]));Lo.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();
   c.strokeStyle='#ffffff';c.lineWidth=12;c.beginPath();LAKE.loop.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();c.beginPath();LAKE.r755.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
   c.strokeStyle='#2f8a5c';c.lineWidth=5;c.beginPath();LAKE.loop.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
   LAKE.poi.forEach(o=>{c.save();c.translate(o.p[0],o.p[1]);c.rotate(S.th+Math.PI/2);c.fillStyle=o.name.includes('香腸')?'#c2352b':o.name.includes('鬼')?'#5a3a7a':'#1f5fb4';c.beginPath();c.arc(0,0,11,0,7);c.fill();c.fillStyle='#fff';c.font='900 14px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(o.name.includes('香腸')?'腸':o.name.includes('鬼')?'鬼':o.name[0],0,1);c.restore()});
@@ -3873,7 +3874,7 @@ function makeCarModel(type,color,opt){const T=car4Spec(type),root=new THREE.Grou
   add(G.paint,paint,1);add(G.glass,M.glass);add(G.misc,M.misc,1);add(G.metal,M.metal,1);add(G.head,M.head);add(G.amber,M.amber);add(G.grille,M.grille);
   let h=0;for(const ch of String(color))h=(h*31+ch.charCodeAt(0))>>>0;add(G.plate,M.plates[h%4]);
   const tl=add(G.tail,opt&&opt.parked?(M.tailP||(M.tailP=new THREE.MeshStandardMaterial({color:'#7a0c08',emissive:'#330000',emissiveIntensity:1,roughness:.18,metalness:.25}))):new THREE.MeshStandardMaterial({color:'#7a0c08',emissive:'#330000',emissiveIntensity:1,roughness:.18,metalness:.25}));root.userData.tails=[tl];
-  if(opt&&opt.driver){const D=C.drv||(C.drv=car4Driver());const d=new THREE.Mesh(D,M.misc);d.position.set(T.bx+.02,G.seat-.325,0);root.add(d)}
+  if(opt&&opt.driver){const D=C.drv||(C.drv=car4Driver());const d=new THREE.Mesh(D,M.misc);d.position.set(T.bx+.02,G.seat-.325,0);d.userData.drv=1;root.add(d)}
   const blb=new THREE.Mesh(G.blob,HUM.blobM);root.add(blb);return root}
 // 幾何上色：轉成非索引並寫入頂點色
 function c4col(G,h){const c=new THREE.Color(h);G=G.index?G.toNonIndexed():G;const n=G.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++){a[i*3]=c.r;a[i*3+1]=c.g;a[i*3+2]=c.b}G.setAttribute('color',new THREE.BufferAttribute(a,3));return G}
@@ -4146,7 +4147,7 @@ function sceneFill(){try{const t0=performance.now(),Y=-1.5,R=vRnd(913),S=sceneFi
     const nm=nr?nr.nm:'',rural=/柴橋|東香|新香|環湖|靈隱|1006|1008|出入|客雅/.test(nm),villa=/東段/.test(nm);if(rural&&R()<.82)continue;if(!nr||nr.d>60){if(R()<.55)continue}
     const road=nr&&nr.d<26&&!rural&&!villa,n=road?3:1,park=road&&nr.hw>=4&&R()<.32,setb=villa||rural?6.5:0;for(let u=0;u<n;u++){const w=road?5+R()*2.6:villa?9+R()*4:7+R()*5,d=road?11+R()*5:villa?10+R()*4:8+R()*5,fl=(road?3:villa?3:2)+Math.floor(R()*(road?3:2))+(R()<.06&&!rural?4:0);
       let bx,bz;const off=(u-(n-1)/2)*(road?w+.15:w+2.5);if(road||(setb&&nr&&nr.d<40)){const base=nr.hw+(park?5.2:setb?setb:1.8)+d/2;bx=nr.px+nx*base+ux*(off+(cx-nr.px)*ux+(cz-nr.pz)*uz);bz=nr.pz+nz*base+uz*(off+(cx-nr.px)*ux+(cz-nr.pz)*uz)}else{bx=cx+ux*off;bz=cz+uz*off}
-      if(skip(bx,bz)||!isB(bx,bz)&&!road)continue;let ok=true;for(const[s1,s2]of[[1,1],[1,-1],[-1,1],[-1,-1]]){const qx=bx+ux*s1*w/2+nx*s2*d/2,qz=bz+uz*s1*w/2+nz*s2*d/2;if(!RTX.roadClear(qx,qz,.5)){ok=false;break}}
+      if(skip(bx,bz)||!isB(bx,bz)&&!road)continue;let ok=true;for(const[s1,s2]of[[1,1],[1,-1],[-1,1],[-1,-1],[0,0],[1,0],[-1,0],[0,1],[0,-1]]){const qx=bx+ux*s1*w/2+nx*s2*d/2,qz=bz+uz*s1*w/2+nz*s2*d/2;if(!RTX.roadClear(qx,qz,.5)){ok=false;break}}
       if(!ok||blocked(bx,bz,Math.min(w,d)*.45))continue;if(BL.some(b=>Math.abs(b.x-bx)<(b.r+Math.max(w,d)/2)*.8&&Math.abs(b.z-bz)<(b.r+Math.max(w,d)/2)*.8&&Math.hypot(b.x-bx,b.z-bz)<(b.r+Math.max(w,d)/2)*.75))continue;
       BL.push({x:bx,z:bz,ux,uz,nx,nz,w,d,fl,r:Math.max(w,d)/2,road,park,villa:villa&&nr&&nr.d<40,hw:nr?nr.hw:0,rx:nr?nr.px+ux*(off+(cx-nr.px)*ux+(cz-nr.pz)*uz):0,rz:nr?nr.pz+uz*(off+(cx-nr.px)*ux+(cz-nr.pz)*uz):0})}}
   // ---- 幾何：外牆（磁磚貼圖、每棟不同色調）、屋頂、鐵皮加蓋、水塔、天線、雨遮、招牌 ----
@@ -4546,7 +4547,7 @@ function buildTerrain(){const Y=-1.5,pts=[],add=(x,z,r)=>pts.push(x,z,r);
   RTX.roads.forEach(Rd=>{const Q=Rd.P,rr=(Rd.hw||4)+15;for(let i=0;i<Q.length-1;i++){const a=Q[i],b=Q[i+1],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.ceil(L/9));for(let k=0;k<n;k++)add(a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n,rr)}if(Q.length)add(Q[Q.length-1][0],Q[Q.length-1][1],rr)});
   OBO.forEach(o=>add(o.cx,o.cy,Math.hypot(o.hl||1,o.hw||1)+9));OBC.forEach(c=>add(c.x,c.y,(c.r||.3)+5));if(LAKE.loop)LAKE.loop.forEach(p=>add(p[0],p[1],24));
   for(let x=-30;x<=210;x+=12)for(let z=-30;z<=170;z+=12)add(x,z,26);(window.VFLAT||[]).forEach(q=>add(q[0],q[1],q[2]));
-  const lake=[[-554,231],[-578,245],[-591,272],[-616,270],[-713,307],[-691,349],[-689,373],[-662,415],[-721,469],[-758,534],[-752,557],[-662,601],[-650,620],[-633,605],[-614,598],[-574,577],[-548,554],[-523,524],[-497,442],[-484,378],[-503,371],[-506,342],[-505,319],[-491,303],[-504,277],[-500,254],[-517,239],[-533,227]].map(q=>REALT(q[0],q[1]));
+  const lake=[[-554,231],[-578,245],[-591,272],[-616,270],[-713,307],[-691,349],[-689,373],[-662,415],[-721,469],[-758,534],[-752,557],[-662,601],[-650,620],[-633,605],[-614,598],[-574,577],[-548,554],[-523,524],[-497,442],[-484,378],[-503,371],[-506,342],[-505,319],[-491,303],[-504,277],[-500,254],[-517,239],[-533,227]].map(q=>LKT(q[0],q[1]));
   const inLake=(x,z)=>{let c=false;for(let i=0,j=lake.length-1;i<lake.length;j=i++){const a=lake[i],b=lake[j];if(((a[1]>z)!==(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))c=!c}return c};
   let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(let i=0;i<pts.length;i+=3){x0=Math.min(x0,pts[i]);x1=Math.max(x1,pts[i]);z0=Math.min(z0,pts[i+1]);z1=Math.max(z1,pts[i+1])}const MG=300;x0-=MG;x1+=MG;z0-=MG;z1+=MG;
   const C=40,Hs=new Map();for(let i=0;i<pts.length;i+=3){const k=Math.floor(pts[i]/C)*100003+Math.floor(pts[i+1]/C);let L=Hs.get(k);if(!L)Hs.set(k,L=[]);L.push(i)}
@@ -4657,8 +4658,8 @@ function staticBatch(){try{const C=SB.CELL,keys=new Map(),v=new THREE.Vector3();
 resetState();resetStations();syncUI();resize();drawCluster();
 // 載入最後幾步分段執行：每一步之前先讓載入畫面更新；首幀（編譯材質、上傳貼圖）在載入畫面下完成，進入遊戲後不再卡頓
 (async()=>{const T=[performance.now()],ld=document.getElementById('loading'),paint=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))),step=(t,p)=>{if(window.LD)LD.set(p,t);return paint()};
-  await step('鋪設明湖路與沿路街景…',.42);try{if(window.elevStart)elevStart()}catch(e){}try{visBuild()}catch(e){console.error("VIS",e)}T.push(performance.now());
-  await step('依地形計算道路起伏…',.6);const _te=performance.now();try{if(window.elevPass)await elevPass()}catch(e){console.error('ELEV',e)}try{if(window.map8Build)map8Build()}catch(e){console.error('MAP8',e)}try{if(window.cab9Build)cab9Build()}catch(e){console.error('CAB9',e)}try{if(window.dash10Build)dash10Build()}catch(e){console.error('DASH10',e)}try{if(window.car10Build)car10Build()}catch(e){console.error('CAR10',e)}try{if(typeof gate11Build==='function')gate11Build()}catch(e){console.error('GATE11',e)}try{if(typeof hotel13Build==='function')hotel13Build()}catch(e){console.error('HOTEL13',e)}try{if(typeof temple26Build==='function')temple26Build()}catch(e){console.error('TEMPLE26',e)}try{if(typeof ui12Build==='function')ui12Build()}catch(e){console.error('UI12',e)}const _te2=performance.now();
+  await step('鋪設明湖路與沿路街景…',.42);try{if(typeof north27==='function')north27()}catch(e){console.error('NORTH27',e)}try{if(window.elevStart)elevStart()}catch(e){}try{visBuild()}catch(e){console.error("VIS",e)}T.push(performance.now());
+  await step('依地形計算道路起伏…',.6);const _te=performance.now();try{if(typeof N27!=='undefined'&&N27&&N27.late)N27.late()}catch(e){console.error('NORTH27b',e)}try{if(window.elevPass)await elevPass()}catch(e){console.error('ELEV',e)}try{if(window.map8Build)map8Build()}catch(e){console.error('MAP8',e)}try{if(window.cab9Build)cab9Build()}catch(e){console.error('CAB9',e)}try{if(window.dash10Build)dash10Build()}catch(e){console.error('DASH10',e)}try{if(window.car10Build)car10Build()}catch(e){console.error('CAR10',e)}try{if(typeof gate11Build==='function')gate11Build()}catch(e){console.error('GATE11',e)}try{if(typeof hotel13Build==='function')hotel13Build()}catch(e){console.error('HOTEL13',e)}try{if(typeof temple26Build==='function')temple26Build()}catch(e){console.error('TEMPLE26',e)}try{if(typeof logic27Fix==='function')logic27Fix()}catch(e){console.error('LOGIC27',e)}try{if(typeof ui12Build==='function')ui12Build()}catch(e){console.error('UI12',e)}const _te2=performance.now();
   await step('整理車輛與合併建築…',.74);const _tb=performance.now();try{vehFix()}catch(e){console.error('vehFix',e)}staticBatch();T.push(performance.now());
   if(!navigator.webdriver){await step('準備畫面（編譯材質）…',.88);try{render3D()}catch(e){console.warn('warmup',e)}}T.push(performance.now());
   console.log('[載入] 程式與場景 '+Math.round(T[0])+' ms、街景 '+Math.round(T[1]-T[0])+' ms、起伏 '+Math.round(_te2-_te)+' ms、合併 '+Math.round(T[2]-_tb)+' ms（其中等待畫面 '+Math.round(_tb-T[1]-(_te2-_te))+' ms）、首幀 '+Math.round(T[3]-T[2])+' ms，共 '+(T[3]/1000).toFixed(1)+' 秒');
@@ -5358,9 +5359,11 @@ function gate11Build(){if(GATE11.done)return 'exists';const t0=performance.now()
   {let wall=null;scene.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.parameters&&Math.abs((o.geometry.parameters.width||0)-423.3)<.2&&Math.abs(o.position.z-112.85)<.2)wall=o});
     // 斜向車道穿過圍牆（z=112.85）處的 x 範圍
     const WZ=112.85,wx=[-HW-.2,HW+.2].map(l=>W(sAtZ(WZ,l),l)[0]),wa=Math.min(...wx),wb=Math.max(...wx);GATE11.wallGap=[+wa.toFixed(2),+wb.toFixed(2)];
-    if(wall){wall.visible=false;for(const[a,b]of[[76.7,wa],[wb,500]]){const w=new THREE.Mesh(new THREE.BoxGeometry(b-a,wall.geometry.parameters.height,wall.geometry.parameters.depth),wall.material);w.position.set((a+b)/2,wall.position.y,WZ);w.receiveShadow=true;scene.add(w)}}
+    // 第二十七次：明湖路北段改線（north27）後，x 104 以北的場地邊界改由沿新路的擋土牆負責，這道直牆只留到 x 104
+    const WEND=(typeof N27!=='undefined'&&N27)?104:500;
+    if(wall){wall.visible=false;for(const[a,b]of[[76.7,wa],[wb,WEND]]){const w=new THREE.Mesh(new THREE.BoxGeometry(b-a,wall.geometry.parameters.height,wall.geometry.parameters.depth),wall.material);w.position.set((a+b)/2,wall.position.y,WZ);w.receiveShadow=true;scene.add(w)}}
     for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(Math.abs(b.y0-112.65)<.05&&b.x0>76&&b.x0<77&&b.x1>400)OBR.splice(i,1)}
-    OBR.push({x0:76.7,y0:112.65,x1:wa,y1:113.05},{x0:wb,y0:112.65,x1:500,y1:113.05});
+    OBR.push({x0:76.7,y0:112.65,x1:wa,y1:113.05},{x0:wb,y0:112.65,x1:WEND,y1:113.05});
     // 坡道兩側擋土牆（沿斜向車道、2 m 一段）
     const st=wall?wall.material:new THREE.MeshLambertMaterial({color:'#6f6a62'});for(const sx of[-1,1]){const l=sx*(HW+.25),sA=sAtZ(rampB,l),sB=sAtZ(rampA,l);for(let s=sA;s<sB;s+=2){const s1=Math.min(sB,s+2),sm=(s+s1)/2,[x,z]=W(sm,l),bot=hAt(W(sm,0)[0],W(sm,0)[1])-.3;const h=Math.max(.2,.06-bot);const m=new THREE.Mesh(new THREE.BoxGeometry(.4,h,s1-s+.02),st);m.position.set(x,bot+h/2,z);m.rotation.y=TH;scene.add(m)}
       for(let s=sA;s<=sB;s+=1){const[x,z]=W(s,l);OBC.push({x,y:z,r:.25})}}}
@@ -5578,6 +5581,16 @@ function hotelMove(H){if(!H)return H;if(H.mv)return H.mv;const C0=H.P(H.A0+8,4),
   if(RTX.HPOS){const p=tr(RTX.HPOS);RTX.HPOS[0]=p[0];RTX.HPOS[1]=p[1]}
   H.mv=M;return M}
 function hotel13Build(){if(HOTEL13)return 'exists';if(typeof HOTEL2==='undefined'||!HOTEL2||!RTX.HPOS)return 'no hotel';const t0=performance.now();
+  // 第二十七次：臨路面先清場（之後新增的樹、機車、名牌牆不會被誤刪）；PRE27＝清場後原本就在場上的物件，最後的「懸空網格」檢查只動它們
+  let n27front=0;try{const MP=MH.main.P,HW=MH.main.hw||6.6,rz=x=>{for(let i=1;i<MP.length;i++){const a=MP[i-1],c=MP[i];if((a[0]-x)*(c[0]-x)<=0&&a[0]!==c[0])return a[1]+(x-a[0])/(c[0]-a[0])*(c[1]-a[1])}return 112};const[X0,X1]=HOTEL_REAL.northLot;
+    if(typeof gate11Cut==='function'){
+      // (1a) 北側停車場臨路的人行道帶：舊街屋拆了牆、騎樓柱與頂板還在（從路上看像柏油板浮在車子上方）
+      let r=gate11Cut([X0-7,X1+5,rz(X1)+HW-2,rz(X0)+HW+16],(x,z)=>x>X0-6&&x<X1+4&&z>rz(x)+HW+.2&&z<rz(x)+HW+14,(x,z)=>hAt(x,z)+.3);n27front+=r.hide+r.inst+r.cut;
+      // (1b) 飯店入口車道以北到停車場之間（實景是機車格、名牌牆、綠籬與花架，沒有街屋）
+      r=gate11Cut([-484,X0+1,rz(X0)+HW-2,rz(-484)+HW+24],(x,z)=>x>-483.5&&x<X0+1&&z>rz(x)+HW+.2&&z<rz(x)+HW+22,(x,z)=>hAt(x,z)+.3);n27front+=r.hide+r.inst+r.cut;
+      // (1c) 入口車道以南的轉角（花台、看板架）
+      r=gate11Cut([-508,-490,rz(-490)+HW-2,rz(-508)+HW+20],(x,z)=>x>-507&&x<-490.5&&z>rz(x)+HW+.2&&z<rz(x)+HW+18,(x,z)=>hAt(x,z)+.3);n27front+=r.hide+r.inst+r.cut}}catch(e){console.warn('hotel27 front',e)}
+  const PRE27=new Set();scene.traverse(o=>PRE27.add(o));
   const HH=HOTEL2.mv||HOTEL2,C=RTX.HPOS,U=HH.u,T=HH.t,W2=(a,b)=>[C[0]+U[0]*a+T[0]*b,C[1]+U[1]*a+T[1]*b],F2=(x,z)=>[(x-C[0])*U[0]+(z-C[1])*U[1],(x-C[0])*T[0]+(z-C[1])*T[1]];
   let uRoad=-1e9;{let rd0=1e9;for(const p of MH.main.P){const f=[(p[0]-C[0])*U[0]+(p[1]-C[1])*U[1],(p[0]-C[0])*T[0]+(p[1]-C[1])*T[1]];if(Math.abs(f[1])<60&&Math.abs(f[0])<rd0){rd0=Math.abs(f[0]);uRoad=f[0]}}}
   // 飯店量體：高於地面 10 m、佔地大於 40 m²、在明湖路這一側的網格，各自記一個外框（不再合成一個大框）
@@ -5646,8 +5659,12 @@ function hotel13Build(){if(HOTEL13)return 'exists';if(typeof HOTEL2==='undefined
   const trunkM=new THREE.MeshLambertMaterial({color:'#8a7457'}),leafM=new THREE.MeshLambertMaterial({color:'#3f8a3a',side:THREE.DoubleSide});
   const palm=(x,z,h)=>{const y=hAt(x,z);const tr=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,h,7),trunkM);tr.position.set(x,y+h/2,z);tr.castShadow=true;scene.add(tr);
     for(let k=0;k<8;k++){const a=k/8*Math.PI*2,lf=new THREE.Mesh(new THREE.PlaneGeometry(.7,3.2),leafM);lf.position.set(x+Math.cos(a)*1.3,y+h-.25,z+Math.sin(a)*1.3);lf.rotation.order='YXZ';lf.rotation.set(-1.0,-a+Math.PI/2,0);scene.add(lf)}OBC.push({x,y:z,r:.35})};
-  let nP=0;for(let ct=b0+2;ct<=b1-2;ct+=9){for(const cu of[UA+1.6]){const[x,z]=W2(cu,ct);if(!onRoad(x,z)){palm(x,z,6.5+Math.random()*1.5);nP++}}}
-  for(const ct of[b0-4,b1+4]){const[x,z]=W2(UA+5,ct);if(!onRoad(x,z)&&!inBlk(x,z,1)){palm(x,z,7.5);nP++}}
+  // 第二十七次：街景臨路一排是闊葉樹（不是棕櫚）
+  const tTrunk=new THREE.MeshLambertMaterial({color:'#6b5a46'}),tLeaf=[new THREE.MeshLambertMaterial({color:'#4f8a3c'}),new THREE.MeshLambertMaterial({color:'#5f9a45'}),new THREE.MeshLambertMaterial({color:'#6aa04a'})];
+  const broad=(x,z,h)=>{const y=hAt(x,z);const tr=new THREE.Mesh(new THREE.CylinderGeometry(.16,.24,h*.55,7),tTrunk);tr.position.set(x,y+h*.275,z);tr.castShadow=true;scene.add(tr);
+    for(let k=0;k<3;k++){const c=new THREE.Mesh(new THREE.IcosahedronGeometry(h*(.26+.05*k),0),tLeaf[k]);c.position.set(x+(k-1)*.6,y+h*(.62+.1*k),z+((k*7)%3-1)*.5);c.castShadow=true;scene.add(c)}OBC.push({x,y:z,r:.3})};
+  let nP=0;for(let ct=b0+2;ct<=b1-2;ct+=9){for(const cu of[UA+1.6]){const[x,z]=W2(cu,ct);if(!onRoad(x,z)){broad(x,z,6.5+Math.random()*2);nP++}}}
+  for(const ct of[b0-4,b1+4]){const[x,z]=W2(UA+5,ct);if(!onRoad(x,z)&&!inBlk(x,z,1)){broad(x,z,8);nP++}}
   // 路燈（前庭四角）
   const poleM=new THREE.MeshLambertMaterial({color:'#2e3135'}),bulbM=new THREE.MeshBasicMaterial({color:'#fff4d6'});
   for(const[cu,ct]of[[UA+2,b0-2],[UA+2,b1+2],[UA+2,(b0+b1)/2-12],[UA+2,(b0+b1)/2+12]]){const[x,z]=W2(cu,ct),y=hAt(x,z);if(onRoad(x,z)||inBlk(x,z,.5))continue;const p=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,4.2,8),poleM);p.position.set(x,y+2.1,z);scene.add(p);const l=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),bulbM);l.position.set(x,y+4.3,z);scene.add(l);OBC.push({x,y:z,r:.15})}
@@ -5671,7 +5688,7 @@ function hotel13Build(){if(HOTEL13)return 'exists';if(typeof HOTEL2==='undefined
     if(dg.attributes.normal.getY(0)<0){const ix=dg.index.array;for(let k=0;k<ix.length;k+=3){const t=ix[k+1];ix[k+1]=ix[k+2];ix[k+2]=t}dg.computeVertexNormals()}
     const dm=new THREE.Mesh(dg,new THREE.MeshLambertMaterial({map:asphT,polygonOffset:true,polygonOffsetFactor:-5,polygonOffsetUnits:-5}));dm.receiveShadow=true;scene.add(dm);
     // 車道兩側矮綠籬（入口留 8 m）
-    for(const sg of[-1,1])for(let s=8;s<DL-2;s+=2.2){const x=A0[0]+du[0]*s+dn[0]*sg*(DW+.7),z=A0[1]+du[1]*s+dn[1]*sg*(DW+.7);const h=new THREE.Mesh(new THREE.BoxGeometry(2.1,.7,.6),new THREE.MeshLambertMaterial({color:'#3f7a34'}));h.position.set(x,hAt(x,z)+.35,z);h.rotation.y=-Math.atan2(du[1],du[0]);scene.add(h);OBC.push({x,y:z,r:.35})}
+    for(const sg of[-1,1])for(let s=sg<0?16:15;s<DL-2;s+=2.2){/* 第二十七次：北側入口段改停機車、南側是石砌花台（依街景） */const x=A0[0]+du[0]*s+dn[0]*sg*(DW+.7),z=A0[1]+du[1]*s+dn[1]*sg*(DW+.7);const h=new THREE.Mesh(new THREE.BoxGeometry(2.1,.7,.6),new THREE.MeshLambertMaterial({color:'#3f7a34'}));h.position.set(x,hAt(x,z)+.35,z);h.rotation.y=-Math.atan2(du[1],du[0]);scene.add(h);OBC.push({x,y:z,r:.35})}
     HOTEL13_DRIVE=[A0,DL]}catch(e){console.warn('hotel drive',e)}
   // ---------- 東側湯芬館、東北卡樂次元（實景位置的簡化量體）----------
   let nNb=0;try{const winT=(wc,gc)=>tx(128,128,(g,w,h)=>{g.fillStyle=wc;g.fillRect(0,0,w,h);for(const x of[14,74]){g.fillStyle='#f4efe4';g.fillRect(x-4,30,48,64);g.fillStyle=gc;g.fillRect(x,34,40,56);g.fillStyle='rgba(255,255,255,.25)';g.fillRect(x,34,40,10)}g.fillStyle='rgba(0,0,0,.10)';g.fillRect(0,h-8,w,8)});   // 一層一排、每 6 m 兩扇窗
@@ -5707,7 +5724,56 @@ function hotel13Build(){if(HOTEL13)return 'exists';if(typeof HOTEL2==='undefined
     {const pT=tx(64,64,(g,w,h)=>{g.fillStyle='#1f5fbf';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.font='900 48px sans-serif';g.textAlign='center';g.fillText('P',w/2,50)});const x=(X0+X1)/2,z=zL(x)+.6,y=hAt(x,z);
       const p=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,2.6,8),poleM);p.position.set(x,y+1.3,z);scene.add(p);const s=new THREE.Mesh(new THREE.PlaneGeometry(.9,.9),new THREE.MeshLambertMaterial({map:pT,side:THREE.DoubleSide}));s.position.set(x,y+2.4,z-.05);s.rotation.y=-Math.PI/2;scene.add(s);OBC.push({x,y:z,r:.12})}
   }catch(e){console.warn('hotel north lot',e)}
-  HOTEL13={lot:nLot,lotCars:nLotCar,clip:HOTEL13_CLIP,blocks:blocks.length,a:[+a0.toFixed(1),+a1.toFixed(1)],b:[+b0.toFixed(1),+b1.toFixed(1)],uFront:+uFront.toFixed(1),cars:cars.length,lines:nL,palms:nP,cells:{lawn:geo[1].length/18,stone:geo[2].length/18,asph:geo[3].length/18,island:geo[4].length/18},ms:Math.round(performance.now()-t0)};
+  // ---------- 第二十七次：依 Google 街景重做飯店入口與臨路面；清掉懸空的舊街屋騎樓頂板 ----------
+  const n27={front:n27front,orph:0,sc:0};try{const MP=MH.main.P,HW=MH.main.hw||6.6,rz=x=>{for(let i=1;i<MP.length;i++){const a=MP[i-1],c=MP[i];if((a[0]-x)*(c[0]-x)<=0&&a[0]!==c[0])return a[1]+(x-a[0])/(c[0]-a[0])*(c[1]-a[1])}return 112};
+    const[X0,X1]=HOTEL_REAL.northLot;
+    // (2) 飯店一帶「懸空」的網格：底部離地 2.2 m 以上、正下方沒有任何落地的東西撐著（牆被清掉後留下的屋頂、雨遮）
+    {scene.updateMatrixWorld(true);const bb=new THREE.Box3(),L=[];const vis=o=>{let p=o;while(p){if(!p.visible)return false;p=p.parent}return true};
+      scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!vis(o))return;bb.setFromObject(o);if(bb.isEmpty())return;const sx=bb.max.x-bb.min.x,sz=bb.max.z-bb.min.z;if(sx>60||sz>60)return;const cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;if(cx<-575||cx>-335||cz<70||cz>320)return;
+        const g=Math.min(hAt(bb.min.x,bb.min.z),hAt(bb.max.x,bb.max.z),hAt(cx,cz),hAt(bb.min.x,bb.max.z),hAt(bb.max.x,bb.min.z));L.push({o,b:bb.clone(),cx,cz,lo:bb.min.y-g})});
+      for(const e of L){if(!PRE27.has(e.o)||e.cx<-545||e.cx>-365||e.cz<100||e.cz>290||e.lo<2.2)continue;
+        const sup=L.some(f=>f!==e&&f.lo<.8&&f.b.max.y>=e.b.min.y-.4&&f.b.max.x>e.b.min.x-.3&&f.b.min.x<e.b.max.x+.3&&f.b.max.z>e.b.min.z-.3&&f.b.min.z<e.b.max.z+.3);
+        if(!sup){e.o.visible=false;n27.orph++}}}
+    // (3) 入口：明湖路進來的主車道（HOTEL13_DRIVE）
+    if(HOTEL13_DRIVE){const[A0]=HOTEL13_DRIVE,FN=HOTEL_REAL.fountain,dv=[FN[0]-A0[0],FN[1]-A0[1]],dl=Math.hypot(...dv),du=[dv[0]/dl,dv[1]/dl],dn=[-du[1],du[0]],DW=3.5;
+      const P2=(s,l)=>[A0[0]+du[0]*s+dn[0]*l,A0[1]+du[1]*s+dn[1]*l],ang=v=>-Math.atan2(v[1],v[0]);
+      const sgN=dn[0]<0?-1:1;   // 往北（x 增加）那一側的 l 符號
+      const box=(w,h,d,mat,x,z,rot,y0)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,(y0!=null?y0:hAt(x,z))+h/2,z);m.rotation.y=rot;m.castShadow=m.receiveShadow=true;scene.add(m);return m};
+      const scCol=['#4fb3e0','#c2352b','#ffffff','#1d1d1d','#9aa3a8','#e8d36a','#2f5d8a','#d0d0cc'];let sd=11;const rr=()=>(sd=(sd*16807)%2147483647)/2147483647;
+      const scoot=(x,z,face)=>{if(typeof makeScooter!=='function'||rr()<.12)return;const sc=makeScooter(scCol[Math.floor(rr()*scCol.length)]);const g=sc.root||sc;if(!g.parent)scene.add(g);g.position.set(x,hAt(x,z),z);g.rotation.y=face+(rr()-.5)*.2;g.userData.noShift=true;g.userData.noFlip=true;OBC.push({x,y:z,r:.45});n27.sc++};
+      // 3a) 車道北側入口段：一排機車（車頭朝車道）
+      for(let s=1.2;s<14.5;s+=.95){const[x,z]=P2(s,sgN*(DW+1.3));scoot(x,z,ang([dn[0]*sgN,dn[1]*sgN]))}   /* 車頭朝外側（背對車道） */
+      // 3b) 明湖路飯店臨路面（車道以北到停車場前）：路邊機車停車格，一排白線
+      const xA=A0[0]+DW+2.5,xB=X0-3,lineM=new THREE.MeshLambertMaterial({color:'#eeeeea',polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6});
+      for(let x=xA;x<xB;x+=.95){const z=rz(x)+HW+1.1;scoot(x,z,-Math.PI/2)}   /* 車頭朝內（朝東、背對明湖路） */
+      {const x0=xA-.5,x1=xB,zs=x=>rz(x)+HW+.15,ze=x=>rz(x)+HW+2.1;for(const f of[zs,ze]){const n=Math.ceil((x1-x0)/2),pos=[];for(let i=0;i<n;i++){const a=x0+(x1-x0)*i/n,b=x0+(x1-x0)*(i+1)/n,za=f(a),zb=f(b);pos.push(a,hAt(a,za)+.06,za-.06,b,hAt(b,zb)+.06,zb-.06,b,hAt(b,zb)+.06,zb+.06,a,hAt(a,za)+.06,za-.06,b,hAt(b,zb)+.06,zb+.06,a,hAt(a,za)+.06,za+.06)}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.computeVertexNormals();scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:'#e8e8e4',side:THREE.DoubleSide})))}}
+      // 3c) 黑色花崗石名牌牆「煙波大飯店 Lakeshore Hotel」＋後方綠籬（街景：機車後面、正對明湖路）
+      {const wx=-451,wz=rz(wx)+HW+3.4,rot=ang([1,0]),lt=tx(1024,128,(q,W,H)=>{q.fillStyle='#2a2c2f';q.fillRect(0,0,W,H);q.fillStyle='#d9cfa8';q.font='900 70px "Noto Serif TC","Noto Sans TC",serif';q.textAlign='right';q.fillText('煙波大飯店',W/2-30,90);q.font='italic 600 58px Georgia,serif';q.textAlign='left';q.fillText('Lakeshore Hotel',W/2+30,88)});lt.wrapS=lt.wrapT=THREE.ClampToEdgeWrapping;
+        const gm=new THREE.MeshLambertMaterial({color:'#2a2c2f'}),fm=new THREE.MeshLambertMaterial({map:lt});box(13,1.6,.7,[gm,gm,gm,gm,gm,fm],wx,wz,0);   // 長邊沿明湖路（南北），−z 面（朝西、朝明湖路）是字面
+        const hz=new THREE.MeshLambertMaterial({color:'#3f7a34'});box(13.5,1.3,1.4,hz,wx,wz+1.2,0);addOBB(wx,wz+.6,0,6.6,1.2)}
+      // 3d) 名牌牆南側的紫藤花架（深色鋼架、頂上一格一格的橫樑）
+      {const pm=new THREE.MeshLambertMaterial({color:'#3b3532'}),vm=new THREE.MeshLambertMaterial({color:'#7d7a5c'});const xa=A0[0]+DW+2.2,xb=-459,zf=x=>rz(x)+HW+3.6,H=2.8;
+        for(let x=xa;x<=xb+.01;x+=2.6)for(const dz of[0,3.2]){const z=zf(x)+dz;box(.14,H,.14,pm,x,z,0);OBC.push({x,y:z,r:.12})}
+        const xm=(xa+xb)/2,zm=zf(xm)+1.6,y=Math.max(hAt(xa,zf(xa)),hAt(xb,zf(xb)))+H;for(let k=0;k<=8;k++){const b=new THREE.Mesh(new THREE.BoxGeometry(xb-xa+.6,.1,.08),pm);b.position.set(xm,y,zm-1.6+k*.4);scene.add(b)}
+        for(let x=xa;x<=xb;x+=.8){const b=new THREE.Mesh(new THREE.BoxGeometry(.06,.12,3.6),pm);b.position.set(x,y+.1,zm);scene.add(b)}
+        const leaf=new THREE.Mesh(new THREE.BoxGeometry(xb-xa+.4,.25,3.2),new THREE.MeshLambertMaterial({color:'#8a8466',transparent:true,opacity:.55}));leaf.position.set(xm,y+.3,zm);scene.add(leaf)}
+      // 3e) 車道南側轉角：石砌高花台（約 0.8 m）＋黑色抽象雕塑
+      {const sm=new THREE.MeshLambertMaterial({map:stoneT,color:'#b8a98e'}),gm=new THREE.MeshLambertMaterial({map:lawnT,color:'#a4cf7c'});const S0=.8,S1=15,L0=DW+.9,L1=DW+13;
+        const[cx,cz]=P2((S0+S1)/2,-sgN*(L0+L1)/2),y0=Math.min(hAt(...P2(S0,-sgN*L0)),hAt(...P2(S1,-sgN*L1)),hAt(cx,cz));
+        const pl=new THREE.Mesh(new THREE.BoxGeometry(S1-S0,.85+hAt(cx,cz)-y0,L1-L0),[sm,sm,gm,sm,sm,sm]);pl.position.set(cx,y0+(.85+hAt(cx,cz)-y0)/2,cz);pl.rotation.y=ang(du);pl.castShadow=pl.receiveShadow=true;scene.add(pl);addOBB(cx,cz,Math.atan2(du[1],du[0]),(S1-S0)/2,(L1-L0)/2);
+        const[sx,sz]=P2(4.5,-sgN*(L0+3.5)),sy=hAt(cx,cz)+.85,dk=new THREE.MeshLambertMaterial({color:'#24262a'});
+        const ped=new THREE.Mesh(new THREE.BoxGeometry(1.4,.5,1.4),new THREE.MeshLambertMaterial({color:'#5b5550'}));ped.position.set(sx,sy+.25,sz);scene.add(ped);
+        const kn=new THREE.Mesh(new THREE.TorusKnotGeometry(.75,.24,64,10,2,3),dk);kn.position.set(sx,sy+1.6,sz);kn.rotation.set(.4,.8,0);kn.castShadow=true;scene.add(kn);
+        for(const[s,l]of[[9,-sgN*(L0+4)],[12.5,-sgN*(L0+8)],[6,-sgN*(L0+9)]]){const[x,z]=P2(s,l);const b=new THREE.Mesh(new THREE.IcosahedronGeometry(.9,0),new THREE.MeshLambertMaterial({color:'#4c8a3a'}));b.scale.y=.7;b.position.set(x,sy+.5,z);scene.add(b)}
+        const[tx2,tz2]=P2(12.5,-sgN*(L1-2.5));{const y=sy;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.18,.26,4.4,7),tTrunk);tr.position.set(tx2,y+2.2,tz2);scene.add(tr);const c=new THREE.Mesh(new THREE.IcosahedronGeometry(2.2,0),tLeaf[1]);c.position.set(tx2,y+5.6,tz2);c.castShadow=true;scene.add(c);OBC.push({x:tx2,y:tz2,r:.3})}
+        // 3f) 花台南側的大型鋼構廣告看板架（街景：空框、斜撐）
+        const fm=new THREE.MeshLambertMaterial({color:'#8d9196'}),[bx,bz]=P2(3.5,-sgN*(L1+4)),rot=ang([1,0]),by=hAt(bx,bz),FW=11,FH=9,FB=4;
+        for(const o of[-FW/2+.6,FW/2-.6]){box(.35,FB+FH,.35,fm,bx+o,bz,0,by);OBC.push({x:bx+o,y:bz,r:.3});const st=new THREE.Mesh(new THREE.BoxGeometry(.16,7.5,.16),fm);st.position.set(bx+o,by+3.4,bz+2.2);st.rotation.x=-.55;scene.add(st)}
+        for(let k=0;k<=4;k++){const b=new THREE.Mesh(new THREE.BoxGeometry(FW,.16,.16),fm);b.position.set(bx,by+FB+k*FH/4,bz);scene.add(b)}
+        for(const s of[-1,1]){const d=new THREE.Mesh(new THREE.BoxGeometry(.12,Math.hypot(FW,FH),.12),fm);d.position.set(bx,by+FB+FH/2,bz);d.rotation.z=s*Math.atan2(FW,FH);scene.add(d)}
+        {const rp=tx(256,64,(q,W,H)=>{q.fillStyle='#d23a2f';q.fillRect(0,0,W,H)});const r=new THREE.Mesh(new THREE.PlaneGeometry(2.6,.7),new THREE.MeshLambertMaterial({map:rp,side:THREE.DoubleSide}));r.position.set(bx-1,by+FB+FH*.45,bz-.12);r.rotation.y=Math.PI;scene.add(r)}}
+    }}catch(e){console.warn('hotel27',e)}
+  HOTEL13={n27,lot:nLot,lotCars:nLotCar,clip:HOTEL13_CLIP,blocks:blocks.length,a:[+a0.toFixed(1),+a1.toFixed(1)],b:[+b0.toFixed(1),+b1.toFixed(1)],uFront:+uFront.toFixed(1),cars:cars.length,lines:nL,palms:nP,cells:{lawn:geo[1].length/18,stone:geo[2].length/18,asph:geo[3].length/18,island:geo[4].length/18},ms:Math.round(performance.now()-t0)};
   console.log('[煙波飯店] 周邊重做：'+JSON.stringify(HOTEL13));return HOTEL13}
 
 /* ============ 第二十六次：靈隱寺搬到實景位置並細修 ============
@@ -5821,6 +5887,203 @@ function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined
   try{if(R&&R.shadowMap)R.shadowMap.needsUpdate=true}catch(e){}
   TEMPLE26={gate:gate.map(v=>+v.toFixed(1)),sGate:+sG.toFixed(1),rot:+(dPh*180/Math.PI).toFixed(1),cH:+cH.toFixed(2),movers:movers.length,col:[colC.length,colO.length],cut,terrainV:nV,lifted:[nObj,nInst],roof:nRoof,extra,ms:Math.round(performance.now()-t0)};
   console.log('[靈隱寺] '+JSON.stringify(TEMPLE26));return TEMPLE26}
+
+/* ============ 第二十七次：場景邏輯檢查 ============
+   1) 路邊停放的機車：車頭一律朝內（背對道路）。機車模型的車頭是本地 +x（前輪在 x=1.33）。
+      找出所有沒有騎士的機車（子樹或同一群組裡沒有人物 SkinnedMesh），算出最近的道路；車頭若朝向道路就轉 180°。
+      userData.noFlip 的（已經明確擺好方向的）不動。 */
+var LOGIC27=null;
+function logic27Fix(){const t0=performance.now();const out={scoot:0,flip:0,skipRider:0,far:0};
+  try{scene.updateMatrixWorld(true);const hasHuman=o=>{let f=false;o.traverse(c=>{if(c.isSkinnedMesh)f=true});return f};
+    const segs=[];(RTX.roads||[]).forEach(r=>{const P=r.P||[];for(let i=0;i+1<P.length;i++)segs.push([P[i][0],P[i][1],P[i+1][0],P[i+1][1],r.hw||4])});
+    const nearest=(x,z)=>{let bd=1e9,bq=null,bh=4;for(const s of segs){if(Math.abs(s[0]-x)>80&&Math.abs(s[2]-x)>80)continue;const vx=s[2]-s[0],vz=s[3]-s[1],l2=vx*vx+vz*vz||1;let k=((x-s[0])*vx+(z-s[1])*vz)/l2;k=k<0?0:k>1?1:k;const qx=s[0]+k*vx,qz=s[1]+k*vz,d=Math.hypot(x-qx,z-qz);if(d<bd){bd=d;bq=[qx,qz];bh=s[4]}}return{d:bd,q:bq,hw:bh}};
+    const list=[];scene.traverse(o=>{if(o.userData&&o.userData.sd===1&&o!==car)list.push(o)});
+    const P=new THREE.Vector3(),F=new THREE.Vector3();
+    for(const o of list){out.scoot++;if(o.userData.noFlip)continue;let inCar=false;for(let p=o;p;p=p.parent)if(p===car){inCar=true;break}if(inCar)continue;
+      if(hasHuman(o)||(o.parent&&o.parent!==scene&&hasHuman(o.parent))){out.skipRider++;continue}
+      o.getWorldPosition(P);F.set(1,0,0).transformDirection(o.matrixWorld);F.y=0;if(F.lengthSq()<1e-6)continue;F.normalize();
+      const n=nearest(P.x,P.z);if(!n.q||n.d>n.hw+14){out.far++;continue}
+      const vx=P.x-n.q[0],vz=P.z-n.q[1],vl=Math.hypot(vx,vz)||1;
+      if((F.x*vx+F.z*vz)/vl<-.3){o.rotation.y+=Math.PI;o.updateMatrix();o.updateMatrixWorld(true);out.flip++}}
+  }catch(e){console.warn('logic27 scooters',e)}
+  // 2) 建物被清掉後留下的細節：陽台、冷氣、鐵窗（實例化）與雨遮、鐵捲門、招牌（userData.host）
+  try{const vis=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true};const Z=new THREE.Matrix4().makeScale(0,0,0),m4=new THREE.Matrix4();out.orphDet=0;out.orphFx=0;
+    scene.traverse(o=>{if(o.isInstancedMesh&&o.userData.bdet){const L=o.userData.bdet;let ch=0;for(let i=0;i<Math.min(o.count,L.length);i++){const h=L[i].host;if(h&&!vis(h)){o.setMatrixAt(i,Z);ch++}}if(ch){o.instanceMatrix.needsUpdate=true;out.orphDet+=ch}}
+      else if(o.userData&&o.userData.host&&o.visible&&!vis(o.userData.host)){o.visible=false;out.orphFx++}});
+  }catch(e){console.warn('logic27 orphans',e)}
+  // 3) 明湖路北段一帶：懸空、底下沒有任何落地物件撐著的網格（舊街屋拆了牆留下的騎樓頂板、骨架橫樑）
+  try{scene.updateMatrixWorld(true);const bb=new THREE.Box3(),L=[];const vis=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true};out.orphN=0;
+    scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!vis(o))return;bb.setFromObject(o);if(bb.isEmpty())return;const sx=bb.max.x-bb.min.x,sz=bb.max.z-bb.min.z;if(sx>60||sz>60)return;const cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;if(cx<70||cx>520||cz<40||cz>240)return;
+      const g=Math.min(hAt(bb.min.x,bb.min.z),hAt(bb.max.x,bb.max.z),hAt(cx,cz),hAt(bb.min.x,bb.max.z),hAt(bb.max.x,bb.min.z));L.push({o,b:bb.clone(),cx,cz,lo:bb.min.y-g})});
+    for(const e of L){if(e.cx<100||e.cx>505||e.cz<60||e.cz>220||e.lo<2.2)continue;let anc=e.o;while(anc.parent&&anc.parent!==scene)anc=anc.parent;let sk=false;anc.traverse(c=>{if(c.isSkinnedMesh||(c.userData&&c.userData.sd))sk=true});if(sk||anc===car)continue;
+      const sup=L.some(f=>f!==e&&f.lo<.8&&f.b.max.y>=e.b.min.y-.4&&f.b.max.x>e.b.min.x-.3&&f.b.min.x<e.b.max.x+.3&&f.b.max.z>e.b.min.z-.3&&f.b.min.z<e.b.max.z+.3);
+      if(!sup){e.o.visible=false;out.orphN++}}}catch(e){console.warn('logic27 float',e)}
+  // 4) 車道淨空：所有道路「路緣以內 0.3 m」的範圍，路面上 0.25～4.2 m 高度內不能有東西（車輛、人、地面標線、號誌懸臂除外）
+  let nearRoad=()=>true;
+  try{const vis=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true};const segs=[];(RTX.roads||[]).forEach(r=>{if(/環湖|靈隱/.test(r.name||''))return;const P=r.P||[],hw=(r.hw||3)-.3;for(let i=0;i+1<P.length;i++)segs.push([P[i][0],P[i][1],P[i+1][0],P[i+1][1],hw])});   // 湖區（橋、湖岸）不動
+    const G=new Map(),CS=20,key=(i,j)=>i*100003+j;for(const s of segs){const x0=Math.min(s[0],s[2])-s[4],x1=Math.max(s[0],s[2])+s[4],z0=Math.min(s[1],s[3])-s[4],z1=Math.max(s[1],s[3])+s[4];for(let i=Math.floor(x0/CS);i<=Math.floor(x1/CS);i++)for(let j=Math.floor(z0/CS);j<=Math.floor(z1/CS);j++){const k=key(i,j);(G.get(k)||G.set(k,[]).get(k)).push(s)}}
+    const inLane=(x,z)=>{const L=G.get(key(Math.floor(x/CS),Math.floor(z/CS)));if(!L)return false;for(const s of L){const vx=s[2]-s[0],vz=s[3]-s[1],l2=vx*vx+vz*vz||1;let k=((x-s[0])*vx+(z-s[1])*vz)/l2;k=k<0?0:k>1?1:k;if(Math.hypot(x-s[0]-k*vx,z-s[1]-k*vz)<s[4])return true}return false};
+    nearRoad=(x,z,m)=>{for(const s of segs){if(Math.min(s[0],s[2])-m-s[4]>x||Math.max(s[0],s[2])+m+s[4]<x||Math.min(s[1],s[3])-m-s[4]>z||Math.max(s[1],s[3])+m+s[4]<z)continue;const vx=s[2]-s[0],vz=s[3]-s[1],l2=vx*vx+vz*vz||1;let k=((x-s[0])*vx+(z-s[1])*vz)/l2;k=k<0?0:k>1?1:k;if(Math.hypot(x-s[0]-k*vx,z-s[1]-k*vz)<s[4]+m)return true}return false};
+    const dyn=new Set([car]);try{(LIFE.cars||[]).forEach(c=>c.g&&dyn.add(c.g))}catch(e){}try{PEOPLE.forEach(p=>p.H&&dyn.add(p.H.g))}catch(e){}try{(HEAVY.list||[]).forEach(q=>q.g&&dyn.add(q.g))}catch(e){}if(typeof RTX!=='undefined'&&RTX.amb&&RTX.amb.g)dyn.add(RTX.amb.g);
+    const isVeh=o=>{let a=o;while(a.parent&&a.parent!==scene)a=a.parent;if(dyn.has(a))return true;let v=false;a.traverse(c=>{if(c.isSkinnedMesh||(c.userData&&(c.userData.tails||c.userData.sd||c.userData.veh)))v=true});return v};
+    const bb=new THREE.Box3(),P3=new THREE.Vector3();out.laneHide=0;out.laneCut=0;const big=[];
+    scene.traverse(o=>{if(!(o.isMesh||o.isLine)||o.isInstancedMesh||!vis(o)||o.isSprite)return;bb.setFromObject(o);if(bb.isEmpty())return;const sx=bb.max.x-bb.min.x,sz=bb.max.z-bb.min.z;
+      if(sx>900||sz>900){const mats=Array.isArray(o.material)?o.material:[o.material];const merged=o.isMesh&&o.geometry.type==='BufferGeometry'&&!(o.userData&&o.userData._reG)&&mats.some(m=>m&&m.vertexColors);if(merged&&!isVeh(o))big.push(o);return}   // 全圖合併的建物網格（牆、屋頂、雜項）也要檢查；地形不動
+      const cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;
+      if(sx<40&&sz<40){if(!inLane(cx,cz)&&!inLane(bb.min.x,bb.min.z)&&!inLane(bb.max.x,bb.max.z)&&!inLane(bb.min.x,bb.max.z)&&!inLane(bb.max.x,bb.min.z))return;
+        // 用實際頂點判斷（旋轉的建物外框會誤伸進車道）：任一頂點在車道內、且高度在路面上 0.25～4.2 m
+        let hit=false;const Pp=o.geometry&&o.geometry.attributes&&o.geometry.attributes.position;if(Pp){o.updateMatrixWorld(true);const st=Math.max(1,Math.floor(Pp.count/80));for(let i=0;i<Pp.count;i+=st){P3.fromBufferAttribute(Pp,i).applyMatrix4(o.matrixWorld);if(!inLane(P3.x,P3.z))continue;const g=hAt(P3.x,P3.z);if(P3.y>g+.25&&P3.y<g+4.2){hit=true;break}}
+          // 跨過車道的長條（兩端頂點都在路外，例如橫跨的棚子）：再看中心
+          if(!hit&&inLane(cx,cz)){const g=hAt(cx,cz);if(bb.min.y<g+4.2&&bb.max.y>g+.25&&(bb.max.y-bb.min.y)<6)hit=true}}
+        if(hit&&!isVeh(o)&&!(o.isLine||o.isLineSegments)){
+          // 平的（標線、路口鋪面、紅線）→ 貼回路面；稍微伸進車道的（攤販傘、雨遮）→ 往路外推；其餘 → 藏起來
+          const Pp2=o.geometry.attributes.position;let flat=bb.max.y-bb.min.y<1.2;if(flat){for(let i=0;i<Pp2.count;i+=Math.max(1,Math.floor(Pp2.count/60))){P3.fromBufferAttribute(Pp2,i).applyMatrix4(o.matrixWorld);if(Math.abs(P3.y-hAt(P3.x,P3.z))>1.0){flat=false;break}}}
+          if(flat){const inv=new THREE.Matrix4().copy(o.matrixWorld).invert();if(o.geometry.userData&&o.geometry.userData.shared27){}const g2=o.geometry.clone();const P4=g2.attributes.position;for(let i=0;i<P4.count;i++){P3.fromBufferAttribute(P4,i).applyMatrix4(o.matrixWorld);P3.y=hAt(P3.x,P3.z)+.012;P3.applyMatrix4(inv);P4.setXYZ(i,P3.x,P3.y,P3.z)}P4.needsUpdate=true;g2.computeBoundingSphere();o.geometry=g2;out.laneDrape=(out.laneDrape||0)+1;return}
+          let dep=0,nx=0,nz=0;for(let i=0;i<Pp2.count;i+=Math.max(1,Math.floor(Pp2.count/80))){P3.fromBufferAttribute(Pp2,i).applyMatrix4(o.matrixWorld);const L=G.get(key(Math.floor(P3.x/CS),Math.floor(P3.z/CS)));if(!L)continue;const gy=hAt(P3.x,P3.z);if(!(P3.y>gy+.25&&P3.y<gy+4.2))continue;for(const s of L){const vx=s[2]-s[0],vz=s[3]-s[1],l2=vx*vx+vz*vz||1;let k=((P3.x-s[0])*vx+(P3.z-s[1])*vz)/l2;k=k<0?0:k>1?1:k;const qx=s[0]+k*vx,qz=s[1]+k*vz,d=Math.hypot(P3.x-qx,P3.z-qz);if(s[4]-d>dep){dep=s[4]-d;const ox=cx-qx,oz=cz-qz,ol=Math.hypot(ox,oz)||1;nx=ox/ol;nz=oz/ol}}}
+          if(dep>0&&dep<1.6&&!inLane(cx,cz)){const w0=new THREE.Vector3();o.getWorldPosition(w0);const w1=w0.clone();w1.x+=nx*(dep+.1);w1.z+=nz*(dep+.1);if(o.parent&&o.parent!==scene){o.parent.worldToLocal(w0);o.parent.worldToLocal(w1)}o.position.add(w1.sub(w0));o.updateMatrixWorld(true);out.lanePush=(out.lanePush||0)+1;return}
+          o.visible=false;o.userData.laneHid=1;out.laneHide++}return}
+      if(o.isMesh&&bb.max.y-bb.min.y>=.6&&!(o.userData&&o.userData.noWarp27)&&!isVeh(o))big.push(o)});   // 平的地面網格（場地高台、草皮）不切
+    // 大網格：長條三角形（例如場地圍籬一面 100 多公尺）重心不在車道裡卻橫跨車道 → 先細分到每邊 ≤3 m 再判斷
+    const a=new THREE.Vector3(),b2=new THREE.Vector3(),c3=new THREE.Vector3();
+    const crosses=(o)=>{const g=o.geometry,P=g.attributes.position,W=o.matrixWorld,I=g.index?g.index.array:null,n=I?I.length:P.count;for(let t=0;t+2<n;t+=3){const ia=I?I[t]:t,ib=I?I[t+1]:t+1,ic=I?I[t+2]:t+2;a.fromBufferAttribute(P,ia).applyMatrix4(W);b2.fromBufferAttribute(P,ib).applyMatrix4(W);c3.fromBufferAttribute(P,ic).applyMatrix4(W);
+        const L=Math.max(a.distanceTo(b2),b2.distanceTo(c3),c3.distanceTo(a));if(L<6)continue;for(const[p,q]of[[a,b2],[b2,c3],[c3,a]]){const d=p.distanceTo(q),k=Math.ceil(d/1.5);for(let s=1;s<k;s++){const x=p.x+(q.x-p.x)*s/k,z=p.z+(q.z-p.z)*s/k,y=p.y+(q.y-p.y)*s/k;if(inLane(x,z)){const gy=hAt(x,z);if(y>gy+.25&&y<gy+4.2)return true}}}}return false};
+    const subdiv=(o,maxL)=>{let g=o.geometry;if(g.index)g=g.toNonIndexed();const names=Object.keys(g.attributes),A={};names.forEach(n=>A[n]={sz:g.attributes[n].itemSize,src:g.attributes[n].array});const P=g.attributes.position.array,ws=new THREE.Vector3().setFromMatrixScale(o.matrixWorld).x||1;
+      const tri=[];for(let i=0;i<P.length/3;i+=3)tri.push([i,i+1,i+2].map(k=>{const r={};names.forEach(n=>{const s=A[n].sz;r[n]=Array.from(A[n].src.slice(k*s,k*s+s))});return r}));
+      const len=(p,q)=>Math.hypot(p.position[0]-q.position[0],p.position[1]-q.position[1],p.position[2]-q.position[2])*ws,mid=(p,q)=>{const r={};names.forEach(n=>r[n]=p[n].map((v,i)=>(v+q[n][i])/2));return r};
+      const outT=[];let guard=0;while(tri.length&&guard++<300000){const t=tri.pop();const l=[len(t[0],t[1]),len(t[1],t[2]),len(t[2],t[0])],m=Math.max(...l);if(m<=maxL){outT.push(t);continue}const k=l.indexOf(m),p=t[k],q=t[(k+1)%3],c=t[(k+2)%3],mm=mid(p,q);tri.push([p,mm,c],[mm,q,c])}
+      const ng=new THREE.BufferGeometry();names.forEach(n=>{const arr=[];for(const t of outT)for(const v of t)arr.push(...v[n]);ng.setAttribute(n,new THREE.Float32BufferAttribute(arr,A[n].sz))});o.geometry=ng};
+    for(const o of big){o.updateMatrixWorld(true);if(!Array.isArray(o.material)&&o.geometry.attributes.position.count<6000&&crosses(o)){try{subdiv(o,3);out.laneSub=(out.laneSub||0)+1}catch(e){}}}
+    // 三角形重心在車道內、且高度範圍與路面上 0.25～4.2 m 重疊 → 拿掉
+    for(const o of big){const g=o.geometry,P=g&&g.attributes&&g.attributes.position;if(!P)continue;o.updateMatrixWorld(true);const W=o.matrixWorld;
+      const bad=(i0,i1,i2)=>{a.fromBufferAttribute(P,i0).applyMatrix4(W);b2.fromBufferAttribute(P,i1).applyMatrix4(W);c3.fromBufferAttribute(P,i2).applyMatrix4(W);const x=(a.x+b2.x+c3.x)/3,z=(a.z+b2.z+c3.z)/3;if(!inLane(x,z))return false;const gy=hAt(x,z),y0=Math.min(a.y,b2.y,c3.y),y1=Math.max(a.y,b2.y,c3.y);return y1>gy+.25&&y0<gy+4.2};   // 三角形高度範圍與 0.25～4.2 m 重疊（高牆的三角形頂點可能都不在這個帶內）
+      if(g.index){const arr=g.index.array,keep=[];let n=0;for(let t=0;t<arr.length;t+=3){if(bad(arr[t],arr[t+1],arr[t+2]))n++;else keep.push(arr[t],arr[t+1],arr[t+2])}if(n){const ng=g.clone();ng.setIndex(keep);o.geometry=ng;out.laneCut+=n}}
+      else{let n=0;const keepIdx=[];for(let i=0;i+2<P.count;i+=3){if(bad(i,i+1,i+2))n++;else keepIdx.push(i)}if(n){const ng=new THREE.BufferGeometry();for(const nm in g.attributes){const at=g.attributes[nm],isz=at.itemSize,arr=new at.array.constructor(keepIdx.length*3*isz);let w=0;for(const i of keepIdx)for(let k=0;k<3;k++)for(let c=0;c<isz;c++)arr[w++]=at.array[(i+k)*isz+c];ng.setAttribute(nm,new THREE.BufferAttribute(arr,isz,at.normalized))}o.geometry=ng;out.laneCut+=n}}}
+    // 長條碰撞框橫跨車道（例如場地圍籬沿 z 一整條 112 m）：切成 2 m 一段，丟掉落在車道裡的
+    {const add=[];let n=0;for(let i=OBR.length-1;i>=0;i--){const b=OBR[i],lx=b.x1-b.x0,lz=b.y1-b.y0;if(Math.max(lx,lz)<8)continue;let hit=false;const k=Math.ceil(Math.max(lx,lz)/2);
+        for(let s=0;s<=k&&!hit;s++){const x=lx>lz?b.x0+lx*s/k:(b.x0+b.x1)/2,z=lx>lz?(b.y0+b.y1)/2:b.y0+lz*s/k;if(inLane(x,z))hit=true}if(!hit)continue;OBR.splice(i,1);n++;
+        for(let s=0;s<k;s++){const p=lx>lz?{x0:b.x0+lx*s/k,x1:b.x0+lx*(s+1)/k,y0:b.y0,y1:b.y1}:{x0:b.x0,x1:b.x1,y0:b.y0+lz*s/k,y1:b.y0+lz*(s+1)/k};const cx=(p.x0+p.x1)/2,cz=(p.y0+p.y1)/2;if(inLane(cx,cz)||inLane(p.x0,p.y0)||inLane(p.x1,p.y1))continue;add.push(p)}}OBR.push(...add);out.obrLane=n}
+  }catch(e){console.warn('logic27 lanes',e)}
+  // 5) 隱形障礙：碰撞框底下（範圍內）沒有任何看得見、高出地面的物件 → 拿掉
+  try{const vis=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true};scene.updateMatrixWorld(true);const CS=10,G=new Map(),key=(i,j)=>i*100003+j,bb=new THREE.Box3(),m4=new THREE.Matrix4(),gb=new THREE.Box3();
+    const put=(x0,x1,z0,z1,y1)=>{for(let i=Math.floor(x0/CS);i<=Math.floor(x1/CS);i++)for(let j=Math.floor(z0/CS);j<=Math.floor(z1/CS);j++){const k=key(i,j);(G.get(k)||G.set(k,[]).get(k)).push([x0,x1,z0,z1,y1])}};
+    scene.traverse(o=>{if(!o.isMesh||!vis(o)||o.isSprite)return;if(o.isInstancedMesh){if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);m4.premultiply(o.matrixWorld);gb.copy(o.geometry.boundingBox).applyMatrix4(m4);if(gb.max.x-gb.min.x<1e-4)continue;if(gb.max.x-gb.min.x>80||gb.max.z-gb.min.z>80)continue;put(gb.min.x,gb.max.x,gb.min.z,gb.max.z,gb.max.y)}return}
+      bb.setFromObject(o);if(bb.isEmpty())return;if(bb.max.x-bb.min.x>200||bb.max.z-bb.min.z>200)return;put(bb.min.x,bb.max.x,bb.min.z,bb.max.z,bb.max.y)});
+    const seen=(x0,x1,z0,z1)=>{const g=Math.max(hAt((x0+x1)/2,(z0+z1)/2),-1.6);for(let i=Math.floor(x0/CS);i<=Math.floor(x1/CS);i++)for(let j=Math.floor(z0/CS);j<=Math.floor(z1/CS);j++){const L=G.get(key(i,j));if(!L)continue;for(const b of L)if(b[0]<x1+.15&&b[1]>x0-.15&&b[2]<z1+.15&&b[3]>z0-.15&&b[4]>g+.3)return true}return false};
+    const NR=(x,z)=>nearRoad(x,z,25);   // 只檢查考試路線與街區道路 25 m 內（湖岸、場地外圍的邊界牆不動）
+    let nc=0,no=0,nr=0;for(let i=OBC.length-1;i>=0;i--){const c=OBC[i];if(NR(c.x,c.y)&&!seen(c.x-c.r,c.x+c.r,c.y-c.r,c.y+c.r)){OBC.splice(i,1);nc++}}
+    for(let i=OBO.length-1;i>=0;i--){const o=OBO[i];if(!o||o.cx==null)continue;const ex=Math.abs(o.ux)*o.hl+Math.abs(o.vx)*o.hw,ez=Math.abs(o.uy)*o.hl+Math.abs(o.vy)*o.hw;if(NR(o.cx,o.cy)&&!seen(o.cx-ex,o.cx+ex,o.cy-ez,o.cy+ez)){OBO.splice(i,1);no++}}
+    for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(b.x1-b.x0>60||b.y1-b.y0>60)continue;if(NR((b.x0+b.x1)/2,(b.y0+b.y1)/2)&&!seen(b.x0,b.x1,b.y0,b.y1)){OBR.splice(i,1);nr++}}
+    out.ghost={OBC:nc,OBO:no,OBR:nr}}catch(e){console.warn('logic27 ghosts',e)}
+  out.ms=Math.round(performance.now()-t0);LOGIC27=out;console.log('[邏輯檢查] '+JSON.stringify(out));return out}
+
+/* ============ 第二十七次：明湖路北段（駕訓班以北 x 110～430）改到實景位置 ============
+   原版北段是一條沿 z≈118.6 的直線；實景（OSM＋Google 衛星圖確認）在 x≈200 往西彎到 z≈82，x≈330 以北又往東到 z≈143。
+   做法（在 visBuild 之後、地形起伏 elevPass 之前執行）：
+   1) 「沿 x 的東西向位移」Δz(x)＝新中心線 z − 舊中心線 z；路面、人行道、電線、沿路房屋、路燈、機車……全部跟著位移（大網格逐頂點、小物件整體、實例逐一），碰撞框一起移。
+      場地那一側（x<290 且在舊路西側 7 m 以外）不動。
+   2) 新路線往西彎時，原本場地東北角那一條（場內聯絡道、圍籬、零星建物）落到新路東側或路上：位移前先清掉，碰撞一併拿掉（長條碰撞切段保留路外部分）。
+   3) 更新 MH、RTX.roads 的北段座標，重新啟動地形計算（讓路面起伏依新路線）；沿新路西側補一道場地矮牆。 */
+var N27=null;
+function north27(){if(N27)return N27;const t0=performance.now(),out={warpSmall:0,warpBig:0,warpInst:0,hide:0,cut:0,col:0,colCut:0,wall:0};
+  const MP=MH.main.P;const OLD=MP.filter(p=>p[0]>=95).map(p=>[p[0],p[1]]).sort((a,b)=>a[0]-b[0]);if(OLD.length<10)return 'no road';
+  const XMAX=OLD[OLD.length-1][0];
+  // 新中心線：OSM 點以 Catmull-Rom 平滑、每 2 m 取樣（x 遞增）
+  const K=[[95,135.6],[110.1,120.1],[156,96.2],[180.8,84.1],[197.6,82.6],[256.2,89.3],[298.5,94.7],[303.8,96.2],[353.9,117.2],[374.1,125.7],[399.8,134.6],[448.6,155]];
+  const NEW=[];for(let i=0;i<K.length-1;i++){const p0=K[Math.max(0,i-1)],p1=K[i],p2=K[i+1],p3=K[Math.min(K.length-1,i+2)],L=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),n=Math.max(1,Math.ceil(L/2));
+    for(let k=0;k<n;k++){const t=k/n,t2=t*t,t3=t2*t;NEW.push([0,1].map(j=>.5*((2*p1[j])+(-p0[j]+p2[j])*t+(2*p0[j]-5*p1[j]+4*p2[j]-p3[j])*t2+(-p0[j]+3*p1[j]-3*p2[j]+p3[j])*t3)))}}NEW.push(K[K.length-1]);
+  const zAt=(A,x)=>{if(x<=A[0][0])return A[0][1];for(let i=1;i<A.length;i++)if(A[i][0]>=x){const a=A[i-1],b=A[i],t=(x-a[0])/((b[0]-a[0])||1);return a[1]+(b[1]-a[1])*t}return A[A.length-1][1]};
+  const oldZ=x=>zAt(OLD,Math.min(x,XMAX)),newZ=x=>zAt(NEW,Math.min(x,XMAX));
+  const ss=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t)};
+  const dz=x=>x<104?0:(newZ(x)-oldZ(x))*ss(104,112,x);
+  // 權重：舊路東側（含路面、西側人行道）全移；西側只有 x>290（場地以北的街區）才移
+  const W=(x,z)=>{if(x<104)return 0;const rel=z-oldZ(x);if(rel>=-7)return 1-ss(35,65,rel);return 0};   // 舊路西側（原版場地高台 z<114.7，一直到 x≈503）全部不動
+  const D=(x,z)=>dz(x)*W(x,z);
+  const skip=new Set([car,typeof dome!=='undefined'?dome:null,typeof sun!=='undefined'?sun:null,typeof sun!=='undefined'?sun.target:null,window.BGX,typeof FLARE!=='undefined'?FLARE:null].filter(Boolean));
+  const BX=[100,XMAX+40],BZ=[40,240];
+  scene.updateMatrixWorld(true);const bb=new THREE.Box3(),v=new THREE.Vector3(),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),sc=new THREE.Vector3(),inv=new THREE.Matrix4();
+  const outside=b=>b.max.x<BX[0]||b.min.x>BX[1]||b.max.z<BZ[0]||b.min.z>BZ[1];
+  // 場地高台（原版場內地面比道路高 1.5 m，一整片 x −165～505、z −120～114.7 的平面）：沿新路西緣（新中心線 −3.9 m，同原版距離）切掉東北角
+  const EDGE=x=>Math.min(114.7,newZ(x)-6.9);   // 路面半寬 4.6＋人行道 2＋0.3
+  // 「會被丟到路上或路東側的場地物件」：原位置在舊路西側 6.8 m 以外（場地側、不會跟著移），但有任何部分越過新的高台邊緣
+  const fieldSide=(x,z)=>x>104&&z<oldZ(x)-6.8;
+  const beyond=(x,z)=>x>104&&z>EDGE(x)-1.1;
+  // ---- 1) 位移前：場地高台改形、清掉越界的場地物件 ----
+  // 舊版遺留的 155 m 矮欄杆（z=152.6）：gate11 會整條拿掉，但它靠原本位置找；位移前先照同樣條件拿掉（柱、橫桿、碰撞）
+  {const wp=new THREE.Vector3();scene.traverse(m=>{if(!m.isMesh||!m.geometry||!m.geometry.parameters)return;const gp=m.geometry.parameters;m.getWorldPosition(wp);if(Math.abs(wp.z-152.6)<.2&&((gp.width>100&&gp.height<.2)||(Math.abs(gp.width-.1)<.01&&Math.abs(gp.height-.9)<.01))){m.visible=false;out.rail=(out.rail||0)+1}});
+    for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(Math.abs(b.y0-152.5)<.05&&b.x1-b.x0>100)OBR.splice(i,1)}}
+  // 頂點很少的長條網格（例：沿舊路的整條圍牆、路緣，只有 8 個角）先細分到每邊 ≤4 m，位移後才會跟著彎
+  const subdiv=(o,maxL)=>{let g=o.geometry;if(g.index)g=g.toNonIndexed();const names=Object.keys(g.attributes),A={};names.forEach(n=>A[n]={sz:g.attributes[n].itemSize,src:g.attributes[n].array,out:[]});const P=g.attributes.position.array,W0=o.matrixWorld;const ws=new THREE.Vector3(o.matrixWorld.elements[0],o.matrixWorld.elements[1],o.matrixWorld.elements[2]).length()||1;
+    const tri=[];for(let i=0;i<P.length/3;i+=3)tri.push([i,i+1,i+2].map(k=>{const r={};names.forEach(n=>{const s=A[n].sz;r[n]=Array.from(A[n].src.slice(k*s,k*s+s))});return r}));
+    const len=(a,b)=>Math.hypot(a.position[0]-b.position[0],a.position[1]-b.position[1],a.position[2]-b.position[2])*ws,mid=(a,b)=>{const r={};names.forEach(n=>r[n]=a[n].map((v,i)=>(v+b[n][i])/2));return r};
+    const outT=[];let guard=0;while(tri.length&&guard++<200000){const t=tri.pop();const l=[len(t[0],t[1]),len(t[1],t[2]),len(t[2],t[0])],m=Math.max(...l);if(m<=maxL){outT.push(t);continue}const k=l.indexOf(m),a=t[k],b=t[(k+1)%3],c=t[(k+2)%3],mm=mid(a,b);tri.push([a,mm,c],[mm,b,c])}
+    const ng=new THREE.BufferGeometry();names.forEach(n=>{const arr=[];for(const t of outT)for(const v of t)arr.push(...v[n]);ng.setAttribute(n,new THREE.Float32BufferAttribute(arr,A[n].sz))});o.geometry=ng;return outT.length};
+  const doPlat=()=>{try{let plat=null;scene.updateMatrixWorld(true);scene.children.forEach(o=>{if(plat||!o.isMesh||!o.geometry||!o.geometry.attributes.position||o.geometry.attributes.position.count>12)return;bb.setFromObject(o);if(bb.max.x-bb.min.x>600&&bb.max.z-bb.min.z>200&&bb.max.y-bb.min.y<.5)plat=o});
+    if(plat){const g=plat.geometry,P=g.attributes.position,U=g.attributes.uv;plat.updateMatrixWorld(true);const pts=[];for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(plat.matrixWorld);pts.push([v.x,v.y,v.z,U?U.getX(i):0,U?U.getY(i):0])}
+      // uv 對世界 (x,z) 的線性關係（用三個不共線的頂點解）
+      let A=pts[0],B=pts.find(p=>Math.abs(p[0]-A[0])>1),Cc=pts.find(p=>Math.abs(p[2]-A[2])>1&&Math.abs(p[0]-B[0])+Math.abs(p[2]-B[2])>1);const det=(B[0]-A[0])*(Cc[2]-A[2])-(Cc[0]-A[0])*(B[2]-A[2]);
+      const lin=k=>{const a=((B[k]-A[k])*(Cc[2]-A[2])-(Cc[k]-A[k])*(B[2]-A[2]))/det,b=((Cc[k]-A[k])*(B[0]-A[0])-(B[k]-A[k])*(Cc[0]-A[0]))/det;return(x,z)=>A[k]+a*(x-A[0])+b*(z-A[2])};const fu=lin(3),fv=lin(4),Y0=A[1];
+      const x0=Math.min(...pts.map(p=>p[0])),x1=Math.max(...pts.map(p=>p[0])),z0=Math.min(...pts.map(p=>p[2])),z1=Math.max(...pts.map(p=>p[2]));
+      const ct=[[x0,z0],[x1,z0]];for(let x=x1;x>104;x-=2)ct.push([x,Math.min(z1,EDGE(x))]);ct.push([104,z1],[x0,z1]);
+      const tri=THREE.ShapeUtils.triangulateShape(ct.map(p=>new THREE.Vector2(p[0],p[1])),[]);const pos=[],uv=[];inv.copy(plat.matrixWorld).invert();
+      for(const t of tri)for(const k of[t[0],t[2],t[1]]){const [x,z]=ct[k];v.set(x,Y0,z).applyMatrix4(inv);pos.push(v.x,v.y,v.z);uv.push(fu(x,z),fv(x,z))}
+      const ng=new THREE.BufferGeometry();ng.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));ng.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));ng.computeVertexNormals();
+      if(ng.attributes.normal.getY(0)<0){const p=ng.attributes.position.array;for(let i=0;i<p.length;i+=9)for(let k=0;k<3;k++){const t=p[i+3+k];p[i+3+k]=p[i+6+k];p[i+6+k]=t}const u2=ng.attributes.uv.array;for(let i=0;i<u2.length;i+=6)for(let k=0;k<2;k++){const t=u2[i+2+k];u2[i+2+k]=u2[i+4+k];u2[i+4+k]=t}ng.computeVertexNormals()}
+      plat.geometry=ng;plat.userData.noWarp27=1;out.plat=tri.length;
+      // 高台邊緣的擋土牆面（道路 −1.5 到高台面）＋碰撞
+      const wm=new THREE.MeshLambertMaterial({color:'#b8b2a6',side:THREE.DoubleSide}),WP=[];let px=104;while(px<x1){const qx=Math.min(x1,px+2),za=EDGE(px),zb=EDGE(qx);if(za<114.69||zb<114.69||dz(px)>.3){WP.push(px,-1.5,za,qx,-1.5,zb,qx,Y0+.02,zb,px,-1.5,za,qx,Y0+.02,zb,px,Y0+.02,za);const L=Math.hypot(qx-px,zb-za);addOBB((px+qx)/2,(za+zb)/2,Math.atan2(zb-za,qx-px),L/2,.2)}px=qx}
+      if(WP.length){const wg=new THREE.BufferGeometry();wg.setAttribute('position',new THREE.Float32BufferAttribute(WP,3));wg.computeVertexNormals();const wmsh=new THREE.Mesh(wg,wm);wmsh.userData.noWarp27=1;scene.add(wmsh);out.wall=WP.length/18}}}catch(e){console.warn('n27 plateau',e)}};doPlat();
+  // 越界的場地物件：小的整個藏起來，大的網格逐三角形（任一頂點越界就拿掉，避免鋸齒殘片）
+  try{const tri=new THREE.Vector3(),t2=new THREE.Vector3(),t3=new THREE.Vector3();scene.updateMatrixWorld(true);const list=[];scene.traverse(o=>{if((o.isMesh||o.isLine||o.isLineSegments)&&o.visible&&!skip.has(o)&&!(o.userData&&o.userData.noWarp27))list.push(o)});
+    for(const o of list){if(o.isInstancedMesh){let ch=0;for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);v.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld);if(fieldSide(v.x,v.z)&&beyond(v.x,v.z)){m4.makeScale(0,0,0);o.setMatrixAt(i,m4);ch++}}if(ch){o.instanceMatrix.needsUpdate=true;out.hide+=ch}continue}
+      bb.setFromObject(o);if(bb.isEmpty()||bb.max.x<104||bb.min.x>300||bb.max.z<40||bb.min.z>125)continue;const sx=bb.max.x-bb.min.x,sz=bb.max.z-bb.min.z,cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;
+      if(sx<40&&sz<40){if(fieldSide(cx,cz)&&(beyond(cx,cz)||beyond(bb.min.x,bb.max.z)||beyond(bb.max.x,bb.max.z))){o.visible=false;out.hide++}continue}
+      if(sx>900||sz>900||(o.geometry.type==='PlaneGeometry'&&Math.max(sx,sz)>150))continue;const g=o.geometry,P=g.attributes&&g.attributes.position;if(!P||o.isLine||o.isLineSegments)continue;
+      // 平的地面貼片（柏油、草皮、標線）：越界頂點直接壓回邊緣，切口平整；有高度的網格才逐三角形拿掉
+      if(bb.max.y-bb.min.y<.6){o.updateMatrixWorld(true);if(!Array.isArray(o.material)&&P.count<4000){try{subdiv(o,3)}catch(e){}}const P2=o.geometry.attributes.position;inv.copy(o.matrixWorld).invert();let ch=0;for(let i=0;i<P2.count;i++){tri.fromBufferAttribute(P2,i).applyMatrix4(o.matrixWorld);if(fieldSide(tri.x,tri.z)&&beyond(tri.x,tri.z)){tri.z=EDGE(tri.x)-1.15;tri.applyMatrix4(inv);P2.setXYZ(i,tri.x,tri.y,tri.z);ch++}}if(ch){P2.needsUpdate=true;o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();out.cut+=ch}continue}
+      const bad=(i)=>{tri.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);return fieldSide(tri.x,tri.z)&&beyond(tri.x,tri.z)};
+      if(g.index){const a=g.index.array,keep=[];let n=0;for(let t=0;t<a.length;t+=3){if(bad(a[t])||bad(a[t+1])||bad(a[t+2]))n++;else keep.push(a[t],a[t+1],a[t+2])}if(n){const ng=g.clone();ng.setIndex(keep);o.geometry=ng;out.cut+=n}}
+      else{const n0=P.count;let n=0;const keepIdx=[];for(let i=0;i<n0;i+=3){if(bad(i)||bad(i+1)||bad(i+2))n++;else keepIdx.push(i)}if(n){const ng=new THREE.BufferGeometry();for(const nm in g.attributes){const at=g.attributes[nm],isz=at.itemSize,arr=new at.array.constructor(keepIdx.length*3*isz);let w=0;for(const i of keepIdx)for(let k=0;k<3;k++)for(let c=0;c<isz;c++)arr[w++]=at.array[(i+k)*isz+c];ng.setAttribute(nm,new THREE.BufferAttribute(arr,isz,at.normalized))}ng.groups=[];o.geometry=ng;out.cut+=n}}}
+  }catch(e){console.warn('n27 strand',e)}
+  const strand=(x,z)=>fieldSide(x,z)&&beyond(x,z);
+  // 高度：高台切掉的地方回到道路高度
+  {const _hN=hAt;hAt=function(x,y){if(x>104&&x<503&&y>-118&&y<=114.7&&y>EDGE(x))return -1.5;return _hN(x,y)}}
+  for(let i=OBC.length-1;i>=0;i--)if(strand(OBC[i].x,OBC[i].y)){OBC.splice(i,1);out.colCut++}
+  for(let i=OBO.length-1;i>=0;i--){const o=OBO[i];if(o&&o.cx!=null&&strand(o.cx,o.cy)){OBO.splice(i,1);out.colCut++}}
+  // ---- 2) 位移 ----
+  const moveObj=(o,d)=>{o.getWorldPosition(v);const a=v.clone();v.z+=d;if(o.parent&&o.parent!==scene){o.parent.worldToLocal(v);o.parent.worldToLocal(a);o.position.x+=v.x-a.x;o.position.y+=v.y-a.y;o.position.z+=v.z-a.z}else o.position.z+=d;o.updateMatrixWorld(true)};
+  const warpGeo=o=>{const g=o.geometry;if(!g||!g.attributes||!g.attributes.position)return false;const P=g.attributes.position;o.updateMatrixWorld(true);inv.copy(o.matrixWorld).invert();let ch=0;
+    for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);const d=D(v.x,v.z);if(Math.abs(d)<1e-4)continue;v.z+=d;v.applyMatrix4(inv);P.setXYZ(i,v.x,v.y,v.z);ch++}
+    if(ch){P.needsUpdate=true;if(g.attributes.normal)g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere()}return ch>0};
+  const proc=o=>{if(skip.has(o)||o.isCamera||o.isLight)return;if(o.userData&&o.userData.noWarp27)return;
+    // 場地東界整道圍牆（寬 423.3、z=112.85）：之後 gate11 會把它藏起來、在大門兩側重建直牆（只到 x 104），這裡不動
+    if(o.isMesh&&o.geometry&&o.geometry.parameters&&Math.abs((o.geometry.parameters.width||0)-423.3)<.2&&Math.abs(o.position.z-112.85)<.2)return;
+    if(o.isInstancedMesh){o.updateMatrixWorld(true);let ch=0;const wm=o.matrixWorld,iw=new THREE.Matrix4().copy(wm).invert();for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);const w=m4.clone().premultiply(wm);v.setFromMatrixPosition(w);const d=D(v.x,v.z);if(Math.abs(d)<1e-4)continue;w.elements[14]+=d;m4.copy(w).premultiply(iw);o.setMatrixAt(i,m4);ch++}if(ch){o.instanceMatrix.needsUpdate=true;out.warpInst+=ch}return}
+    bb.setFromObject(o);if(bb.isEmpty()||outside(bb))return;const sx=bb.max.x-bb.min.x,sz=bb.max.z-bb.min.z;
+    if((o.isMesh||o.isLine||o.isLineSegments||o.isPoints)&&o.geometry){const big=sx>40||sz>40;if(o.geometry.type==='PlaneGeometry'&&Math.max(sx,sz)>150)return;if(sx>900||sz>900)return;
+      if(big){if(o.children.length){o.children.slice().forEach(proc)}if(o.isMesh&&!Array.isArray(o.material)&&o.geometry.attributes.position.count<2000){try{const n=subdiv(o,4);out.subdiv=(out.subdiv||0)+n}catch(e){}}if(warpGeo(o))out.warpBig++;return}
+      const cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2,d=D(cx,cz);if(Math.abs(d)>1e-4){moveObj(o,d);out.warpSmall++}return}
+    if(o.isSprite){o.getWorldPosition(v);const d=D(v.x,v.z);if(Math.abs(d)>1e-4){moveObj(o,d);out.warpSmall++}return}
+    if(sx<40&&sz<40){const cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2,d=D(cx,cz);if(Math.abs(d)>1e-4){moveObj(o,d);out.warpSmall++}return}
+    o.children.slice().forEach(proc)};
+  scene.children.slice().forEach(proc);
+  // 碰撞：OBC/OBO 依中心位移；OBR 長條切成 ≤4 m 一段再各自位移（或丟掉落在場地殘段的部分）
+  for(const c of OBC){const d=D(c.x,c.y);if(Math.abs(d)>1e-4){c.y+=d;out.col++}}
+  for(const o of OBO){if(!o||o.cx==null)continue;const d=D(o.cx,o.cy);if(Math.abs(d)>1e-4){o.cy+=d;out.col++}}
+  {const add=[];for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(b.x1<104||b.x0>BX[1]||b.y1<BZ[0]||b.y0>BZ[1])continue;
+      if(Math.abs(b.y0-112.65)<.05&&b.x0>76&&b.x0<77&&b.x1>400)continue;   // 場地東界圍牆的碰撞：交給 gate11 處理（只留到 x 104）
+      // x 104 以南那段不動（保持一整段，gate11 之後還會依原形狀處理），以北切 4 m 一段
+      const xs=b.x0<104?104:b.x0,pieces=[];if(b.x0<104)pieces.push({x0:b.x0,x1:104,y0:b.y0,y1:b.y1});
+      const n=Math.max(1,Math.ceil((b.x1-xs)/4));let touched=false;for(let k=0;k<n;k++){const x0=xs+(b.x1-xs)*k/n,x1=xs+(b.x1-xs)*(k+1)/n,cx=(x0+x1)/2,cz=(b.y0+b.y1)/2;
+        if(strand(cx,cz)){touched=true;out.colCut++;continue}const d=D(cx,cz);if(Math.abs(d)>1e-4)touched=true;pieces.push({x0,x1,y0:b.y0+d,y1:b.y1+d})}
+      if(touched){OBR.splice(i,1);add.push(...pieces);out.col++}}OBR.push(...add)}
+  // ---- 3) 資料：MH 主線、RTX.roads 北段座標 ----
+  const done=new Set(),upd=A=>{if(!A)return;for(const p of A){if(p[0]>=104&&!done.has(p)){p[1]+=dz(p[0]);done.add(p)}}};   // 各陣列共用同一組點，每點只移一次
+  upd(MP);(RTX.roads||[]).forEach(r=>{if(r.P!==MP&&/明湖路/.test(r.name||'')&&r.P.some(p=>p[0]>=104))upd(r.P)});
+  // 主線累積長度（若有）依新座標重算
+  try{const Lm=MH.main.L;if(Array.isArray(Lm)&&Lm.length===MP.length){Lm[0]=0;for(let i=1;i<MP.length;i++)Lm[i]=Lm[i-1]+Math.hypot(MP[i][0]-MP[i-1][0],MP[i][1]-MP[i-1][1]);if('len'in MH.main)MH.main.len=Lm[Lm.length-1]}}catch(e){}
+  // （在 visBuild 與地形背景計算之前執行，之後的街區補建、地形都直接用新路線）
+  N27={late:()=>{if(!out.plat)doPlat();return out.plat||0},d:(x,z)=>{let m=1e9;for(let i=0;i<NEW.length-1;i++){const a=NEW[i],b=NEW[i+1],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let t=((x-a[0])*vx+(z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;m=Math.min(m,Math.hypot(x-a[0]-vx*t,z-a[1]-vz*t))}return m},newZ,oldZ,out,ms:Math.round(performance.now()-t0)};
+  console.log('[明湖路北段] '+JSON.stringify(out)+' '+N27.ms+'ms');return N27}
 
 </script>
 </body>
