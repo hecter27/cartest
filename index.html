@@ -2673,7 +2673,7 @@ const LKD=[24.7,15.5],LKT=(N,E)=>{const r=REALT(N,E);return[r[0]+LKD[0],r[1]+LKD
   const sh=new THREE.Shape(LAKE_OUT.map(p=>new THREE.Vector2(p[0],-p[1])));const wg=new THREE.ShapeGeometry(sh);wg.rotateX(-Math.PI/2);
   const water=new THREE.Mesh(wg,new THREE.MeshStandardMaterial({color:'#5d8fa8',roughness:.08,metalness:.35,envMapIntensity:1.2}));water.position.y=Y-.02;water.renderOrder=1;water.receiveShadow=true;scene.add(water);LAKE.water=water;
   const bank=new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(LAKE_OUT.map(p=>{const c=[-590,428];const dx=p[0]-c[0],dz=p[1]-c[1],l=Math.hypot(dx,dz);return new THREE.Vector2(p[0]+dx/l*6,-(p[1]+dz/l*6))}))),M({color:'#7b8a5a'}));bank.geometry.rotateX(-Math.PI/2);bank.position.y=Y-.035;scene.add(bank);
-  const ig=new THREE.ShapeGeometry(new THREE.Shape(ISLE.map(p=>new THREE.Vector2(p[0],-p[1]))));ig.rotateX(-Math.PI/2);const isle=new THREE.Mesh(ig,M({color:'#6f8f4a'}));isle.position.y=Y+.03;scene.add(isle);
+  const ig=new THREE.ShapeGeometry(new THREE.Shape(ISLE.map(p=>new THREE.Vector2(p[0],-p[1]))));ig.rotateX(-Math.PI/2);const isle=new THREE.Mesh(ig,M({color:'#6f8f4a'}));isle.position.y=Y+.12;scene.add(isle);
   let sd=777;const r=()=>(sd=(sd*16807)%2147483647)/2147483647;const crown=new THREE.MeshLambertMaterial({color:'#3f6f2f'}),trunk=M({color:'#5d4633'});
   const tree=(x,z,s=1,col)=>{const t=new THREE.Mesh(new THREE.CylinderGeometry(.18*s,.26*s,3*s,7),trunk);t.position.set(x,Y+1.5*s,z);scene.add(t);const c=new THREE.Mesh(CROWN_GEO,col?new THREE.MeshLambertMaterial({map:LEAF_TEX,vertexColors:true,color:col.color}):CROWN_M);c.scale.set(1.8*s,1.6*s,1.8*s);c.rotation.y=Math.random()*6;c.position.set(x,Y+3.8*s,z);c.castShadow=true;scene.add(c);OBC.push({x,y:z,r:.3*s})};
   for(let i=0;i<14;i++){const a=ISLE[Math.floor(r()*ISLE.length)],b=ISLE[Math.floor(r()*ISLE.length)];tree((a[0]*2+b[0])/3,(a[1]*2+b[1])/3,.9+r()*.5)}
@@ -6930,8 +6930,87 @@ function route30Fix(){const out={};
       if(nz.x*-SL.v[0]+nz.z*-SL.v[1]>.7){o.material=FR;nR++}});
     window.FLASH30={mats:[FL,FR],on:true};out.flash={yellow:nY-nR,red:nR}}}catch(e){console.error('ROUTE30 flash',e)}
   return out}
+// ---- 待辦 5：湖面從高空看有斑塊。湖岸泥色平面（湖形外擴 6 m）只比水面低 1.5 cm，湖底地形也只低幾公分，遠處深度精度不夠就穿出水面。
+//      湖岸平面會被高程模組依外框重切網格（挖洞會被丟掉），所以等載入完成後第一幀再處理：
+//      從水面網格取出邊界線；湖岸平面與地形（_reG）在水面輪廓內 dIn 公尺以上、離水面不到 0.5 m 的頂點，壓到水面下 0.6 m（只動畫面，不動 hAt）。
+function lake30(){const W=window.LAKE&&LAKE.water;if(!W)return null;W.updateMatrixWorld(true);const wl=W.getWorldPosition(new THREE.Vector3()).y;
+  // 水面邊界：只被一個三角形用到的邊
+  const WP=W.geometry.attributes.position,WI=W.geometry.index,wv=new THREE.Vector3(),pts=[];for(let i=0;i<WP.count;i++){wv.fromBufferAttribute(WP,i).applyMatrix4(W.matrixWorld);pts.push([wv.x,wv.z])}
+  const key=i=>Math.round(pts[i][0]*100)+','+Math.round(pts[i][1]*100),E=new Map(),nT=WI?WI.count/3:WP.count/3;
+  for(let t=0;t<nT;t++){const id=[0,1,2].map(k=>WI?WI.getX(t*3+k):t*3+k);for(let k=0;k<3;k++){const a=id[k],b=id[(k+1)%3],ka=key(a),kb=key(b),kk=ka<kb?ka+'|'+kb:kb+'|'+ka;const e=E.get(kk);if(e)e.n++;else E.set(kk,{n:1,a,b})}}
+  const S=[];E.forEach(e=>{if(e.n===1)S.push([pts[e.a][0],pts[e.a][1],pts[e.b][0],pts[e.b][1]])});
+  let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;S.forEach(s=>{x0=Math.min(x0,s[0],s[2]);x1=Math.max(x1,s[0],s[2]);z0=Math.min(z0,s[1],s[3]);z1=Math.max(z1,s[1],s[3])});
+  const inside=(x,z)=>{let c=false;for(const s of S){if((s[1]>z)!==(s[3]>z)&&x<s[0]+(z-s[1])*(s[2]-s[0])/(s[3]-s[1]))c=!c}return c};
+  const dist=(x,z)=>{let d=1e9;for(const s of S){const dx=s[2]-s[0],dz=s[3]-s[1],l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-s[0])*dx+(z-s[1])*dz)/l2));d=Math.min(d,Math.hypot(x-s[0]-dx*t,z-s[1]-dz*t))}return d};
+  const out={wl,edges:S.length,bank:0,terrain:0};
+  const press=(m,dIn,tag)=>{m.updateMatrixWorld(true);const P=m.geometry.attributes.position,mw=m.matrixWorld,inv=new THREE.Matrix4().copy(mw).invert(),v=new THREE.Vector3();let k=0;
+    for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(mw);if(v.x<x0||v.x>x1||v.z<z0||v.z>z1||v.y<wl-.5||v.y>wl+.5)continue;if(!inside(v.x,v.z)||dist(v.x,v.z)<dIn)continue;
+      v.y=wl-.6;v.applyMatrix4(inv);P.setXYZ(i,v.x,v.y,v.z);k++}
+    if(k){P.needsUpdate=true;m.geometry.computeBoundingSphere();out[tag]+=k}};
+  const bb=new THREE.Box3();scene.traverse(m=>{if(!m.isMesh||m===W)return;
+    if(m.userData&&m.userData._reG){press(m,1.5,'terrain');return}
+    const c=m.material&&m.material.color;if(c&&c.getHexString()==='7b8a5a'){bb.setFromObject(m);if(bb.min.x<x1&&bb.max.x>x0&&bb.min.z<z1&&bb.max.z>z0&&Math.abs(bb.max.y-wl)<.2)press(m,.5,'bank')}});
+  return out}
+// ---- 待辦 3：明湖路大門北側東邊（x 200～270）的行道樹，樹幹整個埋在方塊建物裡，只剩樹冠從牆面伸出，看起來像浮在半空。
+//      載入完成後第一幀：樹幹（棕色圓柱）在方塊建物量體內的樹，連同正上方的樹冠與碰撞圓，往最近道路推到離建物 0.7 m 以上、
+//      離路面邊緣 1 m 以上；推不出去就整棵藏起來。原始物件被移動時靜態合併會自動拆出（sbWatch）。
+function tree30(){const out={trunk:0,moved:0,hid:0},v=new THREE.Vector3(),loc=new THREE.Vector3(),inv=new THREE.Matrix4(),sz=new THREE.Vector3(),ws=new THREE.Vector3();
+  const all=new Set(typeof SB!=='undefined'&&SB.byMesh?[...SB.byMesh.keys()]:[]);scene.traverse(o=>{if(o.isMesh&&o.name!=='SB'&&!o.isInstancedMesh)all.add(o)});
+  const blds=[];for(const o of all){if(!o.visible||!o.isMesh||o.geometry.type!=='BoxGeometry'||(o.material&&o.material.transparent))continue;const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();g.boundingBox.getSize(sz);o.getWorldScale(ws);
+    const d=[sz.x*ws.x,sz.z*ws.z].sort((a,b)=>a-b);if(d[0]<2.5||d[1]>160||sz.y*ws.y<3)continue;o.updateMatrixWorld(true);blds.push({o,inv:new THREE.Matrix4().copy(o.matrixWorld).invert(),bb:g.boundingBox})}
+  const inB=(x,y,z,m)=>blds.some(b=>{loc.set(x,y,z).applyMatrix4(b.inv);const bb=b.bb;return loc.x>bb.min.x-m&&loc.x<bb.max.x+m&&loc.y>bb.min.y&&loc.y<bb.max.y&&loc.z>bb.min.z-m&&loc.z<bb.max.z+m});
+  const trunks=[...all].filter(o=>o.isMesh&&o.visible&&o.geometry.type==='CylinderGeometry'&&o.material.color&&o.material.color.getHexString()==='5d4633'&&o.geometry.parameters.height>1.5);out.trunk=trunks.length;
+  for(const t of trunks){t.updateMatrixWorld(true);t.getWorldPosition(v);const tx=v.x,tz=v.z,ty=v.y+.6;if(!inB(tx,ty,tz,-.05))continue;
+    const parts=[t];for(const o of all){if(o===t||!o.isMesh||!o.visible)continue;o.getWorldPosition(loc);if(Math.hypot(loc.x-tx,loc.z-tz)<.4&&loc.y>v.y)parts.push(o)}
+    const oc=OBC.find(c=>Math.hypot(c.x-tx,c.y-tz)<.05);const n=rtNearest(tx,tz);let ok=null;
+    if(n){const sg=n.off>=0?1:-1,nx=-n.dir[1]*sg,nz=n.dir[0]*sg;// 由道路指向樹的法線；往道路方向（負號）推
+      for(let s=.2;s<=6;s+=.2){const x=tx-nx*s,z=tz-nz*s,m=rtNearest(x,z);if(m&&Math.abs(m.d)<m.R.hw+1)break;if(!inB(x,ty,z,.7)){ok=[x-tx,z-tz];break}}}
+    if(ok){for(const o of parts){o.position.x+=ok[0];o.position.z+=ok[1];o.updateMatrixWorld(true)}if(oc){oc.x+=ok[0];oc.y+=ok[1]}out.moved++}
+    else{for(const o of parts)o.visible=false;if(oc){const i=OBC.indexOf(oc);if(i>=0)OBC.splice(i,1)}out.hid++}}
+  return out}
+// ---- 待辦 3（續）：外牆細節（facadeDetail 合併網格，材質在 BM）裡的舊騎樓殘骸。logic27 第 7 步用「1.8 m 內有量體」判斷，
+//      騎樓頂板貼著牆但往外伸 2～3 m、下面的柱子早就沒了，仍留著（大門北側東邊 (142,113) 離地 6.5 m 那塊）。
+//      依相連塊：離地 1.5 m 以上且伸出方塊建物量體超過 1.6 m → 收掉；整塊貼地（0.3 m 內）且落在路面上（舊店面門檻）→ 收掉。
+function facade30(){if(typeof BM==='undefined')return null;const bmS=new Set();for(const k in BM){const m=BM[k];(Array.isArray(m)?m:[m]).forEach(x=>bmS.add(x))}
+  // 外牆細節：場景裡的，加上已被靜態合併的原始網格（改完用 sbWake 拆出，下一次算圖前合併網格自動重建）
+  const det=[];scene.traverse(o=>{if(o.isMesh&&o.visible&&!o.isInstancedMesh&&bmS.has(o.material))det.push(o)});
+  const batched=new Set();if(typeof SB!=='undefined'&&SB.byMesh)for(const o of SB.byMesh.keys())if(o.isMesh&&o.visible&&bmS.has(o.material)&&!det.includes(o)){det.push(o);batched.add(o)}
+  const sz=new THREE.Vector3(),ws=new THREE.Vector3(),loc=new THREE.Vector3(),V=new THREE.Vector3();const all=new Set(typeof SB!=='undefined'&&SB.byMesh?[...SB.byMesh.keys()]:[]);scene.traverse(o=>{if(o.isMesh&&o.name!=='SB'&&!o.isInstancedMesh)all.add(o)});
+  const blds=[];for(const o of all){if(!o.visible||!o.isMesh||o.geometry.type!=='BoxGeometry')continue;const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();g.boundingBox.getSize(sz);o.getWorldScale(ws);
+    const d=[sz.x*ws.x,sz.z*ws.z].sort((a,b)=>a-b);if(d[0]<2.5||d[1]>160||sz.y*ws.y<3)continue;o.updateMatrixWorld(true);const c=new THREE.Vector3();o.getWorldPosition(c);blds.push({c,inv:new THREE.Matrix4().copy(o.matrixWorld).invert(),bb:g.boundingBox})}
+  // 頂點到最近方塊建物量體的水平距離（在量體內為 0；只看 y 在量體高度＋3 m 內的建物）
+  const outD=(x,y,z)=>{let best=1e9;for(const b of blds){if(Math.abs(b.c.x-x)>40||Math.abs(b.c.z-z)>40)continue;loc.set(x,y,z).applyMatrix4(b.inv);const bb=b.bb;if(loc.y<bb.min.y-.5)continue;// 不設上限：退縮樓層的屋頂平台欄杆，正下方有低樓層屋頂撐著，算貼著量體
+    const dx=Math.max(bb.min.x-loc.x,0,loc.x-bb.max.x),dz=Math.max(bb.min.z-loc.z,0,loc.z-bb.max.z);best=Math.min(best,Math.hypot(dx,dz))}return best};
+  const out={mesh:det.length,slab:0,sill:0,at:[]};
+  for(const o of det){const g=o.geometry,P=g.attributes.position,I=g.index?g.index.array:null,n=P.count;if(!n||n>400000)continue;o.updateMatrixWorld(true);
+    const par=new Int32Array(n);for(let i=0;i<n;i++)par[i]=i;const f=i=>{while(par[i]!==i){par[i]=par[par[i]];i=par[i]}return i};
+    const km=new Map();for(let i=0;i<n;i++){const k=Math.round(P.getX(i)*50)+','+Math.round(P.getY(i)*50)+','+Math.round(P.getZ(i)*50);const j=km.get(k);if(j===undefined)km.set(k,i);else{const a=f(i),b=f(j);if(a!==b)par[a]=b}}
+    const nt=(I?I.length:n)/3|0;for(let t=0;t<nt;t++){const a=f(I?I[t*3]:t*3),b=f(I?I[t*3+1]:t*3+1),c=f(I?I[t*3+2]:t*3+2);if(a!==b)par[a]=b;const b2=f(b);if(f(c)!==b2)par[f(c)]=b2}
+    const C=new Map();for(let i=0;i<n;i++){const r=f(i);let c=C.get(r);if(!c)C.set(r,c={v:[],lo:1e9,hi:-1e9,od:0});c.v.push(i);V.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);const gy=V.y-hAt(V.x,V.z);c.lo=Math.min(c.lo,gy);c.hi=Math.max(c.hi,gy);c.od=Math.max(c.od,outD(V.x,V.y,V.z));c.x=V.x;c.z=V.z}
+    let k=0;for(const c of C.values()){let kill=false;if(c.lo>1.5&&c.od>1.6&&c.od<1e8){kill=true;out.slab++}
+      else if(c.hi<.3){const nr=rtNearest(c.x,c.z);if(nr&&nr.d<nr.R.hw){kill=true;out.sill++}}
+      if(kill){if(out.at.length<60)out.at.push([Math.round(c.x),Math.round(c.z),+c.lo.toFixed(1),+(c.od<1e8?c.od:0).toFixed(1)]);const x0=P.getX(c.v[0]),y0=P.getY(c.v[0]),z0=P.getZ(c.v[0]);for(const i of c.v)P.setXYZ(i,x0,y0,z0);k++}}
+    if(k){P.needsUpdate=true;g.computeBoundingSphere();if(batched.has(o)&&typeof sbWake==='function'){sbWake(o);out.unbatch=(out.unbatch||0)+1}}}
+  // 舊街屋主體拆掉後留下的樑／女兒牆：細長方塊（最薄 ≤0.35 m）、離地 1.5 m 以上、原版街屋牆色、中心離方塊建物 1.6 m 以上 → 藏起來
+  const TINT=new Set(['e9e2d0','d8d3c6','efe8d6','cfc8b8','e2d8c0']),bx=new THREE.Box3(),cc=new THREE.Vector3();out.beam=0;
+  for(const o of all){if(!o.visible||!o.isMesh||o.geometry.type!=='BoxGeometry'||!o.material||!o.material.color||!TINT.has(o.material.color.getHexString()))continue;const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();g.boundingBox.getSize(sz);o.getWorldScale(ws);
+    const X=sz.x*ws.x,Y=sz.y*ws.y,Z=sz.z*ws.z;if(Math.min(X,Y,Z)>.35||Math.max(X,Z)<1.5)continue;o.updateMatrixWorld(true);o.getWorldPosition(cc);bx.setFromObject(o);if(bx.min.y-hAt(cc.x,cc.z)<1.5)continue;
+    if(outD(cc.x,cc.y,cc.z)>1.6){o.visible=false;out.beam++;if(out.at.length<60)out.at.push(['beam',Math.round(cc.x),Math.round(cc.z)])}}
+  return out}
+// ---- 待辦 3（續）：大門口 (122,113) 一帶路面上有草地三角形：1400×400 地形補丁的邊緣落在路上，比路面高幾公分。
+//      地形網格（_reG）在路面範圍內（離中心線 < 半寬 −0.2 m）且高過 hAt−0.15 的頂點，壓到 hAt−0.25（路面會蓋住，只動畫面）。
+function road30(){const CS=20,G=new Map(),key=(i,j)=>i*100003+j;
+  for(const R of RTX.roads){if(!R.hw||/環湖|靈隱寺/.test(R.name||''))continue;for(let i=0;i<R.P.length-1;i++){const a=R.P[i],b=R.P[i+1],s=[a[0],a[1],b[0],b[1],R.hw];
+    for(let x=Math.floor((Math.min(a[0],b[0])-R.hw)/CS);x<=Math.floor((Math.max(a[0],b[0])+R.hw)/CS);x++)for(let z=Math.floor((Math.min(a[1],b[1])-R.hw)/CS);z<=Math.floor((Math.max(a[1],b[1])+R.hw)/CS);z++){const k=key(x,z);(G.get(k)||G.set(k,[]).get(k)).push(s)}}}
+  const inRoad=(x,z)=>{const L=G.get(key(Math.floor(x/CS),Math.floor(z/CS)));if(!L)return false;for(const s of L){const dx=s[2]-s[0],dz=s[3]-s[1],l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-s[0])*dx+(z-s[1])*dz)/l2));if(Math.hypot(x-s[0]-dx*t,z-s[1]-dz*t)<s[4]-.2)return true}return false};
+  const out={v:0,mesh:0},v=new THREE.Vector3();scene.traverse(m=>{if(!m.isMesh||!m.userData||!m.userData._reG)return;m.updateMatrixWorld(true);const P=m.geometry.attributes.position,mw=m.matrixWorld,inv=new THREE.Matrix4().copy(mw).invert();let k=0;
+    for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(mw);const h=hAt(v.x,v.z);if(v.y<h-.15||!inRoad(v.x,v.z))continue;v.y=h-.25;v.applyMatrix4(inv);P.setXYZ(i,v.x,v.y,v.z);k++}
+    if(k){P.needsUpdate=true;m.geometry.computeBoundingSphere();out.v+=k;out.mesh++}});return out}
 // 閃光號誌：0.55 秒亮、0.45 秒暗
-{const _fb=frameBody;frameBody=function(ts){_fb(ts);const F=window.FLASH30;if(!F)return;const on=(ts/1000)%1<.55;if(on!==F.on){F.on=on;for(const m of F.mats)m.emissiveIntensity=on?1.6:0,m.color.set(on?(m===F.mats[0]?'#ffb21a':'#ff3b2f'):'#2a2a2a')}}}
+{const _fb=frameBody;frameBody=function(ts){if(!window.LAKE30){window.LAKE30=1;try{window.LAKE30=lake30()||1;console.log('[湖底30]',JSON.stringify(window.LAKE30))}catch(e){console.error('LAKE30',e)}
+  try{window.TREE30=tree30();console.log('[行道樹30]',JSON.stringify(window.TREE30))}catch(e){console.error('TREE30',e)}
+  try{window.FACADE30=facade30();console.log('[騎樓殘骸30]',JSON.stringify(window.FACADE30))}catch(e){console.error('FACADE30',e)}
+  try{window.ROAD30=road30();console.log('[路面草地30]',JSON.stringify(window.ROAD30))}catch(e){console.error('ROAD30',e)}}_fb(ts);const F=window.FLASH30;if(!F)return;const on=(ts/1000)%1<.55;if(on!==F.on){F.on=on;for(const m of F.mats)m.emissiveIntensity=on?1.6:0,m.color.set(on?(m===F.mats[0]?'#ffb21a':'#ff3b2f'):'#2a2a2a')}}}
 {const _g=gate11Routes;gate11Routes=function(){const r=_g.apply(this,arguments);let o={};try{o=route30Fix()}catch(e){console.error('ROUTE30',e)}console.log('[路線修正30]',JSON.stringify(o));return r}}
 {const _j=rtInJunction;rtInJunction=function(px,py){const J=window.GATE30_J;if(J&&Math.hypot(px-J[0],py-J[1])<12)return true;return _j(px,py)}}
 
