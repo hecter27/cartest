@@ -2351,11 +2351,11 @@ const RTX={on:false,route:null,prog:0,tasks:[],lights:[],xw:[],roads:[],nodes:{}
     for(const sd of[-1,1]){const pl=new THREE.Mesh(new THREE.PlaneGeometry(1.8,.45),new THREE.MeshBasicMaterial({map:tx}));pl.position.set(.8,1.45,sd*.88);if(sd<0)pl.rotation.y=Math.PI;g.add(pl)}
     g.visible=false;scene.add(g);RTX.amb={g,bar,spawned:false,done:false}}
   // 練習用導引線
-  RTX.guideMat=new THREE.MeshBasicMaterial({color:'#33d17a',transparent:true,opacity:.45,depthWrite:false});
+  RTX.guideMat=new THREE.MeshBasicMaterial({color:'#33d17a',transparent:true,opacity:.45,depthWrite:false,side:THREE.DoubleSide});
 })();
 function rtPick(route){RTX.route=RTX.ROUTES[route];RTX.laneC=0;RTX.laneG=0;RTX.amb.spawned=false;RTX.amb.done=false;RTX.amb.g.visible=false;RTX.stopOk=-99;RTX.prevSF=null;RTX.on=true;RTX.prog=0;RTX.devT=0;RTX.devPen=false;RTX.task={stop:{st:0},speed:{st:0,max:0},lane:{st:0,done:false}};RTX.route.ins.forEach(x=>{x.said=false;x.done=false});RTX.sigNeed=null;
   if(RTX.guide){scene.remove(RTX.guide);RTX.guide=null}if(mode==='roadp'){const P=RTX.route.P,pos=[];for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l,_n=rtNearest((a[0]+b[0])/2,(a[1]+b[1])/2),o=_n&&_n.d<8?Math.min(1.8,_n.R.hw-1.45):1.8,w=.35;
-    const ya=hAt(a[0],a[1])+.03,yb=hAt(b[0],b[1])+.03;pos.push(a[0]+nx*(o-w),ya,a[1]+nz*(o-w),b[0]+nx*(o-w),yb,b[1]+nz*(o-w),b[0]+nx*(o+w),yb,b[1]+nz*(o+w),a[0]+nx*(o-w),ya,a[1]+nz*(o-w),b[0]+nx*(o+w),yb,b[1]+nz*(o+w),a[0]+nx*(o+w),ya,a[1]+nz*(o+w))}
+    const ya=hAt(a[0],a[1])+.1,yb=hAt(b[0],b[1])+.1;pos.push(a[0]+nx*(o-w),ya,a[1]+nz*(o-w),b[0]+nx*(o-w),yb,b[1]+nz*(o-w),b[0]+nx*(o+w),yb,b[1]+nz*(o+w),a[0]+nx*(o-w),ya,a[1]+nz*(o-w),b[0]+nx*(o+w),yb,b[1]+nz*(o+w),a[0]+nx*(o+w),ya,a[1]+nz*(o+w))}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));const m=new THREE.Mesh(g,RTX.guideMat);m.renderOrder=2;scene.add(m);RTX.guide=m}}
 function rtLightState(LT,grp){if(LT.prio){const t=(time+LT.off)%60;return grp===0?(t<38?'G':t<41?'Y':'R'):(t>=43&&t<55?'G':t>=55&&t<58?'Y':'R')}const cyc=50,t=(time+LT.off)%cyc;const g0=t<20?'G':t<23?'Y':t<25?'R':t<45?'R':t<48?'R':'R';const g1=t<25?'R':t<45?'G':t<48?'Y':'R';return grp===0?(t<20?'G':t<23?'Y':'R'):(t>=25&&t<45?'G':t>=45&&t<48?'Y':'R')}
 function rtUpdateLights(){RTX.lights.forEach((LT,i)=>{if(LT.off==null)LT.off=i*17;LT.heads.forEach(h=>{const st=rtLightState(LT,h.grp);h.ls[0].material.color.set(st==='R'?'#ff3b2f':'#3a1010');h.ls[1].material.color.set(st==='Y'?'#ffc21a':'#3a3010');h.ls[2].material.color.set(st==='G'?'#33ff7a':'#103a18')})})}
@@ -2392,7 +2392,7 @@ function rtChecks(ev,dt){if(!RTX.on||!RTX.route||ended)return;const R=RTX.route,
     if(x.peds.some(p=>p.on&&Math.abs(p.u-la)<4)&&time-(RTX.pT||-9)>6){RTX.pT=time;pen(32,'未禮讓行人（行人穿越道）')}}});
   // 路邊臨時停車
   const T=RTX.task,segIn=(a,b)=>{const A=R.ins.find(x=>x.id===a),B=R.ins.find(x=>x.id===b);return A&&B&&s>A.s+25&&s<B.s-25};
-  if(T.stop.st===0&&segIn(...R.stop)){T.stop.st=1;rtSay('請在前方路邊臨時停車')}
+  if(T.stop.st===0&&segIn(...R.stop)&&Math.hypot(c[0]-RTX.nodes.C[0],c[1]-RTX.nodes.C[1])>36){T.stop.st=1;rtSay('請在前方路邊臨時停車')}
   if(T.stop.st===1){if(ev.stop){const n=rtNearest(c[0],c[1]);const gap=n?n.R.hw-(Math.abs(n.off)+.9):9;const sigOk=S.signal==='R'||(time-(S.sigLast||-99)<4&&S.sigLastSide==='R');
       if(!sigOk||time-Math.max(S.lookL,S.lookR)>10)pen(32,'靠邊停車前未依規定顯示方向燈或未轉頭察看');if(gap>.6)pen(16,'臨時停車時右側輪胎距路面邊緣逾 60 公分');T.stop.st=2;T.stop.t=time;rtSay('好，停妥了。準備好再起步')}
     else if(!segIn(...R.stop)&&s>(R.ins.find(x=>x.id===R.stop[1])||{s:0}).s-25){T.stop.st=9;pen(32,'漏考：臨時路邊停車')}}
@@ -2401,7 +2401,7 @@ function rtChecks(ev,dt){if(!RTX.on||!RTX.route||ended)return;const R=RTX.route,
   if(T.speed.st===0&&segIn(...R.speed)){T.speed.st=1;rtSay('這段請加速到時速 40 公里以上，但不可超速')}
   if(T.speed.st===1){if(Math.abs(S.v)*3.6>=40){T.speed.st=2;rtSay('時速 40 公里，好',true)}else if(!segIn(...R.speed)&&s>(R.ins.find(x=>x.id===R.speed[1])||{s:0}).s-25){T.speed.st=9;pen(32,'漏考：行駛速度每小時 40 公里以上')}}
   // 變換車道任務
-  if(T.lane.st===0&&segIn(...R.lane)){const n=rtNearest(c[0],c[1]);if(n&&n.R.lanes){T.lane.st=1;rtSay('請變換到內側車道')}}
+  if(T.lane.st===0&&segIn(...R.lane)&&!rtInJunction(c[0],c[1])){const n=rtNearest(c[0],c[1]);if(n&&n.R.lanes){const rel0=n.off*(Math.cos(S.th)*n.dir[0]+Math.sin(S.th)*n.dir[1]>=0?1:-1);if(rel0<n.R.lanes){T.lane.st=2;rtSay('請變換到外側車道')}else{T.lane.st=1;rtSay('請變換到內側車道')}}}
   if((T.lane.st===1||T.lane.st===2)&&s>(R.ins.find(x=>x.id===R.lane[1])||{s:1e9}).s-120){T.lane.st=9;pen(32,'漏考：變換車道')}
   // ===== 依「小型車駕駛人道路駕駛考驗評分標準」補齊的項目 =====
   {const N=RTX.nodes,f=front(),v=Math.abs(S.v)*3.6,dC=Math.hypot(c[0]-N.C[0],c[1]-N.C[1]);
@@ -2423,7 +2423,7 @@ function rtChecks(ev,dt){if(!RTX.on||!RTX.route||ended)return;const R=RTX.route,
      if(n&&n.R.lanes&&s>A.s-30&&s<A.s-14&&!RTX.laneC){const rel=n.off*(Math.cos(S.th)*n.dir[0]+Math.sin(S.th)*n.dir[1]>=0?1:-1);if(rel>n.R.lanes){RTX.laneC=1;pen(32,'未依規定行駛正確車道（左轉應由內側車道）')}else if(s>A.s-16)RTX.laneC=1}
      if(n&&n.R.lanes&&s>G.s+22&&s<G.s+40&&!RTX.laneG){RTX.laneG=1;const rel=n.off*(Math.cos(S.th)*n.dir[0]+Math.sin(S.th)*n.dir[1]>=0?1:-1);if(rel<n.R.lanes-.4)pen(32,'未依規定行駛正確車道（右轉後應駛入外側車道）')}}
    // 四-1：在禁止臨時停車線（紅線）停車
-   if(ev.stop&&RTX.task.stop.st===1&&dC<22)pen(32,'於禁止臨時停車線（紅線）停車');
+   if(ev.stop&&RTX.task.stop.st===1&&dC<33)pen(32,'於禁止臨時停車線（紅線）停車');
    // 六-1：空檔滑行
    if(S.gear==='N'&&v>5&&rtOnRoad(S.x,S.y)&&time-(RTX.nT||-9)>10){RTX.nT=time;pen(32,'行駛中排入空檔滑行')}
    // 五-3：救護車警號未避讓
@@ -2432,7 +2432,7 @@ function rtChecks(ev,dt){if(!RTX.on||!RTX.route||ended)return;const R=RTX.route,
   // 終點
   if(RTX.prog>R.P.length-4&&S.y<106&&S.stopped&&!finishShown){finishShown=true;rtSay('到達終點，請排入 P 檔、熄火後下車',true);openFinish()}}
 function rtAmb(ev,dt,s){const R=RTX.route,A=RTX.amb;
-  if(!A.spawned&&!A.done){const seg=R===RTX.ROUTES.blue?['F','G']:['K','D'];const a=R.ins.find(x=>x.id===seg[0]),b=R.ins.find(x=>x.id===seg[1]);if(s>a.s+80&&s<b.s-200){A.spawned=true;A.s=s-70;A.off=1.8;A.t=0;A.ok=false;A.pen=false;A.g.visible=true;rtSay('注意，後方有救護車鳴笛接近')}}
+  if(!A.spawned&&!A.done){const seg=R===RTX.ROUTES.blue?['F','G']:['K','D'];const a=R.ins.find(x=>x.id===seg[0]),b=R.ins.find(x=>x.id===seg[1]);if(s>(R.ambS||a.s+80)&&s<b.s-200){A.spawned=true;A.s=s-70;A.off=1.8;A.t=0;A.ok=false;A.pen=false;A.g.visible=true;rtSay('注意，後方有救護車鳴笛接近')}}
   if(!A.spawned)return;A.t+=dt;const v=Math.abs(S.v)*3.6,gap=s-A.s;
   if(gap<30&&gap>-5){const n=rtNearest(...P2(CAR.L/2,0));const rel=n?n.off*(Math.cos(S.th)*n.dir[0]+Math.sin(S.th)*n.dir[1]>=0?1:-1):0;if(v<20&&rel>.8)A.ok=true}
   if(A.t>9&&!A.ok&&!A.pen){A.pen=true;pen(32,'聞救護車警號，未依規定減速靠右避讓')}
@@ -6889,6 +6889,51 @@ async function h29GhostClean(){const t0=performance.now();const CS=.5,G=new Set(
   for(let i=OBO.length-1;i>=0;i--){const o=OBO[i];if(!o||o.cx==null||o.hl*o.hw>150)continue;const pts=[],na=Math.max(1,Math.ceil(o.hl*2/1.2)),nb=Math.max(1,Math.ceil(o.hw*2/1.2));for(let a=0;a<=na;a++)for(let b=0;b<=nb;b++){const la=-o.hl+2*o.hl*a/na,lb=-o.hw+2*o.hw*b/nb;pts.push([o.cx+o.ux*la+o.vx*lb,o.cy+o.uy*la+o.vy*lb])}if(!any(pts)){L.push(['O',+o.cx.toFixed(1),+o.cy.toFixed(1)]);OBO.splice(i,1);no++}}
   for(let i=OBR.length-1;i>=0;i--){const b=OBR[i],lx=b.x1-b.x0,lz=b.y1-b.y0;if(lx*lz>600||lx>120||lz>120)continue;const pts=[],na=Math.max(1,Math.ceil(lx/1.2)),nb=Math.max(1,Math.ceil(lz/1.2));for(let a=0;a<=na;a++)for(let c=0;c<=nb;c++)pts.push([b.x0+lx*a/na,b.y0+lz*c/nb]);if(!any(pts)){L.push(['R',+((b.x0+b.x1)/2).toFixed(1),+((b.y0+b.y1)/2).toFixed(1)]);OBR.splice(i,1);nr++}}
   return{OBC:nc,OBO:no,OBR:nr,tri,ms:Math.round(performance.now()-t0),list:L.slice(0,30)}}
+
+/* ============ 第三十次：路考路線實測修正（tools/js/examdrive.js 模擬考生開完藍線、紅線後找到的問題） ============
+   1) 紅線新香街口迴轉：原本路線在迴轉點原地折返（零半徑），練習導引線在原地折回、自動駕駛轉不過去。
+      改成利用路口鋪面的迴轉弧：先往右靠、再左轉半圈（導引線行車半徑 4.5 m，車子最小迴轉半徑後軸 3.6 m）。
+   2) 路口免判逆向／壓線（rtInJunction）原本還是舊大門 (x≈70)，新大門路口左轉進場會被判「跨越分向限制線」。
+   3) 救護車改在路段中間、遠離號誌與路口時出現（原本緊接在「時速 40」「變換車道」指示之後）。
+   柴橋路口紅線與「路邊臨時停車」指示的距離在 patch.py（第三十次）。 */
+function route30Fix(){const out={};
+  // ---- 1) 新香街口迴轉弧 ----
+  try{const R=RTX.ROUTES.red,U=RTX.nodes.U,P=R.P;let iU=-1,bd=1e9;for(let i=1;i<P.length-1;i++){const d=Math.hypot(P[i][0]-U[0],P[i][1]-U[1]);if(d<bd){bd=d;iU=i}}
+    const qU=R.ins.find(q=>q.turn==='uturn');
+    if(bd<3&&qU){const a=P[Math.max(0,iU-4)],dx=P[iU][0]-a[0],dz=P[iU][1]-a[1],l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,vx=-uz,vz=ux;// u：前進方向；v：右側
+      const W=(u,v)=>[U[0]+ux*u+vx*v,U[1]+uz*u+vz*v],loc=p=>[(p[0]-U[0])*ux+(p[1]-U[1])*uz,(p[0]-U[0])*vx+(p[1]-U[1])*vz];
+      const U0=-10,UC=-3,RC=2.7;// 路線中心線：右移 RC → 半圓（半徑 RC）→ 回到 0；導引線再往右 1.8 m，行車半徑 4.5 m
+      let i0=iU;while(i0>0&&loc(P[i0])[0]>U0)i0--;let i1=iU;while(i1<P.length-1&&loc(P[i1])[0]>U0)i1++;
+      const sm=t=>(1-Math.cos(Math.PI*Math.max(0,Math.min(1,t))))/2,arc=[];
+      for(let u=loc(P[i0])[0]+.5;u<UC;u+=.5)arc.push(W(u,RC*sm((u-U0)/(UC-U0))));
+      const iArc=arc.length;for(let k=0;k<=36;k++){const th=Math.PI*k/36;arc.push(W(UC+RC*Math.sin(th),RC*Math.cos(th)))}
+      for(let u=UC-.5;u>loc(P[i1])[0];u-=.5)arc.push(W(u,-RC*sm((u-U0)/(UC-U0))));
+      const oldLen=R.len,oldApex=R.Lc[iU];R.P=P.slice(0,i0+1).concat(arc,P.slice(i1));
+      R.Lc=[0];for(let i=1;i<R.P.length;i++)R.Lc.push(R.Lc[i-1]+Math.hypot(R.P[i][0]-R.P[i-1][0],R.P[i][1]-R.P[i-1][1]));R.len=R.Lc[R.Lc.length-1];
+      const dl=R.len-oldLen;R.ins.forEach(q=>{if(q===qU)q.s=R.Lc[i0+1+iArc];else if(q.s>oldApex)q.s+=dl});
+      out.uturn={pts:arc.length,dl:+dl.toFixed(1),sU:Math.round(qU.s)}}else out.uturn='找不到迴轉點'}catch(e){console.error('ROUTE30 uturn',e)}
+  // ---- 2) 新大門路口：明湖路中心線上最靠近大門車道口的點 ----
+  try{const P=RTX.ROUTES.blue.P,mh=RTX.roads.filter(r=>/^明湖路/.test(r.name||'')&&!/巷/.test(r.name));let best=null;
+    for(let i=0;i<Math.min(P.length,40);i++){for(const Rd of mh){for(let j=0;j<Rd.P.length-1;j++){const a=Rd.P[j],b=Rd.P[j+1],dx=b[0]-a[0],dz=b[1]-a[1],l2=dx*dx+dz*dz||1;const t=Math.max(0,Math.min(1,((P[i][0]-a[0])*dx+(P[i][1]-a[1])*dz)/l2)),q=[a[0]+dx*t,a[1]+dz*t],d=Math.hypot(P[i][0]-q[0],P[i][1]-q[1]);
+      if(!best||d<best.d)best={d,q}}}if(best&&best.d<.8)break}
+    if(best&&best.d<3){window.GATE30_J=best.q;out.gateJ=best.q.map(v=>+v.toFixed(1))}}catch(e){console.error('ROUTE30 gate',e)}
+  // ---- 3) 救護車出現位置 ----
+  try{for(const k in RTX.ROUTES){const R=RTX.ROUTES[k],seg=R===RTX.ROUTES.blue?['F','G']:['K','D'],a=R.ins.find(x=>x.id===seg[0]),b=R.ins.find(x=>x.id===seg[1]);if(!a||!b)continue;
+      const N=RTX.nodes,hot=RTX.lights.map(L=>L.c).concat([N.C,N.U,N.D,N.E,N.E2,N.F,N.J,N.K].filter(Boolean)),far=s=>{const p=rtAt(R,s,0);return hot.every(c=>Math.hypot(p.x-c[0],p.y-c[1])>110)};
+      // 同一段若有「變換車道」任務：避開任務開始（第一個有雙車道、不在路口內的位置）後 250 m
+      let s=a.s+Math.max(80,(b.s-a.s)*.42);const lg=R.lane&&R.lane[0]===seg[0]&&R.lane[1]===seg[1];
+      if(lg){for(let t=a.s+25;t<b.s-25;t+=5){const p=rtAt(R,t,0),n=rtNearest(p.x,p.y);if(n&&n.R.lanes&&!rtInJunction(p.x,p.y)){s=Math.max(s,t+250);out['lane_'+k]=Math.round(t-a.s);break}}}
+      while(s<b.s-350&&!(far(s)&&far(s+80)&&far(s+160)))s+=10;if(s<b.s-350){R.ambS=s;out['amb_'+k]=Math.round(s-a.s)}}}catch(e){console.error('ROUTE30 amb',e)}
+  // ---- 4) 非考試路口的閃光號誌：原本恆亮黃燈不閃；1008 巷口面對「停」字的燈面也是黃燈 → 改成閃紅（支道閃紅、幹道閃黃） ----
+  try{const FL=sceneFill&&sceneFill.FL;if(FL){const FR=new THREE.MeshStandardMaterial({color:'#ff3b2f',emissive:'#ff1a0a',emissiveIntensity:1.6});const SL=RTX.stopF,v=new THREE.Vector3(),q=new THREE.Quaternion(),nz=new THREE.Vector3();let nY=0,nR=0;
+    scene.traverse(o=>{if(!o.isMesh||o.material!==FL)return;nY++;if(!SL)return;o.getWorldPosition(v);if(Math.hypot(v.x-SL.p[0],v.z-SL.p[1])>30)return;o.getWorldQuaternion(q);nz.set(0,0,1).applyQuaternion(q);
+      if(nz.x*-SL.v[0]+nz.z*-SL.v[1]>.7){o.material=FR;nR++}});
+    window.FLASH30={mats:[FL,FR],on:true};out.flash={yellow:nY-nR,red:nR}}}catch(e){console.error('ROUTE30 flash',e)}
+  return out}
+// 閃光號誌：0.55 秒亮、0.45 秒暗
+{const _fb=frameBody;frameBody=function(ts){_fb(ts);const F=window.FLASH30;if(!F)return;const on=(ts/1000)%1<.55;if(on!==F.on){F.on=on;for(const m of F.mats)m.emissiveIntensity=on?1.6:0,m.color.set(on?(m===F.mats[0]?'#ffb21a':'#ff3b2f'):'#2a2a2a')}}}
+{const _g=gate11Routes;gate11Routes=function(){const r=_g.apply(this,arguments);let o={};try{o=route30Fix()}catch(e){console.error('ROUTE30',e)}console.log('[路線修正30]',JSON.stringify(o));return r}}
+{const _j=rtInJunction;rtInJunction=function(px,py){const J=window.GATE30_J;if(J&&Math.hypot(px-J[0],py-J[1])<12)return true;return _j(px,py)}}
 
 </script>
 </body>
