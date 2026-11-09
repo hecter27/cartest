@@ -5806,9 +5806,14 @@ var TEMPLE26=null;
 function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined'||!LAKE.temple||!LAKE.templeDrive)return 'no temple';const t0=performance.now();
   const tc=LAKE.temple,DR=LAKE.templeDrive;let G=null,best=0;scene.children.forEach(o=>{if(!o.isGroup||!o.visible)return;if(Math.hypot(o.position.x-tc[0],o.position.z-tc[1])<4){let n=0;o.traverse(()=>n++);if(n>best){best=n;G=o}}});if(!G||best<100)return 'no group';
   const HALL=[-870.6,764.8],HLZ=-16,GZ=40,RR=GZ-HLZ,a=DR.a,u=DR.u;
-  // 山門落在車道上：|a + u·s − HALL| = 56
-  const qx=a[0]-HALL[0],qz=a[1]-HALL[1],qb=qx*u[0]+qz*u[1],qc=qx*qx+qz*qz-RR*RR;if(qb*qb-qc<0)return 'no fit';const sG=-qb-Math.sqrt(qb*qb-qc);
-  const gate=[a[0]+u[0]*sG,a[1]+u[1]*sG],dir=[(gate[0]-HALL[0])/RR,(gate[1]-HALL[1])/RR],ph1=Math.atan2(dir[0],dir[1]),pos1=[HALL[0]-HLZ*dir[0],HALL[1]-HLZ*dir[1]];
+  // 第三十次（待辦 4）：原本山門必須落在既有車道上，大殿因此朝東北；實景（Google 衛星圖 19z）大殿長軸略偏東北—西南、正面朝東（往南偏約 12°），
+  // 前面是大片廣場。改成依實景朝向放寺，山門在大殿正前方 56 m；車道沿原線進來到舊山門處（sG，東北建物西南方），再往東南繞到山門正前方、轉往西進山門（第 7 節）。
+  const DIR30=(()=>{const v=[-.2,.98],l=Math.hypot(v[0],v[1]);return[v[0]/l,v[1]/l]})(),sG=Math.min(62,DR.len-.3);
+  const gate=[HALL[0]+DIR30[0]*RR,HALL[1]+DIR30[1]*RR],dir=DIR30,ph1=Math.atan2(dir[0],dir[1]),pos1=[HALL[0]-HLZ*dir[0],HALL[1]-HLZ*dir[1]];
+  const bend=[a[0]+u[0]*sG,a[1]+u[1]*sG];
+  // 新車道：轉彎點 → 東北建物西南角與寺東北角之間 (−842,838) → 山門正前方 22 m → 山門；Chaikin 平滑後每 4 m 取點
+  const NEWP=(()=>{let Q=[bend,[-842,838],[gate[0]+dir[0]*22,gate[1]+dir[1]*22],gate];for(let it=0;it<3;it++){const R2=[Q[0]];for(let i=0;i<Q.length-1;i++){const p=Q[i],q=Q[i+1];R2.push([p[0]*.75+q[0]*.25,p[1]*.75+q[1]*.25],[p[0]*.25+q[0]*.75,p[1]*.25+q[1]*.75])}R2.push(Q[Q.length-1]);Q=R2}
+    const out=[];let acc=0;for(let i=1;i<Q.length;i++){const p=Q[i-1],q=Q[i],l=Math.hypot(q[0]-p[0],q[1]-p[1]);acc+=l;if(acc>=4||i===Q.length-1){out.push(q);acc=0}}return out})();
   const ph0=G.rotation.y,pos0=[G.position.x,G.position.z],c0=Math.cos(ph0),s0=Math.sin(ph0),c1=Math.cos(ph1),s1=Math.sin(ph1);
   const toL0=(x,z)=>{const ex=x-pos0[0],ez=z-pos0[1];return[ex*c0-ez*s0,ex*s0+ez*c0]},toL1=(x,z)=>{const ex=x-pos1[0],ez=z-pos1[1];return[ex*c1-ez*s1,ex*s1+ez*c1]};
   const fromL0=(lx,lz)=>[pos0[0]+lx*c0+lz*s0,pos0[1]-lx*s0+lz*c0],fromL1=(lx,lz)=>[pos1[0]+lx*c1+lz*s1,pos1[1]-lx*s1+lz*c1];
@@ -5818,6 +5823,8 @@ function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined
   const inRect1=(x,z,p)=>{const l=toL1(x,z);return Math.abs(l[0])<RX+(p||0)&&l[1]>RZ0-(p||0)&&l[1]<RZ1+(p||0)},inRect0=(x,z,p)=>{const l=toL0(x,z);return Math.abs(l[0])<RX+(p||0)&&l[1]>RZ0-(p||0)&&l[1]<RZ1+4+(p||0)};
   // 舊車道在山門以內（及穿出後牆）的那段
   const inTail=(x,z,w)=>{const ex=x-a[0],ez=z-a[1],s=ex*u[0]+ez*u[1],l=Math.abs(-ex*u[1]+ez*u[0]);return s>sG+.6&&s<DR.len+30&&l<(w||10)};
+  // 新車道（轉彎點 → 新山門）走廊
+  const inNew=(x,z,w)=>{const P=[bend,...NEWP];for(let i=0;i+1<P.length;i++){const p=P[i],q=P[i+1],vx=q[0]-p[0],vz=q[1]-p[1],l2=vx*vx+vz*vz||1;let t=((x-p[0])*vx+(z-p[1])*vz)/l2;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-p[0]-vx*t,z-p[1]-vz*t)<(w||8))return true}return false};
   const wOf=(x,z)=>{const l=toL1(x,z);if(l[1]>RZ1)return l[1]<RZ1+3?Math.max(0,1-(l[1]-RZ1)/3)*(Math.abs(l[0])<RX?1:0):0;const ox=Math.max(0,Math.abs(l[0])-RX),oz=Math.max(0,RZ0-l[1]);const d=Math.hypot(ox,oz);if(d<=0)return 1;if(d>=BL)return 0;const t=1-d/BL;return t*t*(3-2*t)};
   const box1=(p)=>{let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const lx of[-RX-p,RX+p])for(const lz of[RZ0-p,RZ1+p]){const q=fromL1(lx,lz);x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);z0=Math.min(z0,q[1]);z1=Math.max(z1,q[1])}return[x0,x1,z0,z1]};
   // ---- 1) 舊址屬於寺的零散物件與碰撞（群組以外）----
@@ -5826,10 +5833,11 @@ function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined
   // ---- 2) 新址清空（暫時把寺拿出場景，免得被一起裁掉）----
   scene.remove(G);movers.forEach(o=>scene.remove(o));let cut={hide:0,cut:0,inst:0};
   try{const B=box1(2),tailB=[Math.min(gate[0],a[0]+u[0]*(DR.len+30))-12,Math.max(gate[0],a[0]+u[0]*(DR.len+30))+12,Math.min(gate[1],a[1]+u[1]*(DR.len+30))-12,Math.max(gate[1],a[1]+u[1]*(DR.len+30))+12];
-    const Q=[Math.min(B[0],tailB[0]),Math.max(B[1],tailB[1]),Math.min(B[2],tailB[2]),Math.max(B[3],tailB[3])];const test=(x,z)=>inRect1(x,z,1.5)||inTail(x,z,9);
+    const NX=NEWP.map(p=>p[0]).concat(bend[0]),NZ=NEWP.map(p=>p[1]).concat(bend[1]);
+    const Q=[Math.min(B[0],tailB[0],Math.min(...NX)-12),Math.max(B[1],tailB[1],Math.max(...NX)+12),Math.min(B[2],tailB[2],Math.min(...NZ)-12),Math.max(B[3],tailB[3],Math.max(...NZ)+12)];const test=(x,z)=>inRect1(x,z,1.5)||inTail(x,z,9)||inNew(x,z,8);
     if(typeof gate11Cut==='function')cut=gate11Cut(Q,test,()=>-1e9)}catch(e){console.warn('temple cut',e)}
   scene.add(G);movers.forEach(o=>scene.add(o));
-  const newIn=(x,y)=>inRect1(x,y,1.5)||inTail(x,y,6);for(let i=OBC.length-1;i>=0;i--){const c=OBC[i];if(!colC.includes(c)&&newIn(c.x,c.y))OBC.splice(i,1)}for(let i=OBO.length-1;i>=0;i--){const o=OBO[i];if(o&&o.cx!=null&&!colO.includes(o)&&newIn(o.cx,o.cy))OBO.splice(i,1)}for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(newIn((b.x0+b.x1)/2,(b.y0+b.y1)/2)&&b.x1-b.x0<40&&b.y1-b.y0<40)OBR.splice(i,1)}
+  const newIn=(x,y)=>inRect1(x,y,1.5)||inTail(x,y,6)||inNew(x,y,6);for(let i=OBC.length-1;i>=0;i--){const c=OBC[i];if(!colC.includes(c)&&newIn(c.x,c.y))OBC.splice(i,1)}for(let i=OBO.length-1;i>=0;i--){const o=OBO[i];if(o&&o.cx!=null&&!colO.includes(o)&&newIn(o.cx,o.cy))OBO.splice(i,1)}for(let i=OBR.length-1;i>=0;i--){const b=OBR[i];if(newIn((b.x0+b.x1)/2,(b.y0+b.y1)/2)&&b.x1-b.x0<40&&b.y1-b.y0<40)OBR.splice(i,1)}
   // ---- 3) 地形：新址圍牆內用舊址高程（＋cH 使山門處接上車道），外圍 20 m 漸變 ----
   const hNew=(x,z)=>{const h=H0(x,z),w=wOf(x,z);if(w<=0)return h;const p=Ti(x,z);return h+w*(H0(p[0],p[1])+cH-h)};
   hAt=function(x,y){return hNew(x,y)};
@@ -5848,9 +5856,11 @@ function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined
   movers.forEach(o=>{const p=Tf(o.position.x,o.position.z);o.position.set(p[0],o.position.y+cH,p[1]);o.rotation.y+=dPh;o.updateMatrixWorld(true)});
   colC.forEach(c=>{const p=Tf(c.x,c.y);c.x=p[0];c.y=p[1]});
   colO.forEach(o=>{const p=Tf(o.cx,o.cy);o.cx=p[0];o.cy=p[1];const cr=Math.cos(-dPh),sr=Math.sin(-dPh);for(const k of[['ux','uy'],['vx','vy']]){const x=o[k[0]],y=o[k[1]];o[k[0]]=x*cr-y*sr;o[k[1]]=x*sr+y*cr}});
-  // ---- 5) 車道只到山門 ----
-  {const Rd=RTX.roads.find(r=>r.name==='靈隱寺車道');if(Rd&&Rd.P){const P=Rd.P;let k=P.length;for(let i=0;i<P.length;i++){const s=(P[i][0]-a[0])*u[0]+(P[i][1]-a[1])*u[1];if(s>sG+.5){k=i;break}}const end=[a[0]+u[0]*(sG+.5),a[1]+u[1]*(sG+.5)];P.splice(k,P.length-k,end)}
-    DR.len=sG;DR.b=[gate[0]-u[0]*40,gate[1]-u[1]*40]}
+  // ---- 5) 車道：原線進來到轉彎點，再轉往西接到新山門（第三十次） ----
+  {const Rd=RTX.roads.find(r=>r.name==='靈隱寺車道');if(Rd&&Rd.P){const P=Rd.P;let k=P.length;for(let i=0;i<P.length;i++){const s=(P[i][0]-a[0])*u[0]+(P[i][1]-a[1])*u[1];if(s>sG){k=i;break}}P.splice(k,P.length-k,bend.slice(),...NEWP)}
+    DR.len=sG;DR.b=[gate[0]-dir[0]*40,gate[1]-dir[1]*40];
+    // 林蔭車道判斷改成看整條折線（原本只看 a→b 直線）
+    LAKE.nearDrive=(x,z,m=7)=>{const P=Rd&&Rd.P;if(!P)return false;for(let i=0;i+1<P.length;i++){const p=P[i],q=P[i+1],vx=q[0]-p[0],vz=q[1]-p[1],l2=vx*vx+vz*vz||1;let t=((x-p[0])*vx+(z-p[1])*vz)/l2;t=Math.max(0,Math.min(1,t));if(Math.hypot(x-p[0]-vx*t,z-p[1]-vz*t)<m)return true}return Math.hypot(x-LAKE.temple[0],z-LAKE.temple[1])<48}}
   tc[0]=HALL[0];tc[1]=HALL[1];
   // ---- 6) 大殿屋頂改橘色（實景橘色琉璃瓦）----
   // 紅色屋脊／簷板 → 橘紅；金黃屋瓦（貼圖或 d9a43a）→ 乘上橘色，變成實景的橘色琉璃瓦（只改大殿範圍：群組座標 |x|<26、z −40…10、高 8 m 以上）
@@ -5874,10 +5884,30 @@ function temple26Build(){if(TEMPLE26)return 'exists';if(typeof LAKE==='undefined
     const rd=new THREE.Mesh(new THREE.BoxGeometry(w*.7,.35,.5),new THREE.MeshLambertMaterial({color:roofC}));rd.position.y=.65+H+H*.55-.1;g.add(rd);
     addOBB(cx,cz,rot,w/2+.6,d/2+.6);return g};
   let extra=[];
-  try{// 西側紅頂側殿：實景 (−862.8,736.7)；若落在新寺圍牆內就往外推到牆外
-    let p=[-862.8,736.7];{const l=toL1(p[0],p[1]);if(Math.abs(l[0])<RX+9&&l[1]>RZ0-9&&l[1]<RZ1){l[0]=Math.sign(l[0]||1)*(RX+9.5);p=fromL1(l[0],l[1])}}
+  try{// 新車道（轉彎點 → 新山門）：路面貼地形、兩側林蔭（與原車道同樣式）
+    const am=(typeof matAsph!=='undefined'?matAsph:new THREE.MeshLambertMaterial({color:'#55585b'})).clone();am.side=THREE.DoubleSide;am.polygonOffset=true;am.polygonOffsetFactor=-2;am.polygonOffsetUnits=-2;const Pn=[bend,...NEWP],pos=[],uv=[];
+    // 連續帶狀路面：從轉彎點前 3 m（與舊車道重疊）開始，每 2 m 取點，法線取前後平均（轉彎處不留縫），橫向分 3 格貼地形
+    const S=[[bend[0]-u[0]*10,bend[1]-u[1]*10],...Pn],R2=[S[0]];for(let i=1;i<S.length;i++){const p=S[i-1],q=S[i],n=Math.max(1,Math.ceil(Math.hypot(q[0]-p[0],q[1]-p[1])/2));for(let k=1;k<=n;k++)R2.push([p[0]+(q[0]-p[0])*k/n,p[1]+(q[1]-p[1])*k/n])}
+    // 地形網格三角形很大（約 18 m），頂點雖貼 hAt，三角形中間卻可能比 hAt 高 0.1～0.7 m，把路面蓋住。
+    // 車道範圍內的 hAt 改用「地形網格表面」與原 hAt 的較高者（路緣外 2.5 m 漸變回原值），路面與車子高度一致。
+    {let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;R2.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1])});x0-=8;x1+=8;z0-=8;z1+=8;const TR=[],v=new THREE.Vector3();
+      scene.traverse(o=>{if(!o.isMesh||!o.visible||!(o.name==='terrain'||(o.userData&&o.userData._reG)))return;o.updateMatrixWorld(true);const P=o.geometry.attributes.position,I=o.geometry.index,nT=(I?I.count:P.count)/3|0,W=[];
+        for(let t=0;t<nT;t++){for(let k=0;k<3;k++){v.fromBufferAttribute(P,I?I.getX(t*3+k):t*3+k).applyMatrix4(o.matrixWorld);W[k*3]=v.x;W[k*3+1]=v.y;W[k*3+2]=v.z}
+          if(Math.max(W[0],W[3],W[6])<x0||Math.min(W[0],W[3],W[6])>x1||Math.max(W[2],W[5],W[8])<z0||Math.min(W[2],W[5],W[8])>z1)continue;TR.push(W.slice())}});
+      const triH=(x,z)=>{let best=null;for(const T of TR){const d=(T[5]-T[8])*(T[0]-T[6])+(T[6]-T[3])*(T[2]-T[8]);if(Math.abs(d)<1e-9)continue;const a=((T[5]-T[8])*(x-T[6])+(T[6]-T[3])*(z-T[8]))/d,b=((T[8]-T[2])*(x-T[6])+(T[0]-T[6])*(z-T[8]))/d,c=1-a-b;if(a<-1e-4||b<-1e-4||c<-1e-4)continue;const y=a*T[1]+b*T[4]+c*T[7];if(best==null||y>best)best=y}return best};
+      const dRd=(x,z)=>{let m=1e9;for(let i=0;i+1<R2.length;i++){const p=R2[i],q=R2[i+1],vx=q[0]-p[0],vz=q[1]-p[1],l2=vx*vx+vz*vz||1;let t=((x-p[0])*vx+(z-p[1])*vz)/l2;t=Math.max(0,Math.min(1,t));m=Math.min(m,Math.hypot(x-p[0]-vx*t,z-p[1]-vz*t))}return m};
+      const hPrev=hAt;hAt=function(x,z){const h=hPrev(x,z);if(x<x0||x>x1||z<z0||z>z1)return h;const d=dRd(x,z);if(d>6.4)return h;const t=triH(x,z);if(t==null||t<=h)return h;const w=d<3.9?1:1-(d-3.9)/2.5;return h+(t-h)*w};
+      extra.push('triH '+TR.length)}
+    const OFF=[-3.4,-1.13,1.13,3.4],rows=R2.map((c,i)=>{const p=R2[Math.max(0,i-1)],q=R2[Math.min(R2.length-1,i+1)],dx=q[0]-p[0],dz=q[1]-p[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;return OFF.map(s=>{const x=c[0]+nx*s,z=c[1]+nz*s;return[x,hAt(x,z)+.06,z]})});
+    for(let i=0;i<rows.length-1;i++)for(let j=0;j<OFF.length-1;j++){const A0=rows[i][j],A1=rows[i][j+1],B0=rows[i+1][j],B1=rows[i+1][j+1];pos.push(...A0,...B0,...B1,...A0,...B1,...A1);for(const w of[A0,B0,B1,A0,B1,A1])uv.push(w[0],-w[2])}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.computeVertexNormals();const m=new THREE.Mesh(g,am);m.receiveShadow=true;m.userData.isGround=1;scene.add(m);
+    const trunkM=new THREE.MeshLambertMaterial({color:'#5d4633'});let nt=0;for(let i=2;i<Pn.length-3;i+=3){const p=Pn[i],q=Pn[i+1],dx=q[0]-p[0],dz=q[1]-p[1],l=Math.hypot(dx,dz)||1;for(const sg of[1,-1]){const x=p[0]-dz/l*sg*5.2,z=p[1]+dx/l*sg*5.2,y=hAt(x,z);if(inRect1(x,z,2)||Math.hypot(x+812.2,z-835.4)<24||inNew(x,z,4.5))continue;
+      const t=new THREE.Mesh(new THREE.CylinderGeometry(.2,.28,4,7),trunkM);t.position.set(x,y+2,z);scene.add(t);if(typeof CROWN_GEO!=='undefined'){const c=new THREE.Mesh(CROWN_GEO,CROWN_M);c.scale.set(2.2,2.1,2.2);c.position.set(x,y+5.2,z);scene.add(c)}OBC.push({x,y:z,r:.3});nt++}}
+    extra.push('drive '+Pn.length+'p/'+nt+'t')}catch(e){console.warn('temple new drive',e)}
+  try{// 西側紅頂側殿：實景 (−862.8,736.7) 緊貼大殿西側；寺改朝東後落在後牆附近，落在圍牆內就推到後牆外
+    let p=[-862.8,736.7];{const l=toL1(p[0],p[1]);if(Math.abs(l[0])<RX+9&&l[1]>RZ0-9&&l[1]<RZ1){l[1]=RZ0-8;p=fromL1(l[0],l[1])}}
     hall(p[0],p[1],18,13,4.2,Math.PI/2-ph1,'#b8352a');extra.push('side')}catch(e){console.warn('temple side hall',e)}
-  try{// 東側廣場（石材），避開寺內
+  if(0)try{// 東側廣場（石材）：第三十次寺改朝東後，實景廣場正好是寺的前庭，不再另鋪
     const PC=[-883.6,802.9],PW=39,PD=47,inP=(x,z)=>Math.abs(x-PC[0])<PW/2&&Math.abs(z-PC[1])<PD/2;   // 伸進寺內的格子壓在寺的地坪下方（不留鋸齒縫）
     clearAt((x,z)=>inP(x,z)&&!inRect1(x,z,.5),[PC[0]-PW/2,PC[0]+PW/2,PC[1]-PD/2,PC[1]+PD/2]);dropCol((x,z)=>inP(x,z)&&!inRect1(x,z,.5));
     const stT=tx(128,128,(g,w,h)=>{g.fillStyle='#cfc8b8';g.fillRect(0,0,w,h);g.strokeStyle='#b3ab9a';g.lineWidth=2;for(let y=0;y<=h;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke()}for(let y=0;y<h;y+=32)for(let x=(y/32)%2?16:0;x<=w;x+=32){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+32);g.stroke()}});
@@ -7000,7 +7030,7 @@ function facade30(){if(typeof BM==='undefined')return null;const bmS=new Set();f
 // ---- 待辦 3（續）：大門口 (122,113) 一帶路面上有草地三角形：1400×400 地形補丁的邊緣落在路上，比路面高幾公分。
 //      地形網格（_reG）在路面範圍內（離中心線 < 半寬 −0.2 m）且高過 hAt−0.15 的頂點，壓到 hAt−0.25（路面會蓋住，只動畫面）。
 function road30(){const CS=20,G=new Map(),key=(i,j)=>i*100003+j;
-  for(const R of RTX.roads){if(!R.hw||/環湖|靈隱寺/.test(R.name||''))continue;for(let i=0;i<R.P.length-1;i++){const a=R.P[i],b=R.P[i+1],s=[a[0],a[1],b[0],b[1],R.hw];
+  for(const R of RTX.roads){if(!R.hw||/環湖/.test(R.name||''))continue;for(let i=0;i<R.P.length-1;i++){const a=R.P[i],b=R.P[i+1],s=[a[0],a[1],b[0],b[1],R.hw];
     for(let x=Math.floor((Math.min(a[0],b[0])-R.hw)/CS);x<=Math.floor((Math.max(a[0],b[0])+R.hw)/CS);x++)for(let z=Math.floor((Math.min(a[1],b[1])-R.hw)/CS);z<=Math.floor((Math.max(a[1],b[1])+R.hw)/CS);z++){const k=key(x,z);(G.get(k)||G.set(k,[]).get(k)).push(s)}}}
   const inRoad=(x,z)=>{const L=G.get(key(Math.floor(x/CS),Math.floor(z/CS)));if(!L)return false;for(const s of L){const dx=s[2]-s[0],dz=s[3]-s[1],l2=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-s[0])*dx+(z-s[1])*dz)/l2));if(Math.hypot(x-s[0]-dx*t,z-s[1]-dz*t)<s[4]-.2)return true}return false};
   const out={v:0,mesh:0},v=new THREE.Vector3();scene.traverse(m=>{if(!m.isMesh||!m.userData||!m.userData._reG)return;m.updateMatrixWorld(true);const P=m.geometry.attributes.position,mw=m.matrixWorld,inv=new THREE.Matrix4().copy(mw).invert();let k=0;
