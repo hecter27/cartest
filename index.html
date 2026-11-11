@@ -1,6 +1,26 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
+<script id="diag34">
+// 第三十四次：載入診斷。手機上看不到主控台，出錯或載入太久時把原因直接顯示在畫面最下方。
+//  網址加 ?safe=1：不執行第 32～34 次的載入後處理（fix32、veh33、lod34），用來判斷問題是不是它們造成的。
+(function(){
+  window.SAFE34=/[?&]safe=1/.test(location.search);
+  var box=null,n=0,T0=Date.now();
+  function show(t){try{if(n++>5)return;if(!box){box=document.createElement('div');box.id='diag34';
+        box.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;max-height:45%;overflow:auto;padding:6px 10px;font:11px/1.45 monospace;color:#ffd9d2;background:rgba(60,8,4,.92);white-space:pre-wrap;word-break:break-all;pointer-events:none';
+        (document.body||document.documentElement).appendChild(box)}
+      box.textContent+=(box.textContent?'\n':'')+'['+Math.round((Date.now()-T0)/1000)+'s] '+t}catch(e){}}
+  window.DIAG34=show;
+  window.addEventListener('error',function(e){var s=e&&e.target&&e.target!==window&&(e.target.src||e.target.href);
+    if(s)show('載入失敗：'+s);else show('錯誤：'+(e.message||e)+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno+':'+e.colno:''))},true);
+  window.addEventListener('unhandledrejection',function(e){show('錯誤（Promise）：'+((e.reason&&(e.reason.message||e.reason))||''))});
+  // 載入超過 90 秒還沒結束：顯示停在哪一步
+  setTimeout(function(){try{var l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')
+      show('載入超過 90 秒，停在：'+(l.innerText||'').replace(/\s+/g,' ').slice(-60)+'｜'+navigator.userAgent.slice(0,90))}catch(e){}},90000);
+  if(window.SAFE34)setTimeout(function(){show('安全模式（?safe=1）：未執行 fix32／veh33／lod34')},3000);
+})();
+</script>
 <meta charset="utf-8">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="駕訓班">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7464,7 +7484,7 @@ function fix32(){
   try{const seen=new Set();scene.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!m||!m.polygonOffset||seen.has(m))return;seen.add(m);
       if(m.polygonOffsetFactor<-.3){m.polygonOffsetFactor=-.3;m.polygonOffsetUnits=Math.min(m.polygonOffsetUnits-2,-2);R.mats++}})})}catch(e){console.error('FIX32 mats',e)}
   window.FIX32=R;console.log('[fix32]',JSON.stringify(R));return R}
-(function(){const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{fix32()}catch(e){console.error('FIX32',e)}},400)})();
+(function(){const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{if(!window.SAFE34)fix32()}catch(e){console.error('FIX32',e)}},400)})();
 
 // 第三十三次：車輛遠近分級（LOD）與近處修正
 //  現況：每台車約 2.6 萬個三角形，停車場的車在載入最後被「靜態合併」成幾個大網格，不論遠近都整批畫（全場景約一千萬個三角形）。
@@ -7556,7 +7576,116 @@ function fix32(){
       for(const u of V.units){const d=u.box.distanceToPoint(cp);const near=u.near?d<F:d<N;if(near!==u.near){u.near=near;u.hi.forEach(m=>m.visible=near);u.lo.visible=!near}}
       for(const s of V.singles){s.root.getWorldPosition(tp);const d=tp.distanceTo(cp);const near=s.near?d<F:d<N;if(near!==s.near){s.near=near;for(const ch of s.hi){if(near){if(ch.userData._v33!==undefined){ch.visible=ch.userData._v33;delete ch.userData._v33}}else{ch.userData._v33=ch.visible;ch.visible=false}}s.lo.visible=!near}}};
     V.tick();setInterval(V.tick,200);return out}
-  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{build()}catch(e){console.error('VEH33',e)}},500);
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{if(!window.SAFE34)build()}catch(e){console.error('VEH33',e)}},500);
+})();
+
+// 第三十四次：人物與機車列的遠近分級（LOD）
+//  現況：人物每個約 1.2 萬個三角形的蒙皮網格（121 個，共約 140 萬），機車列是實例網格 433 台 × 約 1300 個三角形（約 56 萬），不論遠近都畫精細模型。
+//  做法：把精細模型的頂點依「骨頭＋格子」分群合併（vertex clustering），得到外形、配色相同但三角形少很多的簡化模型。
+//  1) 人物：遠處隱藏蒙皮網格，改畫簡化網格；簡化網格的每個頂點跟著一根骨頭走，每 200 ms 依骨頭姿勢重算一次，所以遠處的人還是會走路、坐著的還是坐著
+//  2) 機車列：近的留在精細的實例網格，遠的搬到簡化的實例網格
+(function(){
+  const V=window.LOD34={on:true,HN:42,HF:50,SN:50,SF:58,CELL:.075,SCELL:.13,REBAKE:150,humans:new Map(),rows:[],stat:{}};
+
+  // ---- 頂點分群：src=[{n,get(i,p,c,nr),bucket(i),tri:Uint32Array|null}]，回傳 {P,C,Nr,B,I} ----
+  function cluster(parts,cell,nb,grow){
+    // 顏色差很多的面（頭髮和臉、衣服和皮膚）分開分群，才不會混成一色
+    const cls=c=>(c[0]>.35?1:0)+(c[1]>.35?2:0)+(c[2]>.35?4:0);
+    // 第一輪：每個 bucket 的包圍盒
+    const p=new THREE.Vector3(),c=[1,1,1],nr=new THREE.Vector3(),BB=[];let tot=0;
+    for(const s of parts){tot+=s.n;s.bk=new Int32Array(s.n);s.px=new Float32Array(s.n*3);for(let i=0;i<s.n;i++){const b=s.get(i,p,c,nr)*8+cls(c);s.bk[i]=b;s.px[i*3]=p.x;s.px[i*3+1]=p.y;s.px[i*3+2]=p.z;
+        let B=BB[b];if(!B)B=BB[b]={mn:[1e9,1e9,1e9],mx:[-1e9,-1e9,-1e9]};B.mn[0]=Math.min(B.mn[0],p.x);B.mn[1]=Math.min(B.mn[1],p.y);B.mn[2]=Math.min(B.mn[2],p.z);B.mx[0]=Math.max(B.mx[0],p.x);B.mx[1]=Math.max(B.mx[1],p.y);B.mx[2]=Math.max(B.mx[2],p.z)}}
+    for(const B of BB){if(!B)continue;B.n=[0,0,0];B.e=[0,0,0];for(let a=0;a<3;a++){B.e[a]=Math.max(1e-5,B.mx[a]-B.mn[a]);B.n[a]=B.e[a]<.04?1:Math.min(15,Math.max(2,Math.round(B.e[a]/cell)))}}
+    // 第二輪：分群累加
+    const id=new Map(),acc=[];let nC=0;
+    for(const s of parts){s.cl=new Int32Array(s.n);for(let i=0;i<s.n;i++){const b0=s.get(i,p,c,nr),b=b0*8+cls(c),B=BB[b];
+        const ix=Math.min(B.n[0]-1,Math.floor((p.x-B.mn[0])/B.e[0]*B.n[0])),iy=Math.min(B.n[1]-1,Math.floor((p.y-B.mn[1])/B.e[1]*B.n[1])),iz=Math.min(B.n[2]-1,Math.floor((p.z-B.mn[2])/B.e[2]*B.n[2]));
+        const k=b*4096+ix+iy*16+iz*256;let j=id.get(k);if(j===undefined){j=nC++;id.set(k,j);acc.push([0,0,0,0,0,0,0,0,0,0,nb?nb(b0):b0,b,b0])}
+        const A=acc[j];A[0]+=p.x;A[1]+=p.y;A[2]+=p.z;A[3]+=c[0];A[4]+=c[1];A[5]+=c[2];A[6]+=nr.x;A[7]+=nr.y;A[8]+=nr.z;A[9]++;s.cl[i]=j}}
+    const P=new Float32Array(nC*3),C=new Float32Array(nC*3),Nr=new Float32Array(nC*3),Bn=new Uint8Array(nC);
+    acc.forEach((A,j)=>{const n=A[9];P[j*3]=A[0]/n;P[j*3+1]=A[1]/n;P[j*3+2]=A[2]/n;C[j*3]=A[3]/n;C[j*3+1]=A[4]/n;C[j*3+2]=A[5]/n;const l=Math.hypot(A[6],A[7],A[8])||1;Nr[j*3]=A[6]/l;Nr[j*3+1]=A[7]/l;Nr[j*3+2]=A[8]/l;Bn[j]=A[10]});
+    // 取平均會讓外形往內縮（頭髮這種薄殼會縮進頭裡）：每個 bucket 依原本的包圍盒把分群後的點拉回原尺寸；bucket 編號 >= grow 的（掛件）再放大一點
+    const CB=[];acc.forEach((A,j)=>{const b=A[11];let B=CB[b];if(!B)B=CB[b]={mn:[1e9,1e9,1e9],mx:[-1e9,-1e9,-1e9]};for(let a=0;a<3;a++){B.mn[a]=Math.min(B.mn[a],P[j*3+a]);B.mx[a]=Math.max(B.mx[a],P[j*3+a])}});
+    acc.forEach((A,j)=>{const b=A[11],o=BB[b],n=CB[b],k=(grow!==undefined&&A[12]>=grow)?1.1:1;for(let a=0;a<3;a++){const e1=n.mx[a]-n.mn[a];if(e1<1e-4)continue;const c0=(o.mn[a]+o.mx[a])/2,c1=(n.mn[a]+n.mx[a])/2;P[j*3+a]=c0+(P[j*3+a]-c1)*Math.min(1.6,o.e[a]/e1)*k}});
+    const seen=new Set(),I=[];
+    for(const s of parts){const T=s.tri,nt=T?T.length:s.n;for(let t=0;t<nt;t+=3){const a=s.cl[T?T[t]:t],b=s.cl[T?T[t+1]:t+1],d=s.cl[T?T[t+2]:t+2];if(a===b||b===d||a===d)continue;
+        const lo=Math.min(a,b,d),hi=Math.max(a,b,d),mid=a+b+d-lo-hi,k=(lo*nC+mid)*nC+hi;if(seen.has(k))continue;seen.add(k);I.push(a,b,d)}}
+    return {P,C,Nr,B:Bn,I:nC>65535?new Uint32Array(I):new Uint16Array(I),src:tot}}
+
+  // ================= 人物 =================
+  const HMAT=()=>V.hmat||(V.hmat=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  const _m=new THREE.Matrix4(),_inv=new THREE.Matrix4(),_v=new THREE.Vector3(),_n=new THREE.Vector3(),_cp=new THREE.Vector3(),_tp=new THREE.Vector3();
+  // 人物貼圖（臉、頭髮畫在貼圖上）：讀出像素，分群時乘進頂點色
+  const TX=new Map();
+  function texData(t){if(!t||!t.image)return null;if(TX.has(t.uuid))return TX.get(t.uuid);let r=null;try{const im=t.image,w=im.width,h=im.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(im,0,0);
+      r={w,h,d:x.getImageData(0,0,w,h).data,flip:t.flipY!==false,srgb:t.encoding===THREE.sRGBEncoding}}catch(e){}TX.set(t.uuid,r);return r}
+  function buildHuman(H){let sm=null;H.g.traverse(o=>{if(!sm&&o.isSkinnedMesh)sm=o});if(!sm||!sm.skeleton||!sm.geometry.attributes.skinIndex)return null;
+    H.g.updateWorldMatrix(true,true);
+    const g=sm.geometry,A=g.attributes,bones=sm.skeleton.bones,binv=sm.skeleton.boneInverses,hasC=!!A.color,mc=sm.material.color||{r:1,g:1,b:1},tx=texData(sm.material.map);
+    const parts=[{n:A.position.count,tri:g.index?g.index.array:null,get(i,p,c,nr){let b=A.skinIndex.getX(i),w=A.skinWeight.getX(i);const w1=A.skinWeight.getY(i),w2=A.skinWeight.getZ(i),w3=A.skinWeight.getW(i);
+        if(w1>w){w=w1;b=A.skinIndex.getY(i)}if(w2>w){w=w2;b=A.skinIndex.getZ(i)}if(w3>w){w=w3;b=A.skinIndex.getW(i)}
+        p.fromBufferAttribute(A.position,i).applyMatrix4(binv[b]);if(A.normal)nr.fromBufferAttribute(A.normal,i).transformDirection(binv[b]);else nr.set(0,1,0);
+        if(hasC){c[0]=A.color.getX(i)*mc.r;c[1]=A.color.getY(i)*mc.g;c[2]=A.color.getZ(i)*mc.b}else{c[0]=mc.r;c[1]=mc.g;c[2]=mc.b}
+        if(tx&&A.uv){const u=A.uv.getX(i),v=A.uv.getY(i),px=Math.min(tx.w-1,Math.max(0,Math.floor((u-Math.floor(u))*tx.w))),py=Math.min(tx.h-1,Math.max(0,Math.floor((tx.flip?1-(v-Math.floor(v)):(v-Math.floor(v)))*tx.h))),o=(py*tx.w+px)*4;
+          let r=tx.d[o]/255,gg=tx.d[o+1]/255,bb=tx.d[o+2]/255;if(tx.srgb){r=Math.pow(r,2.2);gg=Math.pow(gg,2.2);bb=Math.pow(bb,2.2)}c[0]*=r;c[1]*=gg;c[2]*=bb}return b}}];
+    // 掛在骨頭上的一般網格（頭髮、配件）：各自一個 bucket，跟著所屬骨頭
+    const extraBone=[];let nb=bones.length;
+    bones.forEach((bone,bi)=>{for(const ch of bone.children){if(ch.isBone)continue;ch.traverse(o=>{if(!o.isMesh||o.isSkinnedMesh||!o.visible||!o.geometry||!o.geometry.attributes.position)return;
+          const rel=new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(o.matrixWorld),G=o.geometry,a=G.attributes,m=Array.isArray(o.material)?o.material[0]:o.material,col=(m&&m.color)||{r:1,g:1,b:1},vc=m&&m.vertexColors&&a.color,bk=nb++;extraBone[bk]=bi;
+          parts.push({n:a.position.count,tri:G.index?G.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i).applyMatrix4(rel);if(a.normal)nr.fromBufferAttribute(a.normal,i).transformDirection(rel);else nr.set(0,1,0);
+              c[0]=col.r*(vc?a.color.getX(i):1);c[1]=col.g*(vc?a.color.getY(i):1);c[2]=col.b*(vc?a.color.getZ(i):1);return bk}})})}});
+    const K=cluster(parts,V.CELL,b=>b<bones.length?b:extraBone[b],bones.length);if(K.I.length<30)return null;
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(K.P.length),3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(K.P.length),3).setUsage(THREE.DynamicDrawUsage));geo.setAttribute('color',new THREE.BufferAttribute(K.C,3));geo.setIndex(new THREE.BufferAttribute(K.I,1));
+    geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.6);
+    const lo=new THREE.Mesh(geo,HMAT());lo.name='LO34';lo.visible=false;lo.castShadow=false;lo.receiveShadow=false;lo.userData.noElev=1;H.g.add(lo);
+    return {H,sm,lo,K,bones,near:true,rel:bones.map(()=>new THREE.Matrix4()),tris:K.I.length/3,src:(g.index?g.index.count:A.position.count)/3}}
+  function bake(D){const g=D.H.g,K=D.K,P=D.lo.geometry.attributes.position,N=D.lo.geometry.attributes.normal,pa=P.array,na=N.array;_inv.copy(g.matrixWorld).invert();
+    for(let b=0;b<D.bones.length;b++)D.rel[b].multiplyMatrices(_inv,D.bones[b].matrixWorld);
+    for(let j=0,o=0;j<K.B.length;j++,o+=3){const M=D.rel[K.B[j]];_v.set(K.P[o],K.P[o+1],K.P[o+2]).applyMatrix4(M);pa[o]=_v.x;pa[o+1]=_v.y;pa[o+2]=_v.z;_n.set(K.Nr[o],K.Nr[o+1],K.Nr[o+2]).transformDirection(M);na[o]=_n.x;na[o+1]=_n.y;na[o+2]=_n.z}
+    P.needsUpdate=true;N.needsUpdate=true}
+  function inScene(o){while(o.parent)o=o.parent;return o===scene}
+  function tickHumans(){if(typeof HUMANS==='undefined')return;let built=0,far=0,near=0;const N=V.on?V.HN:1e9,F=V.on?V.HF:1e9;
+    for(const H of HUMANS){if(!H||!H.g||!inScene(H.g))continue;let D=V.humans.get(H);
+      H.g.getWorldPosition(_tp);const d=_tp.distanceTo(_cp);
+      if(D===undefined){if(d<N){near++;continue}if(built>=10)continue;built++;try{D=buildHuman(H)}catch(e){console.error('LOD34 human',e);D=null}V.humans.set(H,D)}
+      if(!D){near++;continue}
+      const isNear=D.near?d<F:d<N;
+      if(isNear!==D.near){D.near=isNear;if(isNear){D.sm.visible=D.keep!==false;D.lo.visible=false}else{D.keep=D.sm.visible;D.sm.visible=false;D.lo.visible=D.keep;bake(D)}}
+      else if(!isNear){if(D.sm.visible){D.sm.visible=false;D.lo.visible=true;D.keep=true}   // 別的程式把精細模型重新打開：照它的意思顯示，但仍用簡化模型
+        if(d<V.REBAKE&&D.lo.visible)bake(D)}
+      if(isNear)near++;else far++}
+    V.stat.hNear=near;V.stat.hFar=far}
+
+  // ================= 機車列 =================
+  function geoPart(mesh,white){const G=mesh.geometry,a=G.attributes,m=mesh.material,vc=m.vertexColors&&a.color,col=white?{r:1,g:1,b:1}:m.color;
+    return {n:a.position.count,tri:G.index?G.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i);if(a.normal)nr.fromBufferAttribute(a.normal,i);else nr.set(0,1,0);c[0]=col.r*(vc?a.color.getX(i):1);c[1]=col.g*(vc?a.color.getY(i):1);c[2]=col.b*(vc?a.color.getZ(i):1);return 0}}}
+  function toGeo(K){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(K.P,3));g.setAttribute('normal',new THREE.BufferAttribute(K.Nr,3));g.setAttribute('color',new THREE.BufferAttribute(K.C,3));g.setIndex(new THREE.BufferAttribute(K.I,1));return g}
+  function buildRows(){const all=[];scene.traverse(o=>{if(o.isInstancedMesh&&o.parent===scene)all.push(o)});const m0=new THREE.Matrix4(),m1=new THREE.Matrix4();
+    const darks=all.filter(o=>o.name==='scootRow'&&!o.material.vertexColors);let gP=null,gR=null;
+    for(const dark of darks){dark.getMatrixAt(0,m0);const same=o=>{if(o===dark||o.count!==dark.count)return false;o.getMatrixAt(0,m1);for(let i=0;i<16;i++)if(Math.abs(m0.elements[i]-m1.elements[i])>1e-6)return false;return true};
+      const ml=all.find(o=>o.name==='scootRow'&&o.material.vertexColors&&same(o)),paint=all.find(o=>o.name!=='scootRow'&&o.instanceColor&&same(o));if(!ml||!paint)continue;
+      if(!gP){gP=toGeo(cluster([geoPart(paint,true)],V.SCELL));gR=toGeo(cluster([geoPart(dark),geoPart(ml)],V.SCELL));V.stat.scootLo=(gP.index.count+gR.index.count)/3;
+        V.stat.scootHi=[paint,dark,ml].reduce((s,o)=>s+(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3,0)}
+      const n=paint.count,M=new Float32Array(paint.instanceMatrix.array.slice(0,n*16)),Cc=new Float32Array(paint.instanceColor.array.slice(0,n*3)),pos=new Float32Array(n*3);for(let i=0;i<n;i++){pos[i*3]=M[i*16+12];pos[i*3+1]=M[i*16+13];pos[i*3+2]=M[i*16+14]}
+      const loP=new THREE.InstancedMesh(gP,new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true}),n),loR=new THREE.InstancedMesh(gR,new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true}),n);
+      loP.setColorAt(0,new THREE.Color(1,1,1));
+      for(const o of [loP,loR]){o.name='LO34row';o.castShadow=false;o.receiveShadow=false;o.frustumCulled=false;o.count=0;o.visible=false;o.userData.noElev=1;scene.add(o)}
+      V.rows.push({paint,dark,ml,loP,loR,n,M,C:Cc,pos,near:new Uint8Array(n).fill(1),nNear:n})}
+    V.stat.rows=V.rows.length;V.stat.scoots=V.rows.reduce((s,r)=>s+r.n,0)}
+  function tickRows(){const N=V.on?V.SN:1e9,F=V.on?V.SF:1e9;let nn=0;
+    for(const r of V.rows){let ch=false;for(let i=0;i<r.n;i++){const d=Math.hypot(r.pos[i*3]-_cp.x,r.pos[i*3+1]-_cp.y,r.pos[i*3+2]-_cp.z),nr=r.near[i]?d<F:d<N;if(nr!==!!r.near[i]){r.near[i]=nr?1:0;ch=true}}
+      if(ch){let a=0,b=0;const hi=[r.paint,r.dark,r.ml],lo=[r.loP,r.loR];
+        for(let i=0;i<r.n;i++){const src=r.M.subarray(i*16,i*16+16);if(r.near[i]){for(const o of hi)o.instanceMatrix.array.set(src,a*16);r.paint.instanceColor.array.set(r.C.subarray(i*3,i*3+3),a*3);a++}
+          else{for(const o of lo)o.instanceMatrix.array.set(src,b*16);r.loP.instanceColor.array.set(r.C.subarray(i*3,i*3+3),b*3);b++}}
+        for(const o of hi){o.count=a;o.visible=a>0;o.instanceMatrix.needsUpdate=true}for(const o of lo){o.count=b;o.visible=b>0;o.instanceMatrix.needsUpdate=true}
+        r.paint.instanceColor.needsUpdate=true;r.loP.instanceColor.needsUpdate=true;r.nNear=a}
+      nn+=r.nNear}
+    V.stat.sNear=nn}
+
+  V.tick=function(){if(typeof cam==='undefined')return;cam.getWorldPosition(_cp);try{tickHumans()}catch(e){console.error('LOD34 h',e)}try{tickRows()}catch(e){console.error('LOD34 r',e)}};
+  function start(){try{buildRows()}catch(e){console.error('LOD34 rows',e)}V.tick();setInterval(V.tick,200);console.log('[lod34]',JSON.stringify(V.stat))}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);if(!window.SAFE34)setTimeout(start,800)},500);
 })();
 
 </script>
