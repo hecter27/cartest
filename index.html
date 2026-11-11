@@ -7463,15 +7463,16 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
 //  網址加 ?mem=0 可關掉。之後才建立的幾何（靜態合併重建等）不處理。
 (function(){
   const M=window.MEM34={on:!/[?&]mem=0/.test(location.search),geos:0,col:0,nor:0,saved:0,skip:0,done:false};
+  const DONE=new Map();   // 原屬性 → 轉換後的屬性（同一份屬性被多個幾何共用時，轉換後仍然共用）
   function shrinkGeo(g){if(!g||!g.isBufferGeometry||g.userData.mem34)return;g.userData.mem34=1;const A=g.attributes;let ch=null;
     const ok=a=>a&&a.isBufferAttribute&&!a.isInstancedBufferAttribute&&!a.isInterleavedBufferAttribute&&a.array instanceof Float32Array&&a.usage===THREE.StaticDrawUsage&&a.array.length>=300;
-    const c=A.color;if(ok(c)){const s=c.array,n=s.length;let good=true;for(let i=0;i<n;i++){const v=s[i];if(!(v>=-.001&&v<=1.001)){good=false;break}}
-      if(good){const d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(0,s[i]))*255);(ch=ch||{}).color=new THREE.BufferAttribute(d,c.itemSize,true);M.col++;M.saved+=n*3}else M.skip++}
-    const nr=A.normal;if(ok(nr)){const s=nr.array,n=s.length,d=new Int16Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(-1,s[i]))*32767);(ch=ch||{}).normal=new THREE.BufferAttribute(d,3,true);M.nor++;M.saved+=n*2}
+    const c=A.color;if(DONE.has(c)){(ch=ch||{}).color=DONE.get(c)}else if(ok(c)){const s=c.array,n=s.length;let good=true;for(let i=0;i<n;i++){const v=s[i];if(!(v>=-.001&&v<=1.001)){good=false;break}}
+      if(good){const d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(0,s[i]))*255);(ch=ch||{}).color=new THREE.BufferAttribute(d,c.itemSize,true);DONE.set(c,ch.color);M.col++;M.saved+=n*3}else M.skip++}
+    const nr=A.normal;if(DONE.has(nr)){(ch=ch||{}).normal=DONE.get(nr)}else if(ok(nr)){const s=nr.array,n=s.length,d=new Int16Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(-1,s[i]))*32767);(ch=ch||{}).normal=new THREE.BufferAttribute(d,3,true);DONE.set(nr,ch.normal);M.nor++;M.saved+=n*2}
     if(!ch)return;g.dispose();   // 已上傳過的先釋放 GPU 緩衝，下次繪製時用新格式重傳
     for(const k in ch){ch[k].name=A[k].name;g.setAttribute(k,ch[k])}M.geos++}
   M.run=function(){if(M.done||!M.on||typeof scene==='undefined')return;M.done=true;const t0=performance.now();try{scene.traverse(o=>{if((o.isMesh||o.isPoints)&&o.geometry)shrinkGeo(o.geometry)})}catch(e){console.error('MEM34',e)}
-    M.ms=Math.round(performance.now()-t0);M.savedMB=Math.round(M.saved/1e6);console.log('[mem34]',JSON.stringify({geos:M.geos,col:M.col,nor:M.nor,savedMB:M.savedMB,skip:M.skip,ms:M.ms}))};
+    DONE.clear();M.ms=Math.round(performance.now()-t0);M.savedMB=Math.round(M.saved/1e6);console.log('[mem34]',JSON.stringify({geos:M.geos,col:M.col,nor:M.nor,savedMB:M.savedMB,skip:M.skip,ms:M.ms}))};
   try{if(window.LD&&LD.done){const _d=LD.done;LD.done=function(){try{M.run()}catch(e){console.error('MEM34',e)}return _d.apply(this,arguments)}}}catch(e){}
   // 保險：LD.done 沒被呼叫到（或被別處換掉）時，載入畫面消失後補做
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);M.run()},300);
@@ -7705,6 +7706,48 @@ function fix32(){
   V.tick=function(){if(typeof cam==='undefined')return;cam.getWorldPosition(_cp);try{tickHumans()}catch(e){console.error('LOD34 h',e)}try{tickRows()}catch(e){console.error('LOD34 r',e)}};
   function start(){try{buildRows()}catch(e){console.error('LOD34 rows',e)}V.tick();setInterval(V.tick,200);console.log('[lod34]',JSON.stringify(V.stat))}
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);if(!window.SAFE34)setTimeout(start,800)},500);
+})();
+
+// 第三十四次：釋放「靜態合併」留下的原始幾何。
+//  staticBatch() 把約 6400 個靜態網格併成 900 多個大網格後，原始網格（不在場景裡）仍各自留著一份幾何，約 237 MB，只有 CPU 端在佔。
+//  它們只在物件被「喚醒」（改位置、顯示、材質）時才用得到，實測跑完藍線＋紅線只喚醒 8 個小平面。
+//  做法：把原始網格的 geometry 換成「用到才還原」的屬性。還原時從合併網格裡切出該物件的頂點，乘回逆矩陣。
+//  沒有別處參照的幾何會被回收；有快取參照的（之後還會拿來建新物件）不受影響。網址加 ?slim=0 可關掉。
+(function(){
+  const V=window.SLIM34={on:!/[?&]slim=0/.test(location.search)&&!window.SAFE34,n:0,restored:0,log:[]};
+  const REC=new WeakMap();
+  function restore(o){const r=REC.get(o);if(!r)return null;REC.delete(o);
+    const p0=r.parts[0],G=p0.grp.mesh.geometry,A=G.attributes,g=new THREE.BufferGeometry(),n=r.vn,v=new THREE.Vector3();
+    const inv=new THREE.Matrix4().copy(r.mw).invert(),mt=new THREE.Matrix3().setFromMatrix4(r.mw).transpose();
+    const P=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,p0.v0+i).applyMatrix4(inv);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z}g.setAttribute('position',new THREE.BufferAttribute(P,3));
+    if(r.hasN&&A.normal){const N=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.normal,p0.v0+i).applyMatrix3(mt).normalize();N[i*3]=v.x;N[i*3+1]=v.y;N[i*3+2]=v.z}g.setAttribute('normal',new THREE.BufferAttribute(N,3))}
+    const pu=r.parts.find(p=>p.grp.uv&&p.grp.mesh.geometry.attributes.uv);
+    if(r.hasU&&pu){const ua=pu.grp.mesh.geometry.attributes.uv,U=new Float32Array(n*2);for(let i=0;i<n;i++){U[i*2]=ua.getX(pu.v0+i);U[i*2+1]=ua.getY(pu.v0+i)}g.setAttribute('uv',new THREE.BufferAttribute(U,2))}
+    const pc=r.parts.find(p=>p.grp.col&&p.grp.mesh.geometry.attributes.color);
+    if(r.hasC&&pc){const ca=pc.grp.mesh.geometry.attributes.color,k=ca.normalized?1/255:1,C=new Float32Array(n*3);for(let i=0;i<n;i++){C[i*3]=ca.getX(pc.v0+i)*k;C[i*3+1]=ca.getY(pc.v0+i)*k;C[i*3+2]=ca.getZ(pc.v0+i)*k}g.setAttribute('color',new THREE.BufferAttribute(C,3))}
+    if(r.indexed){const I=n>65535?new Uint32Array(r.total):new Uint16Array(r.total);
+      for(const p of r.parts){const ix=p.grp.mesh.geometry.index;for(let k=0;k<p.in;k+=3){const a=ix.getX(p.i0+k)-p.v0;let b=ix.getX(p.i0+k+1)-p.v0,c=ix.getX(p.i0+k+2)-p.v0;if(r.flip){const t=b;b=c;c=t}I[p.s+k]=a;I[p.s+k+1]=b;I[p.s+k+2]=c}}
+      g.setIndex(new THREE.BufferAttribute(I,1))}
+    for(const q of r.groups)g.addGroup(q.start,q.count,q.materialIndex);
+    if(r.bs)g.boundingSphere=r.bs;if(r.bb)g.boundingBox=r.bb;g.name=r.name;g.userData=r.ud;
+    Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,writable:true,value:g});V.restored++;if(V.log.length<40)V.log.push(o.name||o.type);return g}
+  V.restore=restore;V.isSlim=o=>REC.has(o);V.peek=o=>REC.get(o);
+  V.run=function(){if(!V.on||typeof SB==='undefined'||!SB.groups||V.ran)return;V.ran=true;const t0=performance.now();
+    // 重算每個物件在合併網格裡的頂點、索引範圍（和 sbMerge 的寫入順序一致）
+    const recs=new Map();let bad=0;
+    for(const grp of SB.groups){if(!grp.mesh||!grp.list||!grp.list.length)continue;const G=grp.mesh.geometry;let vo=0,io=0;
+      for(const e of grp.list){const o=e.o,g=o.geometry,cnt=g.attributes.position.count,ni=Math.floor(e.c/3)*3;
+        let r=recs.get(o);if(!r){o.updateMatrixWorld(true);r={parts:[],vn:cnt,mw:o.matrixWorld.clone(),flip:o.matrixWorld.determinant()<0,indexed:!!g.index,total:g.index?g.index.count:cnt,hasN:!!g.attributes.normal,hasU:!!g.attributes.uv,hasC:!!g.attributes.color,
+            groups:(g.groups||[]).map(q=>({start:q.start,count:q.count,materialIndex:q.materialIndex})),bs:g.boundingSphere,bb:g.boundingBox,name:g.name,ud:g.userData,extra:Object.keys(g.attributes).some(k=>!/^(position|normal|uv|color)$/.test(k))};recs.set(o,r)}
+        r.parts.push({grp,s:e.s,v0:vo,i0:io,in:ni});vo+=cnt;io+=ni}
+      if(vo!==G.attributes.position.count||io!==G.index.count){bad++;for(const e of grp.list)recs.delete(e.o)}}   // 對不上的整組不動
+    for(const [o,r] of recs){if(r.extra||!SB.byMesh.has(o))continue;   // 有其他屬性（還原不回來）的保留原樣
+      // 每個部分都要在：物件的所有材質分段都在合併網格裡
+      REC.set(o,r);Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,get(){return restore(o)},set(x){REC.delete(o);Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,writable:true,value:x})}});V.n++}
+    V.bad=bad;V.ms=Math.round(performance.now()-t0);console.log('[slim34]',JSON.stringify({n:V.n,bad,ms:V.ms}))};
+  // 喚醒前先還原（之後合併網格可能重建，範圍會變）
+  try{const _w=sbWake;sbWake=function(o){try{if(REC.has(o))restore(o)}catch(e){console.error('SLIM34',e)}return _w.apply(this,arguments)}}catch(e){}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);setTimeout(()=>{try{V.run()}catch(e){console.error('SLIM34',e)}},3000)},500);
 })();
 
 </script>
