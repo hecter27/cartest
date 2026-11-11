@@ -7750,6 +7750,48 @@ function fix32(){
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);setTimeout(()=>{try{V.run()}catch(e){console.error('SLIM34',e)}},3000)},500);
 })();
 
+// 第三十五次（階段 M-2）：貼圖上傳 GPU 後釋放 CPU 端的 canvas。
+//  場景有 800 多張貼圖、約 590 張 canvas（約 100 MB），上傳到 GPU 之後 canvas 就只是備份。
+//  做法：貼圖上傳且內容穩定後，把 canvas 轉成 PNG（Blob，很小）存起來，texture.image 換成一張共用的 1×1 canvas；原 canvas 沒有別處參照就會被回收。
+//  需要原圖的情況都會自動還原：有人設 needsUpdate（會動的貼圖：儀表、小地圖）、clone()、WebGL context 遺失後重建。
+//  網址加 ?tex=0 可關掉。
+(function(){
+  const V=window.TEX35={on:!/[?&]tex=0/.test(location.search)&&!window.SAFE34&&typeof WeakRef!=='undefined',recs:new Map(),seen:new Map(),n:0,restored:0,bytes:0,blobBytes:0,busy:0};
+  if(!V.on)return;
+  const NO=new WeakSet();V.NO=NO;
+  const SLOTS=['map','normalMap','roughnessMap','metalnessMap','emissiveMap','alphaMap','bumpMap','specularMap','aoMap','lightMap','displacementMap'];
+  const STUB=document.createElement('canvas');STUB.width=STUB.height=1;{const x=STUB.getContext('2d');x.fillStyle='#808080';x.fillRect(0,0,1,1)}V.STUB=STUB;
+  const protoNU=Object.getOwnPropertyDescriptor(THREE.Texture.prototype,'needsUpdate');
+  const bump=t=>{if(protoNU&&protoNU.set)protoNU.set.call(t,true);else t.version++};
+  function fromBlob(t,rec){const u=URL.createObjectURL(rec.blob),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);if(t.image!==STUB)return;im._tex35=rec.blob;t.image=im;bump(t)};im.onerror=()=>URL.revokeObjectURL(u);im.src=u}
+  // 還原：原 canvas 還在（有人拿著，多半是會重畫的貼圖）就直接放回去，否則從 PNG 解回來
+  function restore(t,keepOut){const rec=V.recs.get(t);if(!rec)return;V.recs.delete(t);delete t.needsUpdate;V.restored++;if(keepOut)NO.add(t);
+    const c=rec.ref&&rec.ref.deref();if(c&&t.image===STUB){t.image=c;return true}if(t.image===STUB)fromBlob(t,rec);return false}
+  function adopt(t,rec){V.recs.set(t,rec);
+    Object.defineProperty(t,'needsUpdate',{configurable:true,set(v){if(v===true){restore(t,true);bump(t)}}})}
+  // 備份只在少數情況用到（context 重建、clone、重畫）：不透明的底色貼圖用 JPEG（小很多），有透明度或不是底色貼圖的用 PNG
+  function toBlob(c,alpha){return new Promise(res=>{try{if(c._tex35)return res(c._tex35);if(alpha)c.toBlob(b=>res(b),'image/png');else c.toBlob(b=>res(b),'image/jpeg',.92)}catch(e){res(null)}})}
+  async function slim(t,alpha){const c=t.image,ver=t.version;V.busy++;try{const blob=await toBlob(c,alpha);if(!blob||t.image!==c||t.version!==ver)return;
+      const isCanvas=c instanceof HTMLCanvasElement;adopt(t,{blob,ref:isCanvas?new WeakRef(c):null,w:c.width,h:c.height});t.image=STUB;V.n++;V.bytes+=c.width*c.height*4;V.blobBytes+=blob.size}finally{V.busy--}}
+  // clone：來源已被換成 1×1 時，複製品先帶同一份 PNG，再還原成真圖
+  const _clone=THREE.Texture.prototype.clone;
+  THREE.Texture.prototype.clone=function(){const c=_clone.call(this),rec=V.recs.get(this);if(rec&&c.image===STUB){V.recs.set(c,{blob:rec.blob,ref:rec.ref,w:rec.w,h:rec.h});const o=rec.ref&&rec.ref.deref();if(o){c.image=o;V.recs.delete(c)}else{fromBlob(c,rec);V.recs.delete(c)}}return c};
+  V.poll=function(){if(typeof scene==='undefined'||typeof R==='undefined'||!R.properties)return;const now=performance.now(),texs=new Map();
+    scene.traverse(o=>{const m=o.material;if(!m)return;(Array.isArray(m)?m:[m]).forEach(mt=>{if(!mt)return;for(const k of SLOTS){const t=mt[k];if(t&&t.isTexture&&t.image){if(mt.skinning)NO.add(t);texs.set(t,(texs.get(t)||0)|((k!=='map'||mt.transparent||mt.alphaTest>0||t.format!==THREE.RGBAFormat&&t.format!==THREE.RGBFormat||t.premultiplyAlpha)?1:0))}}})});
+    let k=0;for(const t of texs.keys()){if(V.recs.has(t)||NO.has(t)||t.isCubeTexture||t.isDataTexture||t.isCompressedTexture||t.isVideoTexture)continue;const im=t.image;
+      if(im===STUB||!(im instanceof HTMLCanvasElement||im._tex35)||im.isConnected||!(im.width>8&&im.height>8))continue;
+      let s=V.seen.get(t);if(!s||s.v!==t.version){V.seen.set(t,{v:t.version,t:now});continue}if(now-s.t<6000)continue;   // 6 秒內沒再更新才算穩定
+      const p=R.properties.get(t);if(!p||!p.__webglTexture||p.__version!==t.version)continue;   // 還沒上傳的不動
+      if(k++>=24)break;slim(t,!!texs.get(t))}
+    V.total=texs.size};
+  // context 重建：three 會重新上傳所有貼圖，先全部還原成真圖
+  function onRestore(){for(const [t,rec] of [...V.recs]){V.recs.delete(t);delete t.needsUpdate;V.restored++;const c=rec.ref&&rec.ref.deref();if(c&&t.image===STUB){t.image=c;bump(t)}else if(t.image===STUB)fromBlob(t,rec)}V.seen.clear()}
+  V.onRestore=onRestore;
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);
+    try{R.domElement.addEventListener('webglcontextrestored',onRestore,false)}catch(e){}
+    setTimeout(()=>setInterval(()=>{try{V.poll()}catch(e){console.error('TEX35',e)}},3000),5000)},500);
+})();
+
 </script>
 </body>
 </html>
