@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="駕訓班">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>駕訓班｜路考模擬</title>
 <meta property="og:title" content="駕訓班｜路考模擬">
@@ -385,15 +386,16 @@ body.walking #pedals,body.walking #checklist,body.walking #startTag,body.walking
   #ovIntro .pg1:not([hidden]){display:grid;grid-template-columns:minmax(190px,230px) minmax(0,1fr);grid-template-rows:auto 1fr auto auto;column-gap:18px;align-items:start}
   #ovIntro .pg1 .nmHead{grid-column:1;grid-row:1;flex-direction:column;align-items:flex-start;margin-bottom:0}
   #ovIntro .pg1 .nmTitle{font-size:30px}
-  #ovIntro .pg1 #modeChoice{grid-column:2;grid-row:1/5;grid-template-columns:repeat(4,minmax(0,1fr));align-self:center}
-  #ovIntro .pg1 #modeChoice .grp{grid-column:span 2;margin-top:0}
-  #ovIntro .pg1 #modeChoice .grp:nth-of-type(1){grid-column:1/3;grid-row:1}
-  #ovIntro .pg1 #modeChoice .grp:nth-of-type(2){grid-column:3/5;grid-row:1}
-  #ovIntro .pg1 #modeChoice .grp:nth-of-type(3){grid-column:1/-1;grid-row:3;margin-top:4px}
-  #ovIntro .pg1 #modeChoice button{grid-row:2;grid-template-columns:1fr;grid-template-rows:auto auto auto;row-gap:5px;padding:11px 10px;align-content:start}
-  #ovIntro .pg1 #modeChoice button i{grid-row:auto}
-  #ovIntro .pg1 #modeChoice button.wide{grid-row:4;grid-template-columns:auto 1fr;grid-template-rows:auto auto;row-gap:0}
-  #ovIntro .pg1 #modeChoice button.wide i{grid-row:1/3}
+  #ovIntro .pg1 #modeChoice{grid-column:2;grid-row:1/5;grid-template-columns:1fr 1fr;align-self:center;gap:8px}
+  #ovIntro .pg1 #modeChoice button[data-m="lake"]{grid-column:1/-1;padding:16px 16px;column-gap:14px;min-height:92px;
+    background:linear-gradient(120deg,rgba(43,212,166,.16),rgba(42,140,255,.14)),rgba(255,255,255,.04)}
+  #ovIntro .pg1 #modeChoice button[data-m="lake"] i{width:52px;height:52px;border-radius:15px}
+  #ovIntro .pg1 #modeChoice button[data-m="lake"] i svg{width:30px;height:30px}
+  #ovIntro .pg1 #modeChoice button[data-m="lake"] b{font-size:20px}
+  #ovIntro .pg1 #modeChoice button[data-m="lake"] small{font-size:13px}
+  #ovIntro .pg1 #modeChoice button[data-m="exam"],#ovIntro .pg1 #modeChoice button[data-m="roade"]{padding:9px 11px}
+  #ovIntro .pg1 #modeChoice button[data-m="exam"] i,#ovIntro .pg1 #modeChoice button[data-m="roade"] i{width:30px;height:30px}
+  #ovIntro .pg1 #modeChoice button[data-m="exam"] b,#ovIntro .pg1 #modeChoice button[data-m="roade"] b{font-size:14.5px}
   #ovIntro .pg1 #goBtn{grid-column:1;grid-row:3;margin-top:10px}
   #ovIntro .pg1 .nmRow{grid-column:1;grid-row:4;flex-direction:column;gap:6px}
   #ovIntro .pg1 .nmRow .ghost{padding:8px 10px;font-size:13.5px;justify-content:flex-start}
@@ -442,7 +444,6 @@ body.walking #pedals,body.walking #checklist,body.walking #startTag,body.walking
 }
 /* 矮螢幕（手機橫式）再收緊 */
 @media (orientation:landscape) and (max-height:430px){
-  #ovIntro .pg1 #modeChoice button small{font-size:11px}
   #ovIntro .pg1 #goBtn{padding:12px}
   #ovIntro .keys{font-size:12.5px;line-height:1.75}
   #ovIntro .note{margin-top:8px;line-height:1.5}
@@ -452,6 +453,36 @@ body.walking #pedals,body.walking #checklist,body.walking #startTag,body.walking
   .overlay .choice button,.overlay .big{padding:9px 13px}
   .result .big-stamp{width:76px;height:76px}.result .big-stamp b{font-size:28px}
   #loading .ld-bar{margin-top:16px}
+}
+</style>
+<style id="land32css">
+/* 第三十二次：主選單簡化、駕駛介面橫式配置（階段 0-2） */
+#ovIntro #modeChoice button[hidden]{display:none}
+#assist31{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);cursor:pointer;color:#cfd8e3}
+#assist31 i{flex:none;width:38px;height:22px;border-radius:11px;background:rgba(255,255,255,.14);position:relative;transition:background .15s}
+#assist31 i::after{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#e9eef5;transition:transform .15s}
+#assist31.on i{background:linear-gradient(120deg,#2bd4a6,#2a8cff)}#assist31.on i::after{transform:translateX(16px)}
+#assist31 b{font-size:13.5px;display:block}#assist31 small{font-size:11.5px;opacity:.6}
+#ios31{margin:8px 0 0;font-size:11px;line-height:1.5;color:rgba(233,238,245,.55)}
+@media (orientation:landscape){
+  #ios31{grid-column:1;grid-row:5}
+  /* 排檔：改成橫排、縮小，放在踏板左邊；不再蓋住右上角的選單鍵 */
+  body #gearGate,body.netlify #gearGate{top:auto!important;bottom:calc(env(safe-area-inset-bottom,0px) + 12px)!important;right:calc(env(safe-area-inset-right,0px) + 164px);
+    grid-auto-flow:column;padding:4px;gap:2px;border-radius:21px}
+  body.netlify #gearGate{bottom:calc(env(safe-area-inset-bottom,0px) + 78px)!important}
+  #gearGate button{width:36px;height:34px;font-size:16px;border-radius:17px}
+  #gearGate::before{left:4px;right:auto;top:4px;width:36px;height:34px;border-radius:17px;transform:translateX(calc(var(--gi) * 38px))}
+  /* 左右安全邊距 */
+  #top{padding-left:calc(env(safe-area-inset-left,0px) + 8px);padding-right:calc(env(safe-area-inset-right,0px) + 8px)}
+  #pedals{right:calc(env(safe-area-inset-right,0px) + 10px)}
+  #walkBtn,#voiceBtn{right:calc(env(safe-area-inset-right,0px) + 8px)}
+  #walkBtn{top:calc(env(safe-area-inset-top,0px) + 52px)}#voiceBtn{top:calc(env(safe-area-inset-top,0px) + 92px)}
+  #rtMap{left:calc(env(safe-area-inset-left,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 52px)}
+  #sigBtns{left:calc(env(safe-area-inset-left,0px) + 12px)!important}
+  #menuBtn{width:42px;height:42px}
+  body #rtNav{top:calc(env(safe-area-inset-top,0px) + 174px)!important;left:calc(env(safe-area-inset-left,0px) + 6px)!important}
+  /* 橫式沒有上下分割 */
+  #mSplit{display:none}
 }
 </style>
 
@@ -3632,7 +3663,7 @@ function startLottery(){show('#ovLot',true);let pick=null;const cards=[...docume
   go.onclick=()=>{if(!pick)return;show('#ovLot',false);rtPick(pick);running=true;paused=false;resize();showCoach(10);
     const intro=pick==='blue'?'今天考藍線。出大門右轉明湖路，到柴橋路口左轉，靠右進入明湖路1006巷，再左轉1008巷繞回明湖路，最後在柴橋路口右轉回駕訓班。途中要做路邊停車、時速四十公里和變換車道。':'今天考紅線。出大門右轉明湖路，過柴橋路口直行柴橋路，再右轉東香路一段，到新香街口迴轉，原路回到明湖路，左轉進駕訓班。途中要做路邊停車、時速四十公里和變換車道。';
     rtSay(intro)}}
-$('#preDone').onclick=()=>{if(mode==='lake'){show('#ovPre',false);LAKE.on=true;S.x+=-Math.sin(S.th)*1.7;S.y+=Math.cos(S.th)*1.7;noScore=true;running=true;paused=false;resize();S.engine=true;$('#stageName').textContent='青草湖環湖觀光';$('#stageTip').textContent='沿環湖道路逛一圈，隨時可以停車下來走走';toast('停好車按「下車走走」，可以四處逛逛');say('青草湖導覽','歡迎來到青草湖！沿著環湖道路慢慢逛，看到有興趣的地方就停車下來走走。',4200);return}if(mode==='roadp'||mode==='roade'){show('#ovPre',false);startLottery();return}show('#ovPre',false);running=true;paused=false;resize();showCoach(14);toast(mode==='practice'?'左上提示逐項完成後起步':'模擬考試開始，考官已上車');if(mode==='exam')announce('考驗開始，請依序完成各項考驗',true)};
+$('#preDone').onclick=()=>{if(mode==='lake'){show('#ovPre',false);LAKE.on=true;S.x+=-Math.sin(S.th)*1.7;S.y+=Math.cos(S.th)*1.7;noScore=true;running=true;paused=false;resize();S.engine=true;$('#stageName').textContent='青草湖環湖觀光';$('#stageTip').textContent='沿環湖道路逛一圈，隨時可以停車下來走走';return}if(mode==='roadp'||mode==='roade'){show('#ovPre',false);startLottery();return}show('#ovPre',false);running=true;paused=false;resize();showCoach(14);toast(mode==='practice'?'左上提示逐項完成後起步':'模擬考試開始，考官已上車');if(mode==='exam')announce('考驗開始，請依序完成各項考驗',true)};
 $('#menuBtn').onclick=()=>{if(!running){show('#ovIntro',true);return}paused=true;openMenu()};
 function openMenu(){$('#jumpBox').hidden=mode!=='practice';const j=$('#jumps');j.innerHTML='';
   STN.slice(1,-1).forEach(s=>{const b=document.createElement('button');b.className='tog';b.textContent=s.name;b.onclick=()=>jump(s.id);j.appendChild(b)});
@@ -5607,7 +5638,7 @@ body #rtNav[hidden]{display:none!important}
   document.head.appendChild(css);
   const j=document.getElementById('sjoy');if(j&&!j.querySelector('.sj12c'))j.insertAdjacentHTML('beforeend','<i class="sj12c l">‹</i><i class="sj12c r">›</i>');
   // 轉向滑桿放在左下（儀表條最底部），不擋抬頭顯示與儀表
-  discPos=function(){const r=cv.getBoundingClientRect();return{x:12+SJW()/2,y:r.height-42-(document.body.classList.contains('netlify')?66:0)}};
+  discPos=function(){const r=cv.getBoundingClientRect();return{x:12+(window.SAFE31?SAFE31.l():0)+SJW()/2,y:r.height-42-(document.body.classList.contains('netlify')?66:0)}};
   {const _pd=placeDisc;placeDisc=function(){_pd.apply(this,arguments);const e=document.getElementById('sjoy');if(e)e.style.setProperty('--sjw',SJW()+'px')}}
   {const _uc=updateCar;updateCar=function(){_uc.apply(this,arguments);const e=document.getElementById('sjoy');if(!e||e.hidden)return;const v=IN.sj?IN.sj.v:0,t=SJT();e.style.setProperty('--fl',(v<0?-v*t:0).toFixed(1)+'px');e.style.setProperty('--fr',(v>0?v*t:0).toFixed(1)+'px')}}
   try{placeDisc()}catch(e){}
@@ -7371,6 +7402,161 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
   const stop=e=>{if(LAND31.isPortrait()&&e.target&&e.target.id!=='rot31Btn'){e.stopPropagation();if(e.cancelable&&e.type!=='keydown'&&e.type!=='keyup')e.preventDefault()}};
   ['keydown','keyup'].forEach(t=>window.addEventListener(t,stop,true));
   ['pointerdown','touchstart','mousedown'].forEach(t=>el.addEventListener(t,stop,{passive:false}));
+})();
+
+// 第三十二次：主選單簡化（環湖為主、場地考、道路考＋練習輔助開關）；只有模擬考顯示上車前檢查
+(function(){
+  const mc=document.getElementById('modeChoice');if(!mc)return;
+  const q=m=>mc.querySelector('[data-m="'+m+'"]');
+  const lake=q('lake'),ex=q('exam'),rd=q('roade'),pr=q('practice'),rp=q('roadp');if(!lake||!ex||!rd)return;
+  mc.querySelectorAll('.grp').forEach(e=>e.remove());if(pr)pr.hidden=true;if(rp)rp.hidden=true;
+  const set=(b,t,s)=>{b.querySelector('b').textContent=t;b.querySelector('small').textContent=s};
+  set(lake,'青草湖自由駕駛','開自己的車環湖兜風，隨處停車下來走走');
+  set(ex,'場地考','駕訓班場內項目，70 分及格');
+  set(rd,'道路考','抽籤藍線或紅線，扣超過 30 分中止');
+  mc.insertBefore(lake,mc.firstChild);mc.classList.add('m31');
+  const as=document.createElement('div');as.id='assist31';as.setAttribute('role','switch');as.tabIndex=0;
+  as.innerHTML='<i></i><span><b>練習輔助</b><small>考試時顯示教練提示與輔助線，可跳關，不計成績</small></span>';mc.appendChild(as);
+  let on=false;
+  const fix=()=>{if(mode==='exam'||mode==='practice')mode=on?'practice':'exam';else if(mode==='roade'||mode==='roadp')mode=on?'roadp':'roade';
+    as.classList.toggle('on',on);as.setAttribute('aria-checked',on)};
+  [ex,rd,lake].forEach(b=>b.addEventListener('click',fix));
+  as.addEventListener('click',()=>{on=!on;fix()});
+  lake.click();
+  // 只有模擬考（場地、道路）顯示上車前檢查；環湖與練習直接上路
+  const skipPre=()=>{try{PRE.forEach(a=>{P[a[0]]=true})}catch(e){}document.getElementById('preDone').onclick()};
+  const needPre=()=>mode==='exam'||mode==='roade';
+  document.getElementById('goBtn').onclick=()=>{audioInit();newRun();show('#ovIntro',false);if(needPre())show('#ovPre',true);else skipPre()};
+  document.getElementById('rAgain').onclick=()=>{show('#ovResult',false);newRun();if(needPre())show('#ovPre',true);else skipPre()};
+  // iPhone 的 Safari 不能由網頁進全螢幕：提示加入主畫面（從主畫面開啟就沒有網址列）
+  const ios=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=navigator.standalone||matchMedia('(display-mode:standalone)').matches||matchMedia('(display-mode:fullscreen)').matches;
+  if(ios&&!standalone){const n=document.createElement('p');n.id='ios31';n.textContent='iPhone 全螢幕：Safari 下方「分享」→「加入主畫面」，再從主畫面開啟。';
+    const row=document.querySelector('#ovIntro .pg1 .nmRow');if(row)row.parentNode.insertBefore(n,row.nextSibling)}
+  // 左側安全邊距（瀏海）：給轉向滑桿用
+  const pr2=document.createElement('i');pr2.style.cssText='position:fixed;left:0;top:0;width:env(safe-area-inset-left,0px);height:0;visibility:hidden;pointer-events:none';document.body.appendChild(pr2);
+  window.SAFE31={l:()=>matchMedia('(orientation:landscape)').matches?pr2.getBoundingClientRect().width:0};
+})();
+
+// 第三十二次：世界修正（載入完成後執行一次）
+//  1) 場地上下坡道：坡道模型被多抬高 0.95 m（車子其實走在模型下面，看起來像穿過去）→ 放回地面；坡上兩塊標線改成貼著坡面
+//  2) 大門北側、明湖路西邊的擋土牆欄杆（x≈113～128）沒有碰撞 → 沿路緣補斜方盒
+//  3) 鋪面材質的 polygonOffset 斜率因子（−1）在低角度、遠距離會蓋掉貼地的輪胎 → 降到 −0.3
+function fix32(){
+  const R={ramp:0,marks:0,obb:0,mats:0};
+  // 1) 坡道
+  try{scene.traverse(m=>{if(!m.isMesh||!m.geometry||m.parent!==scene)return;const g=m.geometry;if(!g.boundingBox)g.computeBoundingBox();const b=g.boundingBox;
+      const wx0=b.min.x+m.position.x,wx1=b.max.x+m.position.x,wz0=b.min.z+m.position.z,wz1=b.max.z+m.position.z;
+      if(Math.abs(wx0-128.5)<.3&&Math.abs(wx1-135.5)<.3&&Math.abs(wz0-26)<.3&&Math.abs(wz1-48)<.3&&b.max.y-b.min.y>.8&&m.position.y>.5){m.position.y=0;m.updateMatrixWorld(true);R.ramp++}
+      else if(g.type==='PlaneGeometry'&&m.position.x>128&&m.position.x<136&&m.position.z>26&&m.position.z<48&&m.position.y>.05&&m.position.y<1){
+        const z=m.position.z;if(z>40.2&&z<47.8){const hz=(g.parameters.height||0)/2;const e=new THREE.Euler().copy(m.rotation);
+          // 下坡段坡度 0.12：平面繞 X 軸傾斜，兩端高度對到坡面
+          const best=[1,-1].map(s=>{m.rotation.set(e.x+s*Math.atan(.12),e.y,e.z);m.position.y=hAt(m.position.x,z)+.025;m.updateMatrixWorld(true);
+            const v=new THREE.Vector3(0,hz,0).applyMatrix4(m.matrixWorld);return [Math.abs(v.y-.025-hAt(v.x,v.z)),s]}).sort((a,b)=>a[0]-b[0])[0];
+          m.rotation.set(e.x+best[1]*Math.atan(.12),e.y,e.z);m.updateMatrixWorld(true);R.marks++}}})}catch(e){console.error('FIX32 ramp',e)}
+  // 2) 欄杆碰撞
+  try{const P=MH.main.P,inCol=(x,z)=>{for(const r of OBR){if(x>=r.x0&&x<=r.x1&&z>=r.y0&&z<=r.y1)return 1}for(const o of OBO){const dx=x-o.cx,dz=z-o.cy;if(Math.abs(dx*o.ux+dz*o.uy)<=o.hl&&Math.abs(dx*o.vx+dz*o.vy)<=o.hw)return 1}return 0};
+    const pts=[];for(let i=0;i<P.length-1;i++){const ax=P[i][0],az=P[i][1],bx=P[i+1][0],bz=P[i+1][1],L=Math.hypot(bx-ax,bz-az);if(L<.01)continue;let ux=(bx-ax)/L,uz=(bz-az)/L;if(ux<0){ux=-ux;uz=-uz}
+      for(let t=0;t<L;t+=1.5){const x=ax+(bx-ax)*t/L,z=az+(bz-az)*t/L;if(x<114.5||x>129)continue;pts.push([x+uz*5.6,z-ux*5.6,Math.atan2(uz,ux)])}}
+    pts.sort((a,b)=>a[0]-b[0]);
+    for(const p of pts){let hit=0;for(let d=-1.6;d<=1.2;d+=.2)if(inCol(p[0]+Math.sin(p[2])*d,p[1]-Math.cos(p[2])*d)){hit=1;break}if(hit)continue;addOBB(p[0],p[1],p[2],.85,.14);R.obb++}}catch(e){console.error('FIX32 fence',e)}
+  // 3) 鋪面 polygonOffset
+  try{const seen=new Set();scene.traverse(o=>{if(!o.isMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!m||!m.polygonOffset||seen.has(m))return;seen.add(m);
+      if(m.polygonOffsetFactor<-.3){m.polygonOffsetFactor=-.3;m.polygonOffsetUnits=Math.min(m.polygonOffsetUnits-2,-2);R.mats++}})})}catch(e){console.error('FIX32 mats',e)}
+  window.FIX32=R;console.log('[fix32]',JSON.stringify(R));return R}
+(function(){const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{fix32()}catch(e){console.error('FIX32',e)}},400)})();
+
+// 第三十三次：車輛遠近分級（LOD）與近處修正
+//  現況：每台車約 2.6 萬個三角形，停車場的車在載入最後被「靜態合併」成幾個大網格，不論遠近都整批畫（全場景約一千萬個三角形）。
+//  1) 遠處（約 60 m 以外）改畫簡化模型（每台約 300 個三角形），靠近才換回精細模型
+//  2) 停放的車原本比鋪面低幾公分（鋪面有加厚），輪胎下緣陷進地面：依實際鋪面高度把車抬上來
+//  3) 烤漆反射加強
+(function(){
+  const REG=new Map();
+  const _mk=makeCarModel;
+  makeCarModel=function(type,color,opt){const r=_mk.apply(this,arguments);try{REG.set(r,{type,color,parked:!!(opt&&opt.parked)})}catch(e){}return r};
+  window.VEH33={REG,units:[],singles:[],on:true,NEAR:55,FAR:66};
+
+  const lerp=(pts,x)=>{if(x<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){if(x<=pts[i][0]){const a=pts[i-1],b=pts[i],t=(x-a[0])/Math.max(1e-6,b[0]-a[0]);return a[1]+(b[1]-a[1])*t}}return pts[pts.length-1][1]};
+  const GEO={};
+  // 簡化模型：側面輪廓擠出＋玻璃色塊＋四個輪子＋頭尾燈。頂點色：純白＝烤漆（之後乘上車色）
+  function loGeo(type){if(GEO[type])return GEO[type];const T=car4Spec(type),W=T.W,P=[],C=[];
+    const tri=(a,b,c,col)=>{P.push(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2]);for(let i=0;i<3;i++)C.push(col[0],col[1],col[2])};
+    const BODY=[1,1,1],GL=[.045,.06,.075],DK=[.07,.07,.075],RIM=[.62,.63,.65],RED=[.55,.04,.03],HEAD=[.93,.93,.88],UNDER=[.1,.1,.1];
+    const top=x=>lerp(T.top,x),belt=x=>lerp(T.belt,x);
+    const sh=new THREE.Shape();T.top.forEach((p,i)=>i?sh.lineTo(p[0],p[1]):sh.moveTo(p[0],p[1]));for(let i=T.bot.length-1;i>=0;i--)sh.lineTo(T.bot[i][0],T.bot[i][1]);
+    let g=new THREE.ExtrudeGeometry(sh,{depth:2*W,bevelEnabled:false,curveSegments:1});g.translate(0,0,-W);if(g.index)g=g.toNonIndexed();
+    const q=g.attributes.position,a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),n=new THREE.Vector3(),e=new THREE.Vector3();
+    for(let i=0;i<q.count;i+=3){a.fromBufferAttribute(q,i);b.fromBufferAttribute(q,i+1);c.fromBufferAttribute(q,i+2);n.subVectors(b,a).cross(e.subVectors(c,a)).normalize();
+      const cx=(a.x+b.x+c.x)/3,cy=(a.y+b.y+c.y)/3;let col=BODY;
+      if(Math.abs(n.z)<.5){if(n.y>.15&&cy>belt(cx)+.02&&((cx>T.aTop-.02&&cx<T.cowl+.02)||(cx<T.cTop+.02&&cx>T.deck-.02)))col=GL;else if(n.y<-.5)col=UNDER}
+      tri([a.x,a.y,a.z],[b.x,b.y,b.z],[c.x,c.y,c.z],col)}
+    // 側窗
+    for(const s of [1,-1]){const z=s*(W+.006);let pv=null;for(let x=T.deck+.1;x<=T.cowl-.08+1e-6;x+=.22){const lo=belt(x)+.035,hi=top(x)-.075;const cur=hi>lo+.04?[x,lo,hi]:null;
+        if(pv&&cur){const A=[pv[0],pv[1],z],B=[cur[0],cur[1],z],Cc=[cur[0],cur[2],z],D=[pv[0],pv[2],z];if(s>0){tri(A,B,Cc,GL);tri(A,Cc,D,GL)}else{tri(A,Cc,B,GL);tri(A,D,Cc,GL)}}pv=cur}}
+    // 方塊（燈）
+    const box=(x0,x1,y0,y1,z0,z1,col)=>{const v=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+      [[0,2,1],[0,3,2],[4,5,6],[4,6,7],[0,1,5],[0,5,4],[3,6,2],[3,7,6],[1,2,6],[1,6,5],[0,4,7],[0,7,3]].forEach(f=>tri(v[f[0]],v[f[1]],v[f[2]],col))};
+    const yt=belt(T.xr+.05)-.02;for(const s of [1,-1]){box(T.xr-.012,T.xr+.05,yt-.13,yt,s*(W-.42),s*(W-.04),RED);const yh=lerp(T.top,T.xf-.12)-.03;box(T.xf-.1,T.xf+.004,yh-.11,yh-.02,s*(W-.46),s*(W-.1),HEAD)}
+    // 輪子（十邊形）
+    const N=10,r=T.r,tw=.2;for(const ax of [0,2.7])for(const s of [1,-1]){const zc=s*(W-.1),z0=zc-tw/2,z1=zc+tw/2,zo=s>0?z1:z0;
+      for(let i=0;i<N;i++){const a0=i/N*Math.PI*2,a1=(i+1)/N*Math.PI*2,p0=[ax+Math.cos(a0)*r,r+Math.sin(a0)*r],p1=[ax+Math.cos(a1)*r,r+Math.sin(a1)*r];
+        tri([p0[0],p0[1],z0],[p1[0],p1[1],z0],[p1[0],p1[1],z1],DK);tri([p0[0],p0[1],z0],[p1[0],p1[1],z1],[p0[0],p0[1],z1],DK);
+        const h0=[ax+Math.cos(a0)*r*.62,r+Math.sin(a0)*r*.62],h1=[ax+Math.cos(a1)*r*.62,r+Math.sin(a1)*r*.62];
+        tri([p0[0],p0[1],zo],[p1[0],p1[1],zo],[h1[0],h1[1],zo],DK);tri([p0[0],p0[1],zo],[h1[0],h1[1],zo],[h0[0],h0[1],zo],DK);tri([ax,r,zo],[h0[0],h0[1],zo],[h1[0],h1[1],zo],RIM)}}
+    return GEO[type]={P:new Float32Array(P),C:new Float32Array(C)}}
+  const MAT=()=>VEH33.mat||(VEH33.mat=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));
+  // 把若干台車（各有世界矩陣、車型、車色）合成一個簡化網格
+  function loMesh(items){let n=0;items.forEach(it=>n+=loGeo(it.type).P.length);const P=new Float32Array(n),C=new Float32Array(n);let o=0;const v=new THREE.Vector3(),col=new THREE.Color();
+    for(const it of items){const G=loGeo(it.type);if(it.color&&it.color.isColor)col.copy(it.color);else col.set(it.color);const lin=col;for(let i=0;i<G.P.length;i+=3){v.set(G.P[i],G.P[i+1],G.P[i+2]);if(it.m)v.applyMatrix4(it.m);P[o+i]=v.x;P[o+i+1]=v.y;P[o+i+2]=v.z;
+        const w=G.C[i]===1&&G.C[i+1]===1&&G.C[i+2]===1;C[o+i]=w?Math.min(1,lin.r*1.25+.02):G.C[i];C[o+i+1]=w?Math.min(1,lin.g*1.25+.02):G.C[i+1];C[o+i+2]=w?Math.min(1,lin.b*1.25+.02):G.C[i+2]}o+=G.P.length}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('color',new THREE.BufferAttribute(C,3));g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();
+    const m=new THREE.Mesh(g,MAT());m.castShadow=false;m.receiveShadow=false;m.name='LO33';m.userData.noElev=1;return m}
+
+  function build(){const out={units:0,unitCars:0,singles:0,raised:0,dy:[]};const V=VEH33;
+    const carOf=o=>{let p=o;while(p){if(REG.has(p)||(p.userData&&p.userData.tails))return p;p=p.parent}return null};
+    // ---- 已合併的停放車：合併後的大網格用車輛材質辨認，範圍重疊的歸成一個單位；車的位置取自當初建立時的車物件 ----
+    const CM=(makeCarModel.v4&&makeCarModel.v4.m)||{},carMats=new Set();Object.values(CM).forEach(m=>{(Array.isArray(m)?m:[m]).forEach(x=>x&&carMats.add(x))});
+    if(typeof SB!=='undefined'&&SB.bakeM)SB.bakeM.forEach(m=>{if(m&&m.isMeshPhysicalMaterial)carMats.add(m)});
+    const cg=[];if(typeof SB!=='undefined'&&SB.groups)for(const grp of SB.groups){if(!grp.mesh||!carMats.has(grp.mesh.material))continue;const g=grp.mesh.geometry;if(!g.boundingBox)g.computeBoundingBox();cg.push({mesh:grp.mesh,box:g.boundingBox.clone()})}
+    const par=cg.map((_,i)=>i),find=x=>{while(par[x]!==x){par[x]=par[par[x]];x=par[x]}return x};
+    for(let i=0;i<cg.length;i++)for(let j=i+1;j<cg.length;j++){const A=cg[i].box,B=cg[j].box;if(A.min.x<=B.max.x+1&&A.max.x>=B.min.x-1&&A.min.z<=B.max.z+1&&A.max.z>=B.min.z-1)par[find(i)]=find(j)}
+    const U=new Map();cg.forEach((c,i)=>{const k=find(i);let u=U.get(k);if(!u)U.set(k,u={hi:[],cars:new Set(),box:new THREE.Box3()});u.hi.push(c.mesh);u.box.union(c.box)});
+    for(const [root] of REG){if(root.parent)continue;root.updateMatrix();root.matrixWorld.copy(root.matrix);const x=root.position.x,z=root.position.z;
+      for(const u of U.values()){if(x>=u.box.min.x-.4&&x<=u.box.max.x+.4&&z>=u.box.min.z-.4&&z<=u.box.max.z+.4){u.cars.add(root);break}}}
+    for(const [k,u] of U)if(!u.cars.size)U.delete(k);
+    // 鋪面高度：從車子上方往下打射線（不打車子本身、不打實例網格）
+    const carMeshes=new Set();for(const u of U.values())u.hi.forEach(m=>carMeshes.add(m));
+    const targets=scene.children.filter(o=>!carMeshes.has(o)&&!o.isInstancedMesh&&!o.isSprite&&!REG.has(o)&&o.name!=='LO33'&&!o.isLight&&!o.isCamera&&!o.isLine&&!o.isPoints);
+    const rc=new THREE.Raycaster();rc.camera=typeof cam!=='undefined'?cam:null;const dn=new THREE.Vector3(0,-1,0),wp=new THREE.Vector3();
+    const flat=[];targets.forEach(t=>t.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!o.isSprite&&o.visible&&!carOf(o))flat.push(o)}));
+    const surf=(x,y,z)=>{rc.set(wp.set(x,y+1.2,z),dn);rc.far=2.4;let best=null;for(const o of flat){const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();
+        const bs=g.boundingSphere;if(o.matrixWorld.elements[12]===0&&o.matrixWorld.elements[14]===0){if(Math.hypot(bs.center.x-x,bs.center.z-z)>bs.radius+.5)continue}
+        const h=rc.intersectObject(o,false);if(h.length&&(!best||h[0].point.y>best))best=h[0].point.y}return best};
+    const baseOf=c=>{c.matrixWorld.decompose(wp,_q,_s);return [wp.x,wp.y,wp.z]},_q=new THREE.Quaternion(),_s=new THREE.Vector3();
+    for(const u of U.values()){const items=[],ds=[];for(const c of u.cars){const r=REG.get(c);items.push({type:r.type,color:r.color,m:c.matrixWorld});
+        if(ds.length<7){const p=baseOf(c),s=surf(p[0],p[1],p[2]);if(s!=null){const d=s-p[1];if(d>.005&&d<.25)ds.push(d);else if(d<=.005)ds.push(0)}}}
+      ds.sort((a,b)=>a-b);const dy=ds.length?ds[ds.length>>1]:0;u.dy=dy;
+      const lo=loMesh(items);lo.visible=false;scene.add(lo);u.lo=lo;u.near=true;
+      if(dy>0){u.hi.forEach(m=>{m.position.y+=dy;m.updateMatrix();m.updateMatrixWorld(true)});lo.position.y+=dy;lo.updateMatrixWorld(true);u.box.min.y+=dy;u.box.max.y+=dy;out.raised+=u.cars.size;out.dy.push(+dy.toFixed(3))}
+      V.units.push(u);out.units++;out.unitCars+=u.cars.size}
+    // ---- 沒被合併的車（車流、零星停放）：每台各掛一個簡化網格 ----
+    const TYPES=typeof CARTYPES!=='undefined'?Object.keys(CARTYPES):['sedan','hatch','van','suv','prius'],roots=[];scene.traverse(o=>{if(o.userData&&o.userData.tails&&o.name!=='car10body'&&o.children.some(ch=>ch.isMesh))roots.push(o)});
+    for(const root of roots){let type=null,color=null;for(const ch of root.children){if(!ch.isMesh||!ch.material||!ch.material.isMeshPhysicalMaterial)continue;const g=ch.geometry;if(!g.boundingBox)g.computeBoundingBox();let bd=.2;for(const t of TYPES){const T=car4Spec(t),d=Math.abs(g.boundingBox.max.x-T.xf)+Math.abs(g.boundingBox.min.x-T.xr);if(d<bd){bd=d;type=t}}if(type){color=ch.material.color;break}}
+      if(!type)continue;const r=REG.get(root);
+      if(r&&r.parked){root.updateMatrixWorld(true);const p0=baseOf(root),s=surf(p0[0],p0[1],p0[2]);if(s!=null){const d=s-p0[1];if(d>.005&&d<.25){root.position.y+=d;root.updateMatrixWorld(true);out.raised++}}}
+      const lo=loMesh([{type,color,m:null}]);lo.visible=false;root.add(lo);V.singles.push({root,lo,hi:root.children.filter(ch=>ch!==lo),near:true});out.singles++}
+    // ---- 烤漆 ----
+    try{const M=makeCarModel.v4&&makeCarModel.v4.m;const tune=m=>{if(m&&m.isMeshPhysicalMaterial){m.roughness=.2;m.metalness=.55;m.envMapIntensity=1.7;m.clearcoatRoughness=.03;m.needsUpdate=true}};
+      if(M)Object.keys(M).forEach(k=>{if(k[0]==='p')tune(M[k])});if(typeof SB!=='undefined'&&SB.bakeM)SB.bakeM.forEach(tune)}catch(e){}
+    V.out=out;console.log('[veh33]',JSON.stringify(out));
+    // ---- 依鏡頭距離切換 ----
+    const cp=new THREE.Vector3(),tp=new THREE.Vector3();
+    V.tick=function(){if(typeof cam==='undefined')return;cam.getWorldPosition(cp);const N=V.on?V.NEAR:1e9,F=V.on?V.FAR:1e9;
+      for(const u of V.units){const d=u.box.distanceToPoint(cp);const near=u.near?d<F:d<N;if(near!==u.near){u.near=near;u.hi.forEach(m=>m.visible=near);u.lo.visible=!near}}
+      for(const s of V.singles){s.root.getWorldPosition(tp);const d=tp.distanceTo(cp);const near=s.near?d<F:d<N;if(near!==s.near){s.near=near;for(const ch of s.hi){if(near){if(ch.userData._v33!==undefined){ch.visible=ch.userData._v33;delete ch.userData._v33}}else{ch.userData._v33=ch.visible;ch.visible=false}}s.lo.visible=!near}}};
+    V.tick();setInterval(V.tick,200);return out}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{build()}catch(e){console.error('VEH33',e)}},500);
 })();
 
 </script>
