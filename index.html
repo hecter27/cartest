@@ -7458,6 +7458,25 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
   window.SAFE31={l:()=>matchMedia('(orientation:landscape)').matches?pr2.getBoundingClientRect().width:0};
 })();
 
+// 第三十四次：記憶體減量。iPhone Safari 在載入完成時被系統關掉（「問題が繰り返し起きました」），場景幾何的頂點色、法線都是 32 位元浮點數，佔約 280 MB（CPU 與 GPU 各一份）。
+//  載入完成（LD.done）當下、第一次大量上傳 GPU 之前，把頂點色改成 8 位元、法線改成 16 位元（normalized，著色器看到的值不變）。
+//  網址加 ?mem=0 可關掉。之後才建立的幾何（靜態合併重建等）不處理。
+(function(){
+  const M=window.MEM34={on:!/[?&]mem=0/.test(location.search),geos:0,col:0,nor:0,saved:0,skip:0,done:false};
+  function shrinkGeo(g){if(!g||!g.isBufferGeometry||g.userData.mem34)return;g.userData.mem34=1;const A=g.attributes;let ch=null;
+    const ok=a=>a&&a.isBufferAttribute&&!a.isInstancedBufferAttribute&&!a.isInterleavedBufferAttribute&&a.array instanceof Float32Array&&a.usage===THREE.StaticDrawUsage&&a.array.length>=300;
+    const c=A.color;if(ok(c)){const s=c.array,n=s.length;let good=true;for(let i=0;i<n;i++){const v=s[i];if(!(v>=-.001&&v<=1.001)){good=false;break}}
+      if(good){const d=new Uint8Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(0,s[i]))*255);(ch=ch||{}).color=new THREE.BufferAttribute(d,c.itemSize,true);M.col++;M.saved+=n*3}else M.skip++}
+    const nr=A.normal;if(ok(nr)){const s=nr.array,n=s.length,d=new Int16Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(-1,s[i]))*32767);(ch=ch||{}).normal=new THREE.BufferAttribute(d,3,true);M.nor++;M.saved+=n*2}
+    if(!ch)return;g.dispose();   // 已上傳過的先釋放 GPU 緩衝，下次繪製時用新格式重傳
+    for(const k in ch){ch[k].name=A[k].name;g.setAttribute(k,ch[k])}M.geos++}
+  M.run=function(){if(M.done||!M.on||typeof scene==='undefined')return;M.done=true;const t0=performance.now();try{scene.traverse(o=>{if((o.isMesh||o.isPoints)&&o.geometry)shrinkGeo(o.geometry)})}catch(e){console.error('MEM34',e)}
+    M.ms=Math.round(performance.now()-t0);M.savedMB=Math.round(M.saved/1e6);console.log('[mem34]',JSON.stringify({geos:M.geos,col:M.col,nor:M.nor,savedMB:M.savedMB,skip:M.skip,ms:M.ms}))};
+  try{if(window.LD&&LD.done){const _d=LD.done;LD.done=function(){try{M.run()}catch(e){console.error('MEM34',e)}return _d.apply(this,arguments)}}}catch(e){}
+  // 保險：LD.done 沒被呼叫到（或被別處換掉）時，載入畫面消失後補做
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);M.run()},300);
+})();
+
 // 第三十二次：世界修正（載入完成後執行一次）
 //  1) 場地上下坡道：坡道模型被多抬高 0.95 m（車子其實走在模型下面，看起來像穿過去）→ 放回地面；坡上兩塊標線改成貼著坡面
 //  2) 大門北側、明湖路西邊的擋土牆欄杆（x≈113～128）沒有碰撞 → 沿路緣補斜方盒
@@ -7621,19 +7640,19 @@ function fix32(){
       r={w,h,d:x.getImageData(0,0,w,h).data,flip:t.flipY!==false,srgb:t.encoding===THREE.sRGBEncoding}}catch(e){}TX.set(t.uuid,r);return r}
   function buildHuman(H){let sm=null;H.g.traverse(o=>{if(!sm&&o.isSkinnedMesh)sm=o});if(!sm||!sm.skeleton||!sm.geometry.attributes.skinIndex)return null;
     H.g.updateWorldMatrix(true,true);
-    const g=sm.geometry,A=g.attributes,bones=sm.skeleton.bones,binv=sm.skeleton.boneInverses,hasC=!!A.color,mc=sm.material.color||{r:1,g:1,b:1},tx=texData(sm.material.map);
+    const g=sm.geometry,A=g.attributes,bones=sm.skeleton.bones,binv=sm.skeleton.boneInverses,hasC=!!A.color,mc=sm.material.color||{r:1,g:1,b:1},tx=texData(sm.material.map),kc=hasC&&A.color.normalized?1/255:1;
     const parts=[{n:A.position.count,tri:g.index?g.index.array:null,get(i,p,c,nr){let b=A.skinIndex.getX(i),w=A.skinWeight.getX(i);const w1=A.skinWeight.getY(i),w2=A.skinWeight.getZ(i),w3=A.skinWeight.getW(i);
         if(w1>w){w=w1;b=A.skinIndex.getY(i)}if(w2>w){w=w2;b=A.skinIndex.getZ(i)}if(w3>w){w=w3;b=A.skinIndex.getW(i)}
         p.fromBufferAttribute(A.position,i).applyMatrix4(binv[b]);if(A.normal)nr.fromBufferAttribute(A.normal,i).transformDirection(binv[b]);else nr.set(0,1,0);
-        if(hasC){c[0]=A.color.getX(i)*mc.r;c[1]=A.color.getY(i)*mc.g;c[2]=A.color.getZ(i)*mc.b}else{c[0]=mc.r;c[1]=mc.g;c[2]=mc.b}
+        if(hasC){c[0]=A.color.getX(i)*kc*mc.r;c[1]=A.color.getY(i)*kc*mc.g;c[2]=A.color.getZ(i)*kc*mc.b}else{c[0]=mc.r;c[1]=mc.g;c[2]=mc.b}
         if(tx&&A.uv){const u=A.uv.getX(i),v=A.uv.getY(i),px=Math.min(tx.w-1,Math.max(0,Math.floor((u-Math.floor(u))*tx.w))),py=Math.min(tx.h-1,Math.max(0,Math.floor((tx.flip?1-(v-Math.floor(v)):(v-Math.floor(v)))*tx.h))),o=(py*tx.w+px)*4;
           let r=tx.d[o]/255,gg=tx.d[o+1]/255,bb=tx.d[o+2]/255;if(tx.srgb){r=Math.pow(r,2.2);gg=Math.pow(gg,2.2);bb=Math.pow(bb,2.2)}c[0]*=r;c[1]*=gg;c[2]*=bb}return b}}];
     // 掛在骨頭上的一般網格（頭髮、配件）：各自一個 bucket，跟著所屬骨頭
     const extraBone=[];let nb=bones.length;
     bones.forEach((bone,bi)=>{for(const ch of bone.children){if(ch.isBone)continue;ch.traverse(o=>{if(!o.isMesh||o.isSkinnedMesh||!o.visible||!o.geometry||!o.geometry.attributes.position)return;
-          const rel=new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(o.matrixWorld),G=o.geometry,a=G.attributes,m=Array.isArray(o.material)?o.material[0]:o.material,col=(m&&m.color)||{r:1,g:1,b:1},vc=m&&m.vertexColors&&a.color,bk=nb++;extraBone[bk]=bi;
+          const rel=new THREE.Matrix4().copy(bone.matrixWorld).invert().multiply(o.matrixWorld),G=o.geometry,a=G.attributes,m=Array.isArray(o.material)?o.material[0]:o.material,col=(m&&m.color)||{r:1,g:1,b:1},vc=m&&m.vertexColors&&a.color,ks=vc&&a.color.normalized?1/255:1,bk=nb++;extraBone[bk]=bi;
           parts.push({n:a.position.count,tri:G.index?G.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i).applyMatrix4(rel);if(a.normal)nr.fromBufferAttribute(a.normal,i).transformDirection(rel);else nr.set(0,1,0);
-              c[0]=col.r*(vc?a.color.getX(i):1);c[1]=col.g*(vc?a.color.getY(i):1);c[2]=col.b*(vc?a.color.getZ(i):1);return bk}})})}});
+              c[0]=col.r*(vc?a.color.getX(i)*ks:1);c[1]=col.g*(vc?a.color.getY(i)*ks:1);c[2]=col.b*(vc?a.color.getZ(i)*ks:1);return bk}})})}});
     const K=cluster(parts,V.CELL,b=>b<bones.length?b:extraBone[b],bones.length);if(K.I.length<30)return null;
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(K.P.length),3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(K.P.length),3).setUsage(THREE.DynamicDrawUsage));geo.setAttribute('color',new THREE.BufferAttribute(K.C,3));geo.setIndex(new THREE.BufferAttribute(K.I,1));
@@ -7658,8 +7677,8 @@ function fix32(){
     V.stat.hNear=near;V.stat.hFar=far}
 
   // ================= 機車列 =================
-  function geoPart(mesh,white){const G=mesh.geometry,a=G.attributes,m=mesh.material,vc=m.vertexColors&&a.color,col=white?{r:1,g:1,b:1}:m.color;
-    return {n:a.position.count,tri:G.index?G.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i);if(a.normal)nr.fromBufferAttribute(a.normal,i);else nr.set(0,1,0);c[0]=col.r*(vc?a.color.getX(i):1);c[1]=col.g*(vc?a.color.getY(i):1);c[2]=col.b*(vc?a.color.getZ(i):1);return 0}}}
+  function geoPart(mesh,white){const G=mesh.geometry,a=G.attributes,m=mesh.material,vc=m.vertexColors&&a.color,ks=vc&&a.color.normalized?1/255:1,col=white?{r:1,g:1,b:1}:m.color;
+    return {n:a.position.count,tri:G.index?G.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i);if(a.normal)nr.fromBufferAttribute(a.normal,i);else nr.set(0,1,0);c[0]=col.r*(vc?a.color.getX(i)*ks:1);c[1]=col.g*(vc?a.color.getY(i)*ks:1);c[2]=col.b*(vc?a.color.getZ(i)*ks:1);return 0}}}
   function toGeo(K){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(K.P,3));g.setAttribute('normal',new THREE.BufferAttribute(K.Nr,3));g.setAttribute('color',new THREE.BufferAttribute(K.C,3));g.setIndex(new THREE.BufferAttribute(K.I,1));return g}
   function buildRows(){const all=[];scene.traverse(o=>{if(o.isInstancedMesh&&o.parent===scene)all.push(o)});const m0=new THREE.Matrix4(),m1=new THREE.Matrix4();
     const darks=all.filter(o=>o.name==='scootRow'&&!o.material.vertexColors);let gP=null,gR=null;
