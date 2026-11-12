@@ -8008,7 +8008,7 @@ function fix32(){
     // 路邊停車場（街景 775 巷 26 號：混凝土擋土牆後面一排車，比路面高約 1 m）：沿路 LOT.L0～L1、在停車場那一側，
     //  擋土牆線（離中心線 WALLD）以內維持路面高度；牆後 2.5 m 起整平成「路面＋1 m」的平台，平台外 8 m 內漸變回原地形
     {const ref=[-534.5,181],[rl]=near(P,L,ref[0],ref[1]);let k=1;while(k<L.length-1&&L[k]<rl)k++;const a=P[k-1],b=P[k],side=Math.sign((b[0]-a[0])*(ref[1]-a[1])-(b[1]-a[1])*(ref[0]-a[0]))||1;
-      const L0=jL-66,L1=jL-7,WALLD=hw+3.2,PW=8,UP=1.0;V.lot={L0,L1,WALLD,side,UP};let c=0;
+      const L0=jL-66,L1=jL-13,WALLD=hw+3.2,PW=8,UP=1.0;V.lot={L0,L1,WALLD,side,UP};let c=0;
       const sd=(x,z,l)=>{let i=1;while(i<L.length-1&&L[i]<l)i++;const p=P[i-1],q=P[i];return Math.sign((q[0]-p[0])*(z-p[1])-(q[1]-p[1])*(x-p[0]))};
       for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const x=X0+i*GS,z=Z0+j*GS,[l,d]=near(P,L,x,z);if(l<L0-10||l>L1+10||d<hw||sd(x,z,l)!==side)continue;
         const lw=l<L0?ss((l-(L0-10))/10):l>L1?ss(((L1+10)-l)/10):1;if(lw<=0)continue;const roadH=newRoad(l),kk=i*GNZ+j;
@@ -8017,7 +8017,7 @@ function fix32(){
         H[kk]=H[kk]*(1-lw)+t*lw;c++}V.lot.cells=c}
     // 入口車道：路面 → 飯店前庭
     const DP=drv.P,DL=poly(DP),DT=DL[DL.length-1],dhw=drv.hw||5.2,top=E.h(DP[DP.length-1][0],DP[DP.length-1][1]),bot=tgt(jL);
-    const dB=dhw+10,dF=dhw+2;let m=0;
+    const dB=dhw+15,dF=dhw+9;let m=0;   // 第四十一次：入口是約 25 m 寬的廣場（衛星圖），整片跟著車道坡度
     let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const p of DP){a0=Math.min(a0,Math.floor((p[0]-dB-X0)/GS));a1=Math.max(a1,Math.ceil((p[0]+dB-X0)/GS));b0=Math.min(b0,Math.floor((p[1]-dB-Z0)/GS));b1=Math.max(b1,Math.ceil((p[1]+dB-Z0)/GS))}
     for(let i=Math.max(1,a0);i<=Math.min(GNX-2,a1);i++)for(let j=Math.max(1,b0);j<=Math.min(GNZ-2,b1);j++){const x=X0+i*GS,z=Z0+j*GS,[l,d]=near(DP,DL,x,z);if(d>dB)continue;
       // 775 巷路面本身不動（上一步已經處理）
@@ -8055,6 +8055,77 @@ function fix32(){
   const tw=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(tw);try{wall()}catch(e){console.error('ROAD40 wall',e)}},400);
   const _s=window.scoot8Upgrade;
   window.scoot8Upgrade=function(){try{fix()}catch(e){console.error('ROAD40',e)}return typeof _s==='function'?_s.apply(this,arguments):0};
+})();
+
+// 第四十一次：煙波飯店 775 巷入口照實景重做（Google 衛星圖 z20 ＋ 街景 775 巷 51 號）。
+//  實景：從 775 巷進去是一整片平坦的鋪面廣場（約 25×30 m，淺棕色連鎖磚），一路接到圓環；左側是黑色花崗石名牌牆（斜放，面向巷子）和玻璃警衛亭，
+//  右側是白色波浪矮花台、棕櫚樹，再過去是白色的滿月樓。遊戲原本是窄的紅磚彎車道＋兩側草地，名牌牆擺在車道上。
+//  座標由衛星圖像素換算（入口點換回遊戲座標誤差 < 0.5 m）。
+(function(){
+  const V=window.HOTEL41={};
+  const inPoly=(x,z,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if(((a[1]>z)!==(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))c=!c}return c};
+  const shrink=(P,d)=>{let cx=0,cz=0;P.forEach(p=>{cx+=p[0];cz+=p[1]});cx/=P.length;cz/=P.length;return P.map(p=>{const dx=p[0]-cx,dz=p[1]-cz,l=Math.hypot(dx,dz)||1;return [p[0]-dx/l*d,p[1]-dz/l*d]})};
+  function texPaver(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#8f7d6a';g.fillRect(0,0,256,256);
+    const cols=['#cdb69c','#c4a888','#d6c4ad','#bfa284','#c9b196'];let r=7;const rnd=()=>{r=(r*16807)%2147483647;return r/2147483647};
+    for(let y=0;y<256;y+=16)for(let x=-(y/16%2)*16;x<256;x+=32){g.fillStyle=cols[(rnd()*cols.length)|0];g.fillRect(x+1,y+1,30,14)}
+    for(let i=0;i<900;i++){g.fillStyle=`rgba(60,45,30,${rnd()*.12})`;g.fillRect(rnd()*256,rnd()*256,2,2)}
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;t.encoding=THREE.sRGBEncoding;return t}
+  function signTex(){const c=document.createElement('canvas');c.width=1024;c.height=200;const g=c.getContext('2d');g.fillStyle='#2b2d30';g.fillRect(0,0,1024,200);
+    for(let i=0;i<1600;i++){g.fillStyle=`rgba(255,255,255,${Math.random()*.05})`;g.fillRect(Math.random()*1024,Math.random()*200,2,2)}
+    g.fillStyle='#cdbf96';g.textAlign='center';g.font='900 96px "Noto Serif TC","Noto Sans TC",serif';g.fillText('煙波大飯店',512,110);g.font='600 44px Georgia,serif';g.fillText('LAKESHORE  HOTEL',512,172);
+    const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t}
+  function build(){if(V.done)return;V.done=true;const t0=performance.now();
+    const road=RTX.roads.find(r=>r.name==='環湖道路'&&r.P[0][0]<-500&&r.P[0][1]<120);if(!road)return;const RP=road.P,hw=road.hw||3.6;
+    // 道路北側路緣（廣場從路緣開始）
+    const edge=z=>{let best=null,bd=1e9;for(let i=0;i<RP.length-1;i++){const a=RP[i],b=RP[i+1];if((a[1]-z)*(b[1]-z)>0)continue;const t=(z-a[1])/((b[1]-a[1])||1e-6),x=a[0]+(b[0]-a[0])*t,dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;const nx=-dz/l,nz=dx/l,s=nx>0?1:-1;const e=[x+nx*s*(hw+.25),z+nz*s*(hw+.25)];const d=Math.abs(x+540);if(d<bd){bd=d;best=e}}return best};
+    const S1=edge(204.8),S2=edge(228.8);if(!S1||!S2){V.err='edge';return}
+    const PL=[S1,S2,[-500.5,223.7],[-494.5,214],[-492,203.5],[-499.7,203.4],[-509.9,203.1],[-521.9,204.8]];   // 北端往圓環延伸（衛星圖上廣場直接接圓環）V.poly=PL;
+    // ---- 1) 廣場範圍內原本的東西：草地上的樹叢、小物件、舊名牌牆、碰撞，全部清掉 ----
+    const IN=shrink(PL,.6),veh=o=>{let p=o;while(p){if(p.userData&&(p.userData.tails||p.userData.sd))return true;p=p.parent}return false};
+    const keep=new Set();try{if(typeof HUMANS!=='undefined')HUMANS.forEach(H=>H&&H.g&&keep.add(H.g))}catch(e){}try{for(const u of VEH33.units){if(u.mid)keep.add(u.mid);if(u.lo)keep.add(u.lo)}}catch(e){}
+    const bb=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3();let nh=0,ni=0;
+    const hideObj=o=>{bb.setFromObject(o);if(bb.isEmpty())return false;bb.getSize(sz);if(Math.max(sz.x,sz.z)>14||sz.y>14)return false;bb.getCenter(c);if(!inPoly(c.x,c.z,IN))return false;o.visible=false;nh++;return true};
+    // 舊的入口車道（紅磚人字鋪面、混凝土車道）：貼地的長條鋪面，中心在廣場裡
+    const flatDrive=o=>{if(!o.isMesh||!o.material||Array.isArray(o.material)||!o.material.map)return false;bb.setFromObject(o);if(bb.isEmpty())return false;bb.getSize(sz);if(sz.y>3||Math.max(sz.x,sz.z)>70||Math.max(sz.x,sz.z)<8)return false;bb.getCenter(c);return inPoly(c.x,c.z,PL)};
+    for(const o of scene.children.slice()){if(flatDrive(o)){o.visible=false;nh++;continue}if(keep.has(o)||veh(o)||o.isLight||o.isCamera||o.name==='SB'||o.name==='LO33'||o.name==='WALL40')continue;
+      if(o.isInstancedMesh){const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();const m4=new THREE.Matrix4(),Z=new THREE.Matrix4().makeScale(0,0,0);let ch=false;
+        for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);c.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld);if(inPoly(c.x,c.z,IN)){o.setMatrixAt(i,Z);ch=true;ni++}}if(ch)o.instanceMatrix.needsUpdate=true;continue}
+      if(o.isMesh||o.isGroup)hideObj(o)}
+    // 靜態合併裡的原始物件：設 visible=false 會自動從合併網格拆出來
+    try{for(const [o] of [...SB.byMesh]){const g=o.geometry;let r;if(!g.boundingSphere){if(window.SLIM34&&SLIM34.isSlim(o))continue;g.computeBoundingSphere()}c.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld);r=g.boundingSphere.radius;
+      if(r<8&&inPoly(c.x,c.z,IN)){o.visible=false;nh++}}}catch(e){console.error('HOTEL41 sb',e)}
+    const keepC=(x,z)=>!inPoly(x,z,IN);let nc=0;
+    try{for(const A of [OBC]){for(let i=A.length-1;i>=0;i--){const q=A[i];if(!keepC(q.x,q.y)){A.splice(i,1);nc++}}}
+      for(let i=OBO.length-1;i>=0;i--){const q=OBO[i];if(!keepC(q.cx,q.cy)){OBO.splice(i,1);nc++}}
+      for(let i=OBR.length-1;i>=0;i--){const q=OBR[i];if(!keepC((q.x0+q.x1)/2,(q.y0+q.y1)/2)&&(q.x1-q.x0)<14&&(q.y1-q.y0)<14){OBR.splice(i,1);nc++}}}catch(e){console.error('HOTEL41 col',e)}
+    // ---- 2) 鋪面：1 m 網格貼著地形，只留廣場多邊形裡的格子 ----
+    const grp=new THREE.Group();grp.name='HOTEL41';
+    {let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;PL.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1])});const S=1,nx=Math.ceil((x1-x0)/S),nz=Math.ceil((z1-z0)/S),pos=[],uv=[],idx=[],vid=new Map();
+      const V3=(i,j)=>{const k=i*(nz+1)+j;let v=vid.get(k);if(v!==undefined)return v;const x=x0+i*S,z=z0+j*S;v=pos.length/3;pos.push(x,hAt(x,z)+.07,z);uv.push(z/3,x/3);vid.set(k,v);return v};
+      for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){const cx=x0+(i+.5)*S,cz=z0+(j+.5)*S;if(!inPoly(cx,cz,PL))continue;const a=V3(i,j),b=V3(i+1,j),d=V3(i,j+1),e=V3(i+1,j+1);idx.push(a,d,b,b,d,e)}
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+      const m=new THREE.MeshStandardMaterial({map:texPaver(),roughness:.9,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4});const me=new THREE.Mesh(g,m);me.receiveShadow=true;grp.add(me);V.cells=idx.length/6}
+    const box=(w,h,d,mat,x,y,z,ry)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.rotation.y=ry||0;m.castShadow=m.receiveShadow=true;grp.add(m);return m};
+    // ---- 3) 黑色花崗石名牌牆（廣場左側，斜放、字面朝巷子）----
+    {const A=[-530.7,205.4],B=[-526.1,212.2],mx=(A[0]+B[0])/2,mz=(A[1]+B[1])/2,L=Math.hypot(B[0]-A[0],B[1]-A[1]),ang=Math.atan2(B[1]-A[1],B[0]-A[0]),y=hAt(mx,mz);
+      const gm=new THREE.MeshStandardMaterial({color:'#2e3033',roughness:.35,metalness:.1}),tm=new THREE.MeshStandardMaterial({map:signTex(),roughness:.3});
+      // 網格 rotation.y=-ang 時，本地 z 軸＝(−sin ang, cos ang)；字面要朝巷子（街景 51 號的位置）
+      const lz=[-Math.sin(ang),Math.cos(ang)],cam=[-541,214],s=((cam[0]-mx)*lz[0]+(cam[1]-mz)*lz[1])>0?1:-1;
+      const w=box(L,1.5,.7,gm,mx,y+.75,mz,-ang);const f=new THREE.Mesh(new THREE.PlaneGeometry(L*.86,1.15),tm);f.position.set(mx+lz[0]*s*.36,y+.82,mz+lz[1]*s*.36);f.rotation.y=-ang+(s>0?0:Math.PI);grp.add(f);
+      box(L+.3,.12,.9,new THREE.MeshStandardMaterial({color:'#8d8a84',roughness:.8}),mx,y+.06,mz,-ang);try{addOBB(mx,mz,ang,L/2,.4)}catch(e){}}
+    // ---- 4) 玻璃警衛亭 ----
+    {const x=-521.9,z=209.5,y=hAt(x,z),gl=new THREE.MeshStandardMaterial({color:'#9fb6c2',roughness:.08,metalness:.3,transparent:true,opacity:.55}),fr=new THREE.MeshStandardMaterial({color:'#e8e6e0',roughness:.6});
+      box(2.4,.35,2.4,fr,x,y+.17,z);box(2.2,2.1,2.2,gl,x,y+1.4,z);box(2.9,.22,2.9,fr,x,y+2.56,z);for(const a of[-1,1])for(const b of[-1,1])box(.12,2.1,.12,fr,x+a*1.08,y+1.4,z+b*1.08);try{addOBB(x,z,0,1.3,1.3)}catch(e){}}
+    // ---- 5) 白色波浪矮花台（廣場右側）----
+    {const A=[-530.7,224.9],B=[-513.3,222.8],L=Math.hypot(B[0]-A[0],B[1]-A[1]),ang=Math.atan2(B[1]-A[1],B[0]-A[0]),N=Math.ceil(L/.8),wm=new THREE.MeshStandardMaterial({color:'#f2f0ea',roughness:.55}),pm=new THREE.MeshStandardMaterial({color:'#4f7a3a',roughness:.9});
+      for(let i=0;i<N;i++){const t=(i+.5)/N,x=A[0]+(B[0]-A[0])*t,z=A[1]+(B[1]-A[1])*t,y=hAt(x,z),h=.45+.28*(.5+.5*Math.sin(t*Math.PI*5));box(L/N+.02,h,.9,wm,x,y+h/2,z,-ang);box(L/N,.12,.6,pm,x,y+h+.04,z,-ang)}
+      try{addOBB((A[0]+B[0])/2,(A[1]+B[1])/2,ang,L/2,.45)}catch(e){}}
+    scene.add(grp);grp.updateMatrixWorld(true);
+    // ---- 6) 棕櫚樹 ----
+    try{const PS=[[-509.9,225.9,8.5],[-509.1,240.8,9],[-513.3,245.1,7.5],[-513.3,251.9,8.5],[-516.8,257.9,7.8],[-523.6,226.3,7.2],[-518.5,241.7,8.2]];
+      if(typeof vPalms==='function')for(const p of PS)vPalms([p],hAt(p[0],p[1]))}catch(e){console.error('HOTEL41 palm',e)}
+    V.out={hidden:nh,inst:ni,col:nc,cells:V.cells,ms:Math.round(performance.now()-t0)};console.log('[hotel41]',JSON.stringify(V.out))}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.ROAD40||!ROAD40.wall)return;clearInterval(t);try{build()}catch(e){console.error('HOTEL41',e)}},400);
 })();
 
 </script>
