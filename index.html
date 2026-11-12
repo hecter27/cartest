@@ -7864,6 +7864,105 @@ function fix32(){
     console.log('[pre38]',JSON.stringify(T));return r};
 })();
 
+// 第三十九次：選單簡化（使用者決定）
+//  - 雨天拿掉（雨絲、擋風玻璃雨滴吃效能與記憶體），固定晴天；天氣改由日夜系統（day39.js）變化
+//  - 音效固定開啟（要靜音的人用手機的靜音鍵）
+//  - 深淺色拿掉（全螢幕遊戲用不到）
+(function(){
+  const st=document.createElement('style');st.id='ui39css';
+  st.textContent='#mRain,#mSnd,#mTheme,#rainTog,#sndTog{display:none!important}';
+  document.head.appendChild(st);
+  try{rain=false;sound=true}catch(e){}
+  // 主選單「設定與操作」的副標題：只剩按鍵說明
+  try{const s=[...document.querySelectorAll('.nmSub')].find(e=>/天氣/.test(e.textContent));if(s)s.textContent='按鍵說明'}catch(e){}
+  // 雨天物件不再使用：保持隱藏
+  try{if(typeof RAINFX!=='undefined')for(const k in RAINFX){const o=RAINFX[k];if(o&&o.isObject3D)o.visible=false}}catch(e){}
+})();
+
+// 第三十九次：日夜系統。遊戲時間自己往前走（預設 1 分鐘 = 遊戲 1 小時，一天 24 分鐘），天空、霧、太陽／月光、環境光、反射、車燈跟著變。
+//  不新增會隨時間開關的光源（光源數量改變會讓所有材質重新編譯，手機上會卡）：主角車頭燈在載入時就建立，白天亮度 0。
+//  網址參數：?t=20 起始時刻（0～24），?day=12 一天幾分鐘。DAY39.set(h) 直接跳到某個時刻，DAY39.speed 每秒前進幾小時。
+(function(){
+  const q=location.search,num=(k,d)=>{const m=q.match(new RegExp('[?&]'+k+'=([0-9.]+)'));return m?+m[1]:d};
+  const V=window.DAY39={h:num('t',9),speed:24/(num('day',24)*60),on:true,last:0,envF:-1,applied:''};
+  // 關鍵時刻：[時, 天空/霧, 太陽色, 太陽強度, 天光, 地面反光, 環境光強度, 天空球色調, 反射強度, 夜晚程度]
+  const K=[
+    [0,   '#0c1626','#9cb2ff',.26,'#3d5078','#1a1e25',.44,'#1d2744',.18,1],
+    [4.8, '#0c1626','#9cb2ff',.26,'#3d5078','#1a1e25',.44,'#1d2744',.18,1],
+    [6.0, '#e3b08f','#ffb27a',.60,'#c9a98f','#4a4636',.44,'#d9a58a',.50,.35],
+    [7.5, '#c6d6e4','#ffe2c0',1.0,'#d8e6ff','#56603d',.55,'#f4f0ea',.90,0],
+    [12,  '#b9d0e3','#ffeed6',1.18,'#d8e8ff','#56603d',.58,'#ffffff',1,0],
+    [16.5,'#c3d2df','#ffe6c4',1.08,'#dde6f5','#56603d',.56,'#fbf3ea',.95,0],
+    [18.0,'#efb08a','#ff9d5c',.62,'#d4a98e','#4a4033',.46,'#e8a07c',.55,.3],
+    [19.2,'#3a4560','#c48a7a',.24,'#59607d','#22242a',.38,'#56607e',.25,.8],
+    [20.5,'#0c1626','#9cb2ff',.26,'#3d5078','#1a1e25',.44,'#1d2744',.18,1],
+    [24,  '#0c1626','#9cb2ff',.26,'#3d5078','#1a1e25',.44,'#1d2744',.18,1]];
+  const C=s=>new THREE.Color(s),KC=K.map(k=>[k[0],C(k[1]),C(k[2]),k[3],C(k[4]),C(k[5]),k[6],C(k[7]),k[8],k[9]]);
+  const cur={sky:new THREE.Color(),sun:new THREE.Color(),hs:new THREE.Color(),hg:new THREE.Color(),dome:new THREE.Color(),sunI:1,hemiI:.58,envF:1,night:0};
+  function sample(h){h=((h%24)+24)%24;let i=0;while(i<KC.length-2&&KC[i+1][0]<=h)i++;const a=KC[i],b=KC[i+1],t=Math.max(0,Math.min(1,(h-a[0])/Math.max(1e-6,b[0]-a[0]))),s=t*t*(3-2*t);
+    cur.sky.copy(a[1]).lerp(b[1],s);cur.sun.copy(a[2]).lerp(b[2],s);cur.sunI=a[3]+(b[3]-a[3])*s;cur.hs.copy(a[4]).lerp(b[4],s);cur.hg.copy(a[5]).lerp(b[5],s);cur.hemiI=a[6]+(b[6]-a[6])*s;cur.dome.copy(a[7]).lerp(b[7],s);cur.envF=a[8]+(b[8]-a[8])*s;cur.night=a[9]+(b[9]-a[9])*s;return cur}
+  // 主角車頭燈（載入時建立，之後只改亮度）
+  let head=null,hemi=null;
+  try{scene.traverse(o=>{if(!hemi&&o.isHemisphereLight)hemi=o});
+    head=new THREE.SpotLight('#fff3dc',0,70,.5,.55,1.2);head.castShadow=false;head.position.set(3.4,.75,0);head.target.position.set(22,-1.2,0);
+    if(typeof car!=='undefined'){car.add(head);car.add(head.target)}}catch(e){console.error('DAY39 head',e)}
+  // 天空球（含雲層球）：MeshBasicMaterial、半徑大於 150 m 的球
+  let domes=null;const findDomes=()=>{domes=[];const seen=new Set();scene.traverse(o=>{if(!o.isMesh||!o.material||Array.isArray(o.material)||o.material.type!=='MeshBasicMaterial'||seen.has(o.material))return;const g=o.geometry;if(!g)return;if(!g.boundingSphere)g.computeBoundingSphere();if(g.boundingSphere.radius*Math.max(o.scale.x,o.scale.y,o.scale.z)>150&&g.type==='SphereGeometry'){seen.add(o.material);domes.push({m:o.material,base:o.material.color.clone()})}})};
+  // 反射強度：記住每個材質原本的 envMapIntensity，乘上倍率
+  const BASE=new WeakMap();
+  function scaleEnv(f){scene.traverse(o=>{const ms=o.material;if(!ms)return;(Array.isArray(ms)?ms:[ms]).forEach(m=>{if(!m||m.envMapIntensity===undefined)return;let b=BASE.get(m);if(b===undefined){b=m.envMapIntensity;BASE.set(m,b)}m.envMapIntensity=b*f})})}
+  // 所有車的頭燈、尾燈材質：入夜發光
+  //（白天原本就有微弱自發光：頭燈 .9、尾燈暗紅；入夜在這個基礎上加亮）
+  let LB=null;const TR=new THREE.Color('#ff2a1a');
+  function carLamps(n){try{const M=makeCarModel.v4&&makeCarModel.v4.m;if(!M||!M.head||!M.tail)return;if(!LB)LB={hi:M.head.emissiveIntensity,tc:M.tail.emissive.clone(),ti:M.tail.emissiveIntensity};
+    M.head.emissiveIntensity=LB.hi+n*1.4;M.tail.emissive.copy(LB.tc).lerp(TR,n*.7);M.tail.emissiveIntensity=LB.ti+n*.6}catch(e){}}
+  const dir=new THREE.Vector3();
+  function apply(){const s=sample(V.h),h=((V.h%24)+24)%24;
+    try{if(scene.fog)scene.fog.color.copy(s.sky);if(scene.background&&scene.background.isColor)scene.background.copy(s.sky);else scene.background=s.sky.clone()}catch(e){}
+    // 太陽：6 點東升、12 點偏南、18 點西落；夜裡同一盞燈當月光（18 點東升）
+    const day=h>=5.5&&h<=18.5,a=day?(h-6)/12*Math.PI:(((h-18+24)%24)/12)*Math.PI,el=Math.max(10*Math.PI/180,Math.sin(Math.max(0,Math.min(Math.PI,a)))*(day?65:48)*Math.PI/180);
+    dir.set(-Math.sin(a)*Math.cos(el),Math.sin(el),Math.cos(a)*Math.cos(el)).normalize();try{SUNDIR.copy(dir)}catch(e){}
+    try{sun.color.copy(s.sun);sun.intensity=s.sunI}catch(e){}
+    if(hemi){hemi.color.copy(s.hs);hemi.groundColor.copy(s.hg);hemi.intensity=s.hemiI}
+    if(!domes)findDomes();for(const d of domes)d.m.color.copy(d.base).multiply(s.dome);
+    if(Math.abs(s.envF-V.envF)>.03){V.envF=s.envF;scaleEnv(s.envF)}
+    if(head)head.intensity=s.night>.25?2.6*Math.min(1,(s.night-.25)/.4):0;
+    carLamps(s.night);
+    try{if(typeof FLARE!=='undefined'&&FLARE)FLARE.visible=!COMP&&s.night<.3}catch(e){}
+    V.night=s.night;
+    if(clk){const hh=Math.floor(h),mm=Math.floor((h-hh)*60);clk.textContent=(s.night>.5?'🌙 ':'☀ ')+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')}}
+  // 畫面上方中間的時鐘
+  const clk=document.createElement('div');clk.id='clk39';clk.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:30;pointer-events:none;font:600 13px/1 system-ui,sans-serif;color:#eef3f8;background:rgba(10,16,24,.45);padding:6px 10px;border-radius:12px;letter-spacing:.5px';
+  document.body.appendChild(clk);
+  V.set=h=>{V.h=((h%24)+24)%24;apply()};V.apply=apply;
+  // 時間只在遊戲進行中前進（暫停、選單時不動）
+  setInterval(()=>{const now=performance.now(),dt=V.last?Math.min(2,(now-V.last)/1000):0;V.last=now;let go=true;try{go=running&&!paused}catch(e){}if(V.on&&go)V.h=(V.h+dt*V.speed)%24;
+    try{clk.style.display=(typeof running!=='undefined'&&running)?'block':'none'}catch(e){}apply()},250);
+  apply();
+})();
+
+// 第三十九次：遠處模型從顯示卡卸下。
+//  three.js 第一次畫到一個模型才把它上傳顯示卡，之後就一直留著。開得越遠、去過的地方越多，顯示卡裡累積的東西越多，
+//  玩久了跑遍全地圖，顯示記憶體會比剛載入時多一倍以上（實測 4 分鐘從 3168 個幾何增加到 6530 個）。
+//  每 3 秒檢查一次：離鏡頭超過看得到的距離（cam.far）再加 80 m 的模型，把顯示卡上的那份釋放（記憶體裡的資料還在），開回來時 three.js 會自動重新上傳。
+//  只處理「只有一個網格在用」的幾何；人物、實例網格不處理。網址加 ?evict=0 可關掉。
+(function(){
+  const V=window.EVICT39={on:!/[?&]evict=0/.test(location.search)&&!window.SAFE34,n:0,back:0,out:new Set(),users:null,t:0};
+  if(!V.on)return;
+  const C=new WeakMap(),cp=new THREE.Vector3(),v=new THREE.Vector3();
+  function users(){const m=new Map();scene.traverse(o=>{if(o.geometry)m.set(o.geometry,(m.get(o.geometry)||0)+1)});V.users=m;V.ut=performance.now()}
+  function center(o){let c=C.get(o);if(c&&c.mv===o.matrixWorld.elements[12]+o.matrixWorld.elements[13]*7+o.matrixWorld.elements[14]*13)return c;const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();const bs=g.boundingSphere;
+    v.copy(bs.center).applyMatrix4(o.matrixWorld);const e=o.matrixWorld.elements,s=Math.max(Math.hypot(e[0],e[1],e[2]),Math.hypot(e[4],e[5],e[6]),Math.hypot(e[8],e[9],e[10]));
+    c={x:v.x,y:v.y,z:v.z,r:bs.radius*s,mv:e[12]+e[13]*7+e[14]*13};C.set(o,c);return c}
+  V.tick=function(){if(typeof cam==='undefined'||typeof scene==='undefined')return;const now=performance.now();if(!V.users||now-V.ut>30000)users();cam.getWorldPosition(cp);
+    const FAR=(cam.far||560)+80;let k=0;
+    for(const o of scene.children){if(k>=120)break;o.traverse(m=>{if(k>=120||!m.isMesh||m.isInstancedMesh||m.isSkinnedMesh)return;const g=m.geometry;if(!g||V.users.get(g)!==1)return;
+      const c=center(m),d=Math.hypot(c.x-cp.x,c.z-cp.z)-c.r;
+      if(d>FAR){if(!V.out.has(g)){g.dispose();V.out.add(g);V.n++;k++}}
+      else if(V.out.has(g)){V.out.delete(g);V.back++}})}};
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);setInterval(()=>{try{V.tick()}catch(e){console.error('EVICT39',e)}},3000)},500);
+})();
+
 </script>
 </body>
 </html>
