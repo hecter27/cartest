@@ -7602,7 +7602,7 @@ function fix32(){
     for(const u of U.values()){const ds=[],all=[...u.cars];
       for(const c of all){if(ds.length<7){const p=baseOf(c),s=surf(p[0],p[1],p[2]);if(s!=null){const d=s-p[1];if(d>.005&&d<.25)ds.push(d);else if(d<=.005)ds.push(0)}}}
       ds.sort((a,b)=>a-b);const dy=ds.length?ds[ds.length>>1]:0;u.dy=dy;const lift=new THREE.Matrix4().makeTranslation(0,dy,0);
-      u.list=[];for(const c of all){const r=REG.get(c),p=baseOf(c);if(typeof hAt==='function'&&hAt(p[0],p[2])>p[1]+dy+.15){out.buried++;continue}
+      u.list=[];for(const c of all){const r=REG.get(c),p=baseOf(c);if(typeof hAt==='function'&&hAt(p[0],p[2])>p[1]+dy+.15){out.buried++;(V.buriedPts||(V.buriedPts=[])).push(new THREE.Vector3(p[0],p[1],p[2]));continue}
         u.list.push({type:r.type,color:r.color,m:new THREE.Matrix4().multiplyMatrices(lift,c.matrixWorld),pos:new THREE.Vector3(p[0],p[1]+dy,p[2]),hi:null})}
       u.hiAll=u.hi;u.hiAll.forEach(m=>{m.visible=false});   // 合併的精細網格：不再顯示
       if(CL&&u.list.length){const mid=merge(u.list,V.MIDCELL,MIDM),far=merge(u.list,V.FARCELL,MAT());mid.visible=true;mid.castShadow=true;far.visible=false;scene.add(mid);scene.add(far);u.mid=mid;u.hi=[mid];u.lo=far}
@@ -7615,6 +7615,16 @@ function fix32(){
     try{const v=new THREE.Vector3(),inv=new THREE.Matrix4();let n=0;for(const o of scene.children){if(!o.isMesh||!o.userData._reG)continue;const p=o.geometry.attributes.position;inv.copy(o.matrixWorld).invert();let ch=0;
         for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.x>-443&&v.x<-381&&v.z>131&&v.z<134.5&&v.y>-1.05){v.y=-1.05;v.applyMatrix4(inv);p.setXYZ(i,v.x,v.y,v.z);ch++}}
         if(ch){p.needsUpdate=true;o.geometry.computeBoundingSphere();o.geometry.computeBoundingBox();n+=ch}}out.terrain36=n}catch(e){console.error('VEH33 terrain',e)}
+    // 第四十次：停放車輛還有一份「沒被靜態合併」的精細零件直接掛在場景上（每台車的烤漆是各自顏色的材質，合併不了；另有部分零件），
+    //  一直以最精細的版本畫著、和分級模型重疊（約 220 個網格、90 萬個三角形）。車位上的這些網格移除，停車場的車一律由分級模型畫，鏡頭旁另生精細模型。
+    try{const carM=new Set(Object.values((makeCarModel.v4&&makeCarModel.v4.m)||{})),pts=[];for(const u of V.units)for(const c of u.list)pts.push(c.pos);for(const q of (V.buriedPts||[]))pts.push(q);
+      const users=new Map();scene.traverse(o=>{if(o.geometry)users.set(o.geometry,(users.get(o.geometry)||0)+1)});const rm=[],c=new THREE.Vector3(),sz=new THREE.Vector3();
+      for(const o of scene.children){if(!o.isMesh||o.name==='SB'||o.name==='LO33'||(typeof SB!=='undefined'&&SB.byMesh&&SB.byMesh.has(o)))continue;const m=o.material;if(!m||Array.isArray(m))continue;
+        const g=o.geometry;if(!g||!g.attributes||!g.attributes.position)continue;if(!g.boundingBox)g.computeBoundingBox();g.boundingBox.getSize(sz);if(Math.max(sz.x,sz.z)>6)continue;
+        // 車牌：各車自己的文字貼圖，尺寸約 0.5×0.12 m
+        const plate=!!(m.map&&m.map.image&&m.map.image.width&&Math.max(sz.x,sz.y,sz.z)<.7&&Math.min(sz.x,sz.z)<.08&&sz.y>.05&&sz.y<.25);if(!(carM.has(m)||m.isMeshPhysicalMaterial||plate))continue;g.boundingBox.getCenter(c).applyMatrix4(o.matrixWorld);
+        if(pts.some(p=>Math.hypot(p.x-c.x,p.z-c.z)<3.2))rm.push(o)}
+      let tri=0;for(const o of rm){const g=o.geometry;tri+=(g.index?g.index.count:g.attributes.position.count)/3;scene.remove(o);if(users.get(g)===1)g.dispose()}out.ghost=rm.length;out.ghostTris=Math.round(tri)}catch(e){console.error('VEH33 ghost',e)}
     if(CL){const K1=tmplGeo('sedan',V.MIDCELL),K2=tmplGeo('sedan',V.FARCELL);out.midTris=K1.I.length/3;out.farTris=K2.I.length/3}
     // ---- 沒被合併的車（車流、零星停放）：每台各掛一個簡化網格 ----
     const TYPES=typeof CARTYPES!=='undefined'?Object.keys(CARTYPES):['sedan','hatch','van','suv','prius'],roots=[];scene.traverse(o=>{if(o.userData&&o.userData.tails&&o.name!=='car10body'&&o.children.some(ch=>ch.isMesh))roots.push(o)});
@@ -7961,6 +7971,90 @@ function fix32(){
       if(d>FAR){if(!V.out.has(g)){g.dispose();V.out.add(g);V.n++;k++}}
       else if(V.out.has(g)){V.out.delete(g);V.back++}})}};
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);setInterval(()=>{try{V.tick()}catch(e){console.error('EVICT39',e)}},3000)},500);
+})();
+
+// 第四十次：明湖路 775 巷（環湖起點）高程。
+//  使用者 iPhone 實測＋Google 街景（775 巷 26 號、51 號）：從明湖路口到煙波飯店 775 巷入口，路面幾乎是平的，入口和飯店前庭同高、轉進去沒有上坡；
+//  過了入口往青草湖才是上坡。遊戲裡的 DEM 讓 775 巷先往下凹到 −5.3 m（入口 −4.3 m），飯店基地取平在 −1.26 m，入口要在 11 m 內爬 3 m。
+//  做法：在 elevPass 取平鋪面之後、整場依高程位移之前（包住 scoot8Upgrade，它剛好在這個位置被呼叫），直接改高程格點：
+//   1) 775 巷路面照新的縱斷面：明湖路口不動 → 前段大致持平 → 入口約 −2.6 m → 平順爬到湖邊 −1.5 m（路兩側 14 m 內漸變）
+//   2) 775 巷入口車道：從路面平順接到飯店前庭（約 3% 的坡）
+(function(){
+  const V=window.ROAD40={done:false};
+  const ss=t=>t<=0?0:t>=1?1:t*t*(3-2*t);
+  function poly(P){const L=[0];for(let i=1;i<P.length;i++)L.push(L[i-1]+Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]));return L}
+  // 點到折線：回傳 [沿線距離, 橫向距離]
+  function near(P,L,x,z){let bd=1e9,bl=0;for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let t=((x-a[0])*vx+(z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;const d=Math.hypot(x-a[0]-vx*t,z-a[1]-vz*t);if(d<bd){bd=d;bl=L[i]+(L[i+1]-L[i])*t}}return [bl,bd]}
+  function fix(){if(V.done)return;V.done=true;const E=window.ELEV;if(!E||!E.H||typeof RTX==='undefined')return;const {H,GS,X0,Z0,GNX,GNZ}=E;
+    // 入口車道在高程處理之後才加進 RTX.roads（hotel 模組），所以這裡直接用它的中心線
+    const road=RTX.roads.find(r=>r.name==='環湖道路'&&r.P[0][0]<-500&&r.P[0][1]<120),drv=RTX.roads.find(r=>/775巷入口/.test(r.name||''))||{P:[[-533,219.5],[-522,216.5],[-510,213],[-499,207],[-491.5,200]],hw:5.2};if(!road){V.err='road';return}
+    const P=road.P,L=poly(P),LT=L[L.length-1],hw=road.hw||3.6;
+    // 入口在 775 巷上的位置
+    const jL=near(P,L,drv.P[0][0],drv.P[0][1])[0];
+    // 原本中心線高度（之後要算差值）
+    const h0=l=>{let i=1;while(i<L.length-1&&L[i]<l)i++;const t=(l-L[i-1])/Math.max(1e-6,L[i]-L[i-1]),x=P[i-1][0]+(P[i][0]-P[i-1][0])*t,z=P[i-1][1]+(P[i][1]-P[i-1][1])*t;return E.h(x,z)};
+    const hs=h0(0),he=h0(LT);
+    // 新縱斷面：路口 hs → 前段持平（略降 0.1 m）→ 入口 −2.6 → 湖邊 he
+    const ENT=Math.max(hs,-2.6),K=[[0,hs],[jL*.45,hs-.1],[jL,ENT],[jL+(LT-jL)*.5,ENT+(he-ENT)*.55],[LT,he]];
+    const tgt=l=>{if(l<=0)return hs;if(l>=LT)return he;let i=1;while(i<K.length-1&&K[i][0]<l)i++;const a=K[i-1],b=K[i];return a[1]+(b[1]-a[1])*ss((l-a[0])/Math.max(1e-6,b[0]-a[0]))};
+    // 先把差值算好再寫回（避免邊寫邊讀）
+    const B=hw+16,FULL=hw+2.5;let i0=1e9,i1=-1e9,j0=1e9,j1=-1e9;for(const p of P){i0=Math.min(i0,Math.floor((p[0]-B-X0)/GS));i1=Math.max(i1,Math.ceil((p[0]+B-X0)/GS));j0=Math.min(j0,Math.floor((p[1]-B-Z0)/GS));j1=Math.max(j1,Math.ceil((p[1]+B-Z0)/GS))}
+    i0=Math.max(1,i0);j0=Math.max(1,j0);i1=Math.min(GNX-2,i1);j1=Math.min(GNZ-2,j1);
+    // 改寫之前先記下：每公尺的差值、以及新的路面高度（之後讀格點會讀到已改過的值，不能再用 h0）
+    const D0=new Map(),RN=new Map();for(let l=0;l<=LT;l+=1){const o=h0(l),t=tgt(l);D0.set(l,t-o);RN.set(l,t)}const ix=l=>Math.max(0,Math.min(Math.floor(LT),Math.floor(l))),dAt=l=>D0.get(ix(l)),newRoad=l=>RN.get(ix(l));
+    const W=[];let n=0;
+    for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const x=X0+i*GS,z=Z0+j*GS,[l,d]=near(P,L,x,z);if(d>B||l<=0.01||l>=LT-.01)continue;const w=d<=FULL?1:1-ss((d-FULL)/(B-FULL));if(w<=0)continue;W.push([i*GNZ+j,dAt(l)*w]);n++}
+    for(const [k,dv] of W)H[k]+=dv;
+    // 路邊停車場（街景 775 巷 26 號：混凝土擋土牆後面一排車，比路面高約 1 m）：沿路 LOT.L0～L1、在停車場那一側，
+    //  擋土牆線（離中心線 WALLD）以內維持路面高度；牆後 2.5 m 起整平成「路面＋1 m」的平台，平台外 8 m 內漸變回原地形
+    {const ref=[-534.5,181],[rl]=near(P,L,ref[0],ref[1]);let k=1;while(k<L.length-1&&L[k]<rl)k++;const a=P[k-1],b=P[k],side=Math.sign((b[0]-a[0])*(ref[1]-a[1])-(b[1]-a[1])*(ref[0]-a[0]))||1;
+      const L0=jL-66,L1=jL-7,WALLD=hw+3.2,PW=8,UP=1.0;V.lot={L0,L1,WALLD,side,UP};let c=0;
+      const sd=(x,z,l)=>{let i=1;while(i<L.length-1&&L[i]<l)i++;const p=P[i-1],q=P[i];return Math.sign((q[0]-p[0])*(z-p[1])-(q[1]-p[1])*(x-p[0]))};
+      for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const x=X0+i*GS,z=Z0+j*GS,[l,d]=near(P,L,x,z);if(l<L0-10||l>L1+10||d<hw||sd(x,z,l)!==side)continue;
+        const lw=l<L0?ss((l-(L0-10))/10):l>L1?ss(((L1+10)-l)/10):1;if(lw<=0)continue;const roadH=newRoad(l),kk=i*GNZ+j;
+        // 地形網格 5 m 一格，做不出 1 m 的直立落差：這一帶地形整平在路面高度，平台另外用實體模型做（見 wall()）
+        let t;if(d<=WALLD+2.5+PW)t=roadH;else if(d<=WALLD+2.5+PW+8){const u=ss((d-(WALLD+2.5+PW))/8);t=roadH*(1-u)+H[kk]*u}else continue;
+        H[kk]=H[kk]*(1-lw)+t*lw;c++}V.lot.cells=c}
+    // 入口車道：路面 → 飯店前庭
+    const DP=drv.P,DL=poly(DP),DT=DL[DL.length-1],dhw=drv.hw||5.2,top=E.h(DP[DP.length-1][0],DP[DP.length-1][1]),bot=tgt(jL);
+    const dB=dhw+10,dF=dhw+2;let m=0;
+    let a0=1e9,a1=-1e9,b0=1e9,b1=-1e9;for(const p of DP){a0=Math.min(a0,Math.floor((p[0]-dB-X0)/GS));a1=Math.max(a1,Math.ceil((p[0]+dB-X0)/GS));b0=Math.min(b0,Math.floor((p[1]-dB-Z0)/GS));b1=Math.max(b1,Math.ceil((p[1]+dB-Z0)/GS))}
+    for(let i=Math.max(1,a0);i<=Math.min(GNX-2,a1);i++)for(let j=Math.max(1,b0);j<=Math.min(GNZ-2,b1);j++){const x=X0+i*GS,z=Z0+j*GS,[l,d]=near(DP,DL,x,z);if(d>dB)continue;
+      // 775 巷路面本身不動（上一步已經處理）
+      if(near(P,L,x,z)[1]<hw+1.5)continue;const t=bot+(top-bot)*ss(l/DT),w=d<=dF?1:1-ss((d-dF)/(dB-dF));const k=i*GNZ+j;H[k]=H[k]*(1-w)+t*w;m++}
+    V.out={jL:+jL.toFixed(1),LT:+LT.toFixed(1),hs:+hs.toFixed(2),ent:ENT,he:+he.toFixed(2),cells:n,drv:m,top:+top.toFixed(2)};console.log('[road40]',JSON.stringify(V.out))}
+  // 載入完成後：沿停車場前緣蓋混凝土擋土牆（每 2 m 一段，貼著路面高度與平台高度），加碰撞
+  function wall(){if(!V.lot||V.wall)return;V.wall=true;const road=RTX.roads.find(r=>r.name==='環湖道路'&&r.P[0][0]<-500&&r.P[0][1]<120);if(!road)return;
+    const P=road.P,L=poly(P),{L0,L1,WALLD,side,UP}=V.lot,at=l=>{let i=1;while(i<L.length-1&&L[i]<l)i++;const t=(l-L[i-1])/Math.max(1e-6,L[i]-L[i-1]),a=P[i-1],b=P[i],dx=b[0]-a[0],dz=b[1]-a[1],n=Math.hypot(dx,dz)||1;
+      return {x:a[0]+dx*t,z:a[1]+dz*t,ux:dx/n,uz:dz/n,nx:-dz/n*side,nz:dx/n*side}};
+    // 平台：擋土牆線往內 SW m 的柏油平台（頂面＝路面＋UP），前緣是混凝土擋土牆加壓頂；每 2 m 一段跟著路面高度
+    const SW=8.5,g=new THREE.BoxGeometry(1,1,1),mat=new THREE.MeshStandardMaterial({color:'#a29f97',roughness:.95}),cap=new THREE.MeshStandardMaterial({color:'#bdbab2',roughness:.9}),asp=new THREE.MeshStandardMaterial({color:'#5b5d60',roughness:.95}),grp=new THREE.Group();grp.name='WALL40';let n=0;
+    for(let l=L0;l<L1;l+=2){const A=at(l),B=at(Math.min(L1,l+2.05)),mx=(A.x+B.x)/2,mz=(A.z+B.z)/2,len=Math.hypot(B.x-A.x,B.z-A.z)+.04,ang=Math.atan2(B.z-A.z,B.x-A.x);
+      const base=hAt(mx+A.nx*(WALLD-.6),mz+A.nz*(WALLD-.6)),top=base+UP,bot=base-.35;
+      const wx=mx+A.nx*WALLD,wz=mz+A.nz*WALLD;
+      const w=new THREE.Mesh(g,mat);w.scale.set(len,top+.12-bot,.3);w.position.set(wx,(top+.12+bot)/2,wz);w.rotation.y=-ang;w.castShadow=true;w.receiveShadow=true;grp.add(w);
+      const c2=new THREE.Mesh(g,cap);c2.scale.set(len,.06,.38);c2.position.set(wx,top+.15,wz);c2.rotation.y=-ang;grp.add(c2);
+      const sx=mx+A.nx*(WALLD+SW/2),sz=mz+A.nz*(WALLD+SW/2),s=new THREE.Mesh(g,asp);s.scale.set(len,top-bot,SW);s.position.set(sx,(top+bot)/2,sz);s.rotation.y=-ang;s.receiveShadow=true;grp.add(s);
+      try{addOBB(wx,wz,ang,len/2,.2)}catch(e){}n++}
+    // 平台兩端的側牆
+    for(const l of [L0,L1]){const A=at(l),base=hAt(A.x+A.nx*(WALLD-.6),A.z+A.nz*(WALLD-.6)),cx=A.x+A.nx*(WALLD+SW/2),cz=A.z+A.nz*(WALLD+SW/2),ang=Math.atan2(A.uz,A.ux);
+      const e=new THREE.Mesh(g,mat);e.scale.set(.3,UP+.47,SW);e.position.set(cx,base+UP/2-.06,cz);e.rotation.y=-ang;grp.add(e)}
+    scene.add(grp);grp.updateMatrixWorld(true);V.wallN=n;
+    // 這一排停放的車整排抬到平台上（它們在 veh33 的同一個合併單位裡）
+    try{const inLot=c=>{const p=c.pos;let best=1e9,bl=0;for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let t=((p.x-a[0])*vx+(p.z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;const d=Math.hypot(p.x-a[0]-vx*t,p.z-a[1]-vz*t);if(d<best){best=d;bl=L[i]+(L[i+1]-L[i])*t}}return bl>L0&&bl<L1&&best>WALLD&&best<WALLD+SW};
+      for(const u of (window.VEH33&&VEH33.units)||[]){if(!u.list||!u.list.length||!u.list.every(inLot))continue;const dy=UP,T=new THREE.Matrix4().makeTranslation(0,dy,0);
+        for(const m of [u.mid,u.lo,...(u.hiAll||[])]){if(!m)continue;m.position.y+=dy;m.updateMatrix();m.updateMatrixWorld(true)}
+        for(const c of u.list){c.m.premultiply(T);c.pos.y+=dy;if(c.hi){c.hi.matrix.copy(c.m);c.hi.matrixWorld.copy(c.m)}}u.box.min.y+=dy;u.box.max.y+=dy;V.lifted=(V.lifted||0)+u.list.length;(V.liftPts||(V.liftPts=[])).push(...u.list.map(c=>c.pos))}}catch(e){console.error('ROAD40 lift',e)}
+    // 平台範圍內的其他小物件（車牌、車燈、車底陰影、樹）一起抬上平台
+    try{const inStrip=(x,z)=>{let best=1e9,bl=0;for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let t=((x-a[0])*vx+(z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;const d=Math.hypot(x-a[0]-vx*t,z-a[1]-vz*t);if(d<best){best=d;bl=L[i]+(L[i+1]-L[i])*t}}
+        if(!(bl>L0+.3&&bl<L1-.3&&best<WALLD+SW-.2))return false;if(LP.some(p=>Math.hypot(p.x-x,p.z-z)<3.2))return true;if(best<=WALLD+.3)return false;const A=at(bl);return ((x-A.x)*A.nx+(z-A.z)*A.nz)>0};
+      const LP=V.liftPts||[];
+      const skip=new Set([grp]);for(const u of (window.VEH33&&VEH33.units)||[]){if(u.mid)skip.add(u.mid);if(u.lo)skip.add(u.lo)}const bb=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3();let k=0;
+      for(const o of scene.children.slice()){if(skip.has(o)||o.name==='SB'||o.name==='LO33'||!(o.isMesh||o.isGroup))continue;bb.setFromObject(o);if(bb.isEmpty())continue;bb.getSize(sz);if(Math.max(sz.x,sz.z)>6)continue;bb.getCenter(c);if(!inStrip(c.x,c.z))continue;
+        const base=hAt(c.x,c.z);if(bb.min.y>base+UP-.05)continue;o.position.y+=UP;o.updateMatrix();o.updateMatrixWorld(true);k++}V.liftedObj=k}catch(e){console.error('ROAD40 lift2',e)}}
+  const tw=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(tw);try{wall()}catch(e){console.error('ROAD40 wall',e)}},400);
+  const _s=window.scoot8Upgrade;
+  window.scoot8Upgrade=function(){try{fix()}catch(e){console.error('ROAD40',e)}return typeof _s==='function'?_s.apply(this,arguments):0};
 })();
 
 </script>
