@@ -5342,7 +5342,8 @@ function car10Build(){if(window.CAR10)return 'exists';const t0=performance.now()
   const AX=[0,2.7],RW=.34,inWheel=(x,y,z)=>Math.abs(z)>.58&&AX.some(a=>Math.hypot(x-a,y-.322)<RW);
   const filt=g=>{const p=g.attributes.position;if(!p||g.index)return 0;const names=Object.keys(g.attributes),keep=[];for(let i=0;i<p.count;i+=3){const cx=(p.getX(i)+p.getX(i+1)+p.getX(i+2))/3,cy=(p.getY(i)+p.getY(i+1)+p.getY(i+2))/3,cz=(p.getZ(i)+p.getZ(i+1)+p.getZ(i+2))/3;if(!inWheel(cx,cy,cz))keep.push(i)}
     if(keep.length*3===p.count)return 0;for(const nm of names){const a=g.attributes[nm],sz=a.itemSize,src=a.array,dst=new Float32Array(keep.length*3*sz);let o=0;for(const i of keep){dst.set(src.subarray(i*sz,(i+3)*sz),o);o+=3*sz}g.setAttribute(nm,new THREE.BufferAttribute(dst,sz))}g.computeBoundingSphere();return p.count/3-keep.length};
-  let cut=0;body.children.forEach((m,i)=>{if(m.isMesh&&m.geometry&&i>0&&m.geometry.attributes.position.count>2000)cut+=filt(m.geometry)});
+  // 第三十八次：先複製再刪。原本直接改的是所有轎車共用的幾何（makeCarModel.v4.g.sedan），全場停放、行駛的轎車因此都沒有輪子
+  let cut=0;body.children.forEach((m,i)=>{if(m.isMesh&&m.geometry&&i>0&&m.geometry.attributes.position.count>2000){m.geometry=m.geometry.clone();cut+=filt(m.geometry)}});
   body.traverse(o=>{if(o.isMesh)o.castShadow=true});ext.add(body);
   // 3) 輪子：胎壁圓弧的輪胎、五爪雙輻鋁圈、輪轂蓋、煞車碟與紅色卡鉗
   const tireM=new THREE.MeshStandardMaterial({color:'#1b1c1e',roughness:.92}),rimM=new THREE.MeshStandardMaterial({color:'#c9ced4',metalness:.82,roughness:.28}),darkM=new THREE.MeshStandardMaterial({color:'#2a2d31',metalness:.5,roughness:.4}),discM=new THREE.MeshStandardMaterial({color:'#8c9298',metalness:.75,roughness:.35}),calM=new THREE.MeshStandardMaterial({color:'#c2352b',metalness:.3,roughness:.45});
@@ -7467,7 +7468,7 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
 //  網址加 ?mem=0 可關掉。之後才建立的幾何（靜態合併重建等）不處理。
 (function(){
   const M=window.MEM34={on:!/[?&]mem=0/.test(location.search),geos:0,col:0,nor:0,saved:0,skip:0,done:false};
-  const DONE=new Map();   // 原屬性 → 轉換後的屬性（同一份屬性被多個幾何共用時，轉換後仍然共用）
+  const DONE=new WeakMap();   // 原屬性 → 轉換後的屬性（同一份屬性被多個幾何共用時，轉換後仍然共用）
   function shrinkGeo(g){if(!g||!g.isBufferGeometry||g.userData.mem34)return;g.userData.mem34=1;const A=g.attributes;let ch=null;
     const ok=a=>a&&a.isBufferAttribute&&!a.isInstancedBufferAttribute&&!a.isInterleavedBufferAttribute&&a.array instanceof Float32Array&&a.usage===THREE.StaticDrawUsage&&a.array.length>=300;
     const c=A.color;if(DONE.has(c)){(ch=ch||{}).color=DONE.get(c)}else if(ok(c)){const s=c.array,n=s.length;let good=true;for(let i=0;i<n;i++){const v=s[i];if(!(v>=-.001&&v<=1.001)){good=false;break}}
@@ -7475,8 +7476,9 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
     const nr=A.normal;if(DONE.has(nr)){(ch=ch||{}).normal=DONE.get(nr)}else if(ok(nr)){const s=nr.array,n=s.length,d=new Int16Array(n);for(let i=0;i<n;i++)d[i]=Math.round(Math.min(1,Math.max(-1,s[i]))*32767);(ch=ch||{}).normal=new THREE.BufferAttribute(d,3,true);DONE.set(nr,ch.normal);M.nor++;M.saved+=n*2}
     if(!ch)return;g.dispose();   // 已上傳過的先釋放 GPU 緩衝，下次繪製時用新格式重傳
     for(const k in ch){ch[k].name=A[k].name;g.setAttribute(k,ch[k])}M.geos++}
+  M.shrink=shrinkGeo;
   M.run=function(){if(M.done||!M.on||typeof scene==='undefined')return;M.done=true;const t0=performance.now();try{scene.traverse(o=>{if((o.isMesh||o.isPoints)&&o.geometry)shrinkGeo(o.geometry)})}catch(e){console.error('MEM34',e)}
-    DONE.clear();M.ms=Math.round(performance.now()-t0);M.savedMB=Math.round(M.saved/1e6);console.log('[mem34]',JSON.stringify({geos:M.geos,col:M.col,nor:M.nor,savedMB:M.savedMB,skip:M.skip,ms:M.ms}))};
+    M.ms=Math.round(performance.now()-t0);M.savedMB=Math.round(M.saved/1e6);console.log('[mem34]',JSON.stringify({geos:M.geos,col:M.col,nor:M.nor,savedMB:M.savedMB,skip:M.skip,ms:M.ms}))};
   try{if(window.LD&&LD.done){const _d=LD.done;LD.done=function(){try{M.run()}catch(e){console.error('MEM34',e)}return _d.apply(this,arguments)}}}catch(e){}
   // 保險：LD.done 沒被呼叫到（或被別處換掉）時，載入畫面消失後補做
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);M.run()},300);
@@ -7637,7 +7639,8 @@ function fix32(){
           if(ch)u.mid.geometry.index.needsUpdate=true}}
       for(const s of V.singles){s.root.getWorldPosition(tp);const d=tp.distanceTo(cp);const near=s.near?d<F:d<N;if(near!==s.near){s.near=near;for(const ch of s.hi){if(near){if(ch.userData._v33!==undefined){ch.visible=ch.userData._v33;delete ch.userData._v33}}else{ch.userData._v33=ch.visible;ch.visible=false}}s.lo.visible=!near}}};
     V.tick();setInterval(V.tick,200);return out}
-  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{if(!window.SAFE34)build()}catch(e){console.error('VEH33',e)}},500);
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);try{if(!window.SAFE34)VEH33.build()}catch(e){console.error('VEH33',e)}},500);
+  VEH33.build=function(){if(VEH33.built)return VEH33.out;VEH33.built=true;return build()};
 })();
 
 // 第三十四次：人物與機車列的遠近分級（LOD）
@@ -7707,10 +7710,10 @@ function fix32(){
     for(let j=0,o=0;j<K.B.length;j++,o+=3){const M=D.rel[K.B[j]];_v.set(K.P[o],K.P[o+1],K.P[o+2]).applyMatrix4(M);pa[o]=_v.x;pa[o+1]=_v.y;pa[o+2]=_v.z;_n.set(K.Nr[o],K.Nr[o+1],K.Nr[o+2]).transformDirection(M);na[o]=_n.x;na[o+1]=_n.y;na[o+2]=_n.z}
     P.needsUpdate=true;N.needsUpdate=true}
   function inScene(o){while(o.parent)o=o.parent;return o===scene}
-  function tickHumans(){if(typeof HUMANS==='undefined')return;let built=0,far=0,near=0;const N=V.on?V.HN:1e9,F=V.on?V.HF:1e9;
+  function tickHumans(maxBuild){if(typeof HUMANS==='undefined')return;const MB=maxBuild||10;let built=0,far=0,near=0;const N=V.on?V.HN:1e9,F=V.on?V.HF:1e9;
     for(const H of HUMANS){if(!H||!H.g||!inScene(H.g))continue;let D=V.humans.get(H);
       H.g.getWorldPosition(_tp);const d=_tp.distanceTo(_cp);
-      if(D===undefined){if(d<N){near++;continue}if(built>=10)continue;built++;try{D=buildHuman(H)}catch(e){console.error('LOD34 human',e);D=null}V.humans.set(H,D)}
+      if(D===undefined){if(d<N){near++;continue}if(built>=MB)continue;built++;try{D=buildHuman(H)}catch(e){console.error('LOD34 human',e);D=null}V.humans.set(H,D)}
       if(!D){near++;continue}
       const isNear=D.near?d<F:d<N;
       if(isNear!==D.near){D.near=isNear;if(isNear){D.sm.visible=D.keep!==false;D.lo.visible=false}else{D.keep=D.sm.visible;D.sm.visible=false;D.lo.visible=D.keep;bake(D)}}
@@ -7745,51 +7748,64 @@ function fix32(){
       nn+=r.nNear}
     V.stat.sNear=nn}
 
-  V.tick=function(){if(typeof cam==='undefined')return;cam.getWorldPosition(_cp);try{tickHumans()}catch(e){console.error('LOD34 h',e)}try{tickRows()}catch(e){console.error('LOD34 r',e)}};
-  function start(){try{buildRows()}catch(e){console.error('LOD34 rows',e)}V.tick();setInterval(V.tick,200);console.log('[lod34]',JSON.stringify(V.stat))}
+  V.tick=function(maxBuild){if(typeof cam==='undefined')return;cam.getWorldPosition(_cp);try{tickHumans(typeof maxBuild==='number'?maxBuild:0)}catch(e){console.error('LOD34 h',e)}try{tickRows()}catch(e){console.error('LOD34 r',e)}};
+  function start(pre){if(V.started)return;V.started=true;try{buildRows()}catch(e){console.error('LOD34 rows',e)}V.tick(pre?1e9:0);setInterval(()=>V.tick(),200);console.log('[lod34]',JSON.stringify(V.stat))}
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);if(!window.SAFE34)setTimeout(start,800)},500);
+  V.start=start;
 })();
 
-// 第三十四次：釋放「靜態合併」留下的原始幾何。
+// 第三十四次／第三十八次：釋放「靜態合併」留下的原始幾何。
 //  staticBatch() 把約 6400 個靜態網格併成 900 多個大網格後，原始網格（不在場景裡）仍各自留著一份幾何，約 237 MB，只有 CPU 端在佔。
 //  它們只在物件被「喚醒」（改位置、顯示、材質）時才用得到，實測跑完藍線＋紅線只喚醒 8 個小平面。
-//  做法：把原始網格的 geometry 換成「用到才還原」的屬性。還原時從合併網格裡切出該物件的頂點，乘回逆矩陣。
-//  沒有別處參照的幾何會被回收；有快取參照的（之後還會拿來建新物件）不受影響。網址加 ?slim=0 可關掉。
+//  做法：把原始網格的 geometry 換成一個「空殼幾何」：type、parameters、包圍盒、groups 這些基本資料照舊（載入後有程式會讀，例如 tree30 用 type 找方塊建物和樹幹），
+//  attributes 和 index 是「用到才還原」的屬性，還原時從合併網格裡切出該物件的頂點、乘回逆矩陣。
+//  沒有別處參照的原幾何會被回收；有快取參照的（之後還會拿來建新物件）不受影響。
+//  第三十八次：改成包住 sbMerge()，每合併完一組就立刻處理（同時把合併結果的頂點色、法線改成精簡格式）。
+//  原本是載入完 3 秒後才做，載入瞬間的記憶體峰值沒有降，iPhone 會在快載入完時被系統關掉。網址加 ?slim=0 可關掉。
 (function(){
-  const V=window.SLIM34={on:!/[?&]slim=0/.test(location.search)&&!window.SAFE34,n:0,restored:0,log:[]};
-  const REC=new WeakMap();
-  function restore(o){const r=REC.get(o);if(!r)return null;REC.delete(o);
-    const p0=r.parts[0],G=p0.grp.mesh.geometry,A=G.attributes,g=new THREE.BufferGeometry(),n=r.vn,v=new THREE.Vector3();
+  const V=window.SLIM34={on:!/[?&]slim=0/.test(location.search)&&!window.SAFE34,n:0,restored:0,log:[],bad:0,ran:false,stk:[]};
+  const REC=new WeakMap(),PEND=new WeakMap();   // REC：空殼幾何 → 還原資料
+  const plain=(g,k,v)=>Object.defineProperty(g,k,{configurable:true,enumerable:true,writable:true,value:v});
+  function fill(g){const r=REC.get(g);if(!r)return;REC.delete(g);
+    const p0=r.parts[0],A=p0.G.attributes,n=r.vn,v=new THREE.Vector3(),out={};
     const inv=new THREE.Matrix4().copy(r.mw).invert(),mt=new THREE.Matrix3().setFromMatrix4(r.mw).transpose();
-    const P=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,p0.v0+i).applyMatrix4(inv);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z}g.setAttribute('position',new THREE.BufferAttribute(P,3));
-    if(r.hasN&&A.normal){const N=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.normal,p0.v0+i).applyMatrix3(mt).normalize();N[i*3]=v.x;N[i*3+1]=v.y;N[i*3+2]=v.z}g.setAttribute('normal',new THREE.BufferAttribute(N,3))}
-    const pu=r.parts.find(p=>p.grp.uv&&p.grp.mesh.geometry.attributes.uv);
-    if(r.hasU&&pu){const ua=pu.grp.mesh.geometry.attributes.uv,U=new Float32Array(n*2);for(let i=0;i<n;i++){U[i*2]=ua.getX(pu.v0+i);U[i*2+1]=ua.getY(pu.v0+i)}g.setAttribute('uv',new THREE.BufferAttribute(U,2))}
-    const pc=r.parts.find(p=>p.grp.col&&p.grp.mesh.geometry.attributes.color);
-    if(r.hasC&&pc){const ca=pc.grp.mesh.geometry.attributes.color,k=ca.normalized?1/255:1,C=new Float32Array(n*3);for(let i=0;i<n;i++){C[i*3]=ca.getX(pc.v0+i)*k;C[i*3+1]=ca.getY(pc.v0+i)*k;C[i*3+2]=ca.getZ(pc.v0+i)*k}g.setAttribute('color',new THREE.BufferAttribute(C,3))}
+    const P=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,p0.v0+i).applyMatrix4(inv);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z}out.position=new THREE.BufferAttribute(P,3);
+    if(r.hasN&&A.normal){const N=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.normal,p0.v0+i).applyMatrix3(mt).normalize();N[i*3]=v.x;N[i*3+1]=v.y;N[i*3+2]=v.z}out.normal=new THREE.BufferAttribute(N,3)}
+    const pu=r.parts.find(p=>p.uv&&p.G.attributes.uv);
+    if(r.hasU&&pu){const ua=pu.G.attributes.uv,U=new Float32Array(n*2);for(let i=0;i<n;i++){U[i*2]=ua.getX(pu.v0+i);U[i*2+1]=ua.getY(pu.v0+i)}out.uv=new THREE.BufferAttribute(U,2)}
+    const pc=r.parts.find(p=>p.col&&p.G.attributes.color);
+    if(r.hasC&&pc){const ca=pc.G.attributes.color,k=ca.normalized?1/255:1,C=new Float32Array(n*3);for(let i=0;i<n;i++){C[i*3]=ca.getX(pc.v0+i)*k;C[i*3+1]=ca.getY(pc.v0+i)*k;C[i*3+2]=ca.getZ(pc.v0+i)*k}out.color=new THREE.BufferAttribute(C,3)}
+    let idx=null;
     if(r.indexed){const I=n>65535?new Uint32Array(r.total):new Uint16Array(r.total);
-      for(const p of r.parts){const ix=p.grp.mesh.geometry.index;for(let k=0;k<p.in;k+=3){const a=ix.getX(p.i0+k)-p.v0;let b=ix.getX(p.i0+k+1)-p.v0,c=ix.getX(p.i0+k+2)-p.v0;if(r.flip){const t=b;b=c;c=t}I[p.s+k]=a;I[p.s+k+1]=b;I[p.s+k+2]=c}}
-      g.setIndex(new THREE.BufferAttribute(I,1))}
-    for(const q of r.groups)g.addGroup(q.start,q.count,q.materialIndex);
-    if(r.bs)g.boundingSphere=r.bs;if(r.bb)g.boundingBox=r.bb;g.name=r.name;g.userData=r.ud;
-    Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,writable:true,value:g});V.restored++;if(V.log.length<40)V.log.push(o.name||o.type);return g}
-  V.restore=restore;V.isSlim=o=>REC.has(o);V.peek=o=>REC.get(o);
-  V.run=function(){if(!V.on||typeof SB==='undefined'||!SB.groups||V.ran)return;V.ran=true;const t0=performance.now();
-    // 重算每個物件在合併網格裡的頂點、索引範圍（和 sbMerge 的寫入順序一致）
-    const recs=new Map();let bad=0;
-    for(const grp of SB.groups){if(!grp.mesh||!grp.list||!grp.list.length)continue;const G=grp.mesh.geometry;let vo=0,io=0;
-      for(const e of grp.list){const o=e.o,g=o.geometry,cnt=g.attributes.position.count,ni=Math.floor(e.c/3)*3;
-        let r=recs.get(o);if(!r){o.updateMatrixWorld(true);r={parts:[],vn:cnt,mw:o.matrixWorld.clone(),flip:o.matrixWorld.determinant()<0,indexed:!!g.index,total:g.index?g.index.count:cnt,hasN:!!g.attributes.normal,hasU:!!g.attributes.uv,hasC:!!g.attributes.color,
-            groups:(g.groups||[]).map(q=>({start:q.start,count:q.count,materialIndex:q.materialIndex})),bs:g.boundingSphere,bb:g.boundingBox,name:g.name,ud:g.userData,extra:Object.keys(g.attributes).some(k=>!/^(position|normal|uv|color)$/.test(k))};recs.set(o,r)}
-        r.parts.push({grp,s:e.s,v0:vo,i0:io,in:ni});vo+=cnt;io+=ni}
-      if(vo!==G.attributes.position.count||io!==G.index.count){bad++;for(const e of grp.list)recs.delete(e.o)}}   // 對不上的整組不動
-    for(const [o,r] of recs){if(r.extra||!SB.byMesh.has(o))continue;   // 有其他屬性（還原不回來）的保留原樣
-      // 每個部分都要在：物件的所有材質分段都在合併網格裡
-      REC.set(o,r);Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,get(){return restore(o)},set(x){REC.delete(o);Object.defineProperty(o,'geometry',{configurable:true,enumerable:true,writable:true,value:x})}});V.n++}
-    V.bad=bad;V.ms=Math.round(performance.now()-t0);console.log('[slim34]',JSON.stringify({n:V.n,bad,ms:V.ms}))};
-  // 喚醒前先還原（之後合併網格可能重建，範圍會變）
-  try{const _w=sbWake;sbWake=function(o){try{if(REC.has(o))restore(o)}catch(e){console.error('SLIM34',e)}return _w.apply(this,arguments)}}catch(e){}
-  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);setTimeout(()=>{try{V.run()}catch(e){console.error('SLIM34',e)}},3000)},500);
+      for(const p of r.parts){const ix=p.G.index;for(let k=0;k<p.in;k+=3){const a=ix.getX(p.i0+k)-p.v0;let b=ix.getX(p.i0+k+1)-p.v0,c=ix.getX(p.i0+k+2)-p.v0;if(r.flip){const t=b;b=c;c=t}I[p.s+k]=a;I[p.s+k+1]=b;I[p.s+k+2]=c}}
+      idx=new THREE.BufferAttribute(I,1)}
+    plain(g,'attributes',out);plain(g,'index',idx);V.restored++;
+    if(V.restored%500===1&&V.stk.length<6)V.stk.push(String(new Error().stack).split(String.fromCharCode(10)).slice(2,7).map(x=>x.trim().slice(0,90)).join(' | '))}
+  function shell(o,g0,r){const g=new THREE.BufferGeometry();g.type=g0.type;if(g0.parameters)g.parameters=g0.parameters;g.name=g0.name;g.userData=g0.userData;g.boundingBox=g0.boundingBox;g.boundingSphere=g0.boundingSphere;
+    for(const q of (g0.groups||[]))g.addGroup(q.start,q.count,q.materialIndex);
+    Object.defineProperty(g,'attributes',{configurable:true,enumerable:true,get(){fill(g);return g.attributes},set(x){REC.delete(g);plain(g,'attributes',x)}});
+    Object.defineProperty(g,'index',{configurable:true,enumerable:true,get(){fill(g);return g.index},set(x){fill(g);plain(g,'index',x)}});
+    REC.set(g,r);o.geometry=g;V.n++}
+  V.isSlim=o=>REC.has(o.geometry);V.peek=o=>REC.get(o.geometry);V.restore=o=>{const g=o.geometry;fill(g);return g};
+  if(!V.on||typeof sbMerge!=='function')return;
+  const _m=sbMerge;
+  sbMerge=function(list,bake,uv,col){
+    // 先記下每個物件在合併結果裡的頂點、索引範圍（和 sbMerge 的寫入順序一致）。讀 attributes 會讓已釋放的物件先還原
+    const info=[];let vo=0,io=0;
+    for(const e of list){const g=e.o.geometry,cnt=g.attributes.position.count,ni=Math.max(0,Math.floor(e.c/3)*3);info.push([e,g,cnt,vo,io,ni]);vo+=cnt;io+=ni}
+    const G=_m.apply(this,arguments);
+    try{if(!G||!G.index||vo!==G.attributes.position.count||io!==G.index.count){V.bad++;return G}
+      if(window.MEM34&&MEM34.on&&MEM34.shrink)MEM34.shrink(G);
+      for(const [e,g,cnt,v0,i0,ni] of info){const o=e.o;let r=PEND.get(o);
+        if(!r){const total=g.index?g.index.count:cnt,arr=Array.isArray(o.material);o.updateMatrixWorld(true);
+          r={g0:g,parts:[],need:arr?(g.groups||[]).filter(q=>o.material[q.materialIndex]&&Math.min(q.count,total-q.start)>0).length:1,vn:cnt,mw:o.matrixWorld.clone(),flip:o.matrixWorld.determinant()<0,indexed:!!g.index,total,
+            hasN:!!g.attributes.normal,hasU:!!g.attributes.uv,hasC:!!g.attributes.color,
+            extra:Object.keys(g.attributes).some(k=>!/^(position|normal|uv|color)$/.test(k))||!!(g.morphAttributes&&Object.keys(g.morphAttributes).length)};PEND.set(o,r)}
+        if(r.g0!==g){PEND.delete(o);continue}   // 中途被換過幾何：不處理
+        r.parts.push({G,uv:!!uv,col:!!col,s:e.s,v0,i0,in:ni});
+        if(!r.extra&&r.parts.length>=r.need){PEND.delete(o);const g0=r.g0;r.g0=null;shell(o,g0,r)}}}catch(er){console.error('SLIM34',er)}
+    return G};
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);V.ran=true;console.log('[slim34]',JSON.stringify({n:V.n,bad:V.bad,restored:V.restored}))},500);
 })();
 
 // 第三十五次（階段 M-2）：貼圖上傳 GPU 後釋放 CPU 端的 canvas。
@@ -7832,6 +7848,20 @@ function fix32(){
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;clearInterval(t);
     try{R.domElement.addEventListener('webglcontextrestored',onRestore,false)}catch(e){}
     setTimeout(()=>setInterval(()=>{try{V.poll()}catch(e){console.error('TEX35',e)}},3000),5000)},500);
+})();
+
+// 第三十八次：把省記憶體的處理搬到「載入最後預先畫一幀」之前。
+//  載入流程是 staticBatch() → 預先畫一幀（編譯材質、上傳 GPU）→ LD.done。之前 mem34／veh33／lod34 都在 LD.done 之後才執行，
+//  所以預畫那一幀時停車場全部精細車（每台 2.6 萬個三角形）、121 個精細路人都還顯示著，全部上傳 GPU，iPhone 在這一刻被系統關掉。
+//  現在包住 staticBatch()：合併完立刻做 (1) 其餘幾何的頂點色、法線精簡 (2) 停車場車輛分級（合併的精細網格藏起來）(3) 路人、機車列分級。
+(function(){
+  if(window.SAFE34||typeof staticBatch!=='function')return;const _sb=staticBatch;window.PRE38={t:{}};
+  staticBatch=function(){const r=_sb.apply(this,arguments),T=PRE38.t,now=()=>Math.round(performance.now());
+    try{scene.updateMatrixWorld(true)}catch(e){}
+    let t0=now();try{if(window.MEM34)MEM34.run()}catch(e){console.error('PRE38 mem',e)}T.mem=now()-t0;
+    t0=now();try{if(window.VEH33&&VEH33.build)VEH33.build()}catch(e){console.error('PRE38 veh',e)}T.veh=now()-t0;
+    t0=now();try{if(window.LOD34&&LOD34.start)LOD34.start(true)}catch(e){console.error('PRE38 lod',e)}T.lod=now()-t0;
+    console.log('[pre38]',JSON.stringify(T));return r};
 })();
 
 </script>
