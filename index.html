@@ -8325,6 +8325,213 @@ function fix32(){
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.PARK42||!PARK42.done)return;clearInterval(t);try{run()}catch(e){console.error('TEMPLE43',e)}},400);
 })();
 
+// 第四十三次：音效修正（使用者回饋）
+//  1) 車外視角（追尾、俯視、GTA）一直有「沙沙聲」：風切聲（白噪音 900 Hz）與路噪是照車內設計的，車外沒有調整 → 車外風切幾乎關掉、路噪降低變悶
+//  2) 速克達：原本只是把汽車引擎聲調高 → 另加單缸四行程的尖銳嗡嗡聲（鋸齒＋方波、帶通 2.4 kHz）與 CVT 傳動高頻聲，汽車引擎聲壓低
+//  3) 大卡車（kind==='truck'）：柴油引擎（低沉、爆震喀啦聲、渦輪聲）
+//  4) 腳步聲依地面：柏油／鋪面（清脆）、草地（沙沙、柔）、木棧道（空心敲擊）
+//  5) 夜晚蟲鳴（DAY39.night 高時，隨機的蟋蟀鳴叫）
+(function(){
+  const V=window.AUDIO43={};
+  const outside=()=>{try{return camMode==='chase'||camMode==='top'||camMode==='gta'}catch(e){return false}};
+  const kindOf=()=>{try{const c=BORROW&&BORROW.cur;if(!c)return 'car';if(c.heavy)return 'heavy';return c.kind||'car'}catch(e){return 'car'}};
+  let L=null;
+  function layers(){if(L||!AU.c)return L;const C=AU.c,dst=AU.cabin||AU.master||C.destination;
+    // 速克達
+    const so1=C.createOscillator(),so2=C.createOscillator(),shp=C.createBiquadFilter(),sbp=C.createBiquadFilter(),sg=C.createGain(),sws=C.createWaveShaper(),cv=new Float32Array(512);
+    for(let i=0;i<512;i++){const x=i/255.5-1;cv[i]=Math.tanh(x*2.4)}sws.curve=cv;so1.type='sawtooth';so2.type='square';shp.type='highpass';shp.frequency.value=260;sbp.type='bandpass';sbp.frequency.value=2400;sbp.Q.value=.9;sg.gain.value=0;
+    const s2g=C.createGain();s2g.gain.value=.45;so1.connect(shp);so2.connect(s2g);s2g.connect(shp);shp.connect(sws);sws.connect(sbp);sbp.connect(sg);sg.connect(dst);so1.start();so2.start();
+    const cvt=C.createOscillator(),cg=C.createGain();cvt.type='sine';cg.gain.value=0;cvt.connect(cg);cg.connect(dst);cvt.start();
+    // 柴油卡車：低頻主體＋爆震喀啦（噪音經方波調幅）＋渦輪
+    const dz=C.createOscillator(),dg=C.createGain(),dlp=C.createBiquadFilter();dz.type='sawtooth';dlp.type='lowpass';dlp.frequency.value=320;dg.gain.value=0;dz.connect(dlp);dlp.connect(dg);dg.connect(dst);dz.start();
+    const nb=C.createBuffer(1,C.sampleRate,C.sampleRate),nd=nb.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+    const cn=C.createBufferSource();cn.buffer=nb;cn.loop=true;const cbp=C.createBiquadFilter();cbp.type='bandpass';cbp.frequency.value=1700;cbp.Q.value=1.8;const cam_=C.createGain();cam_.gain.value=0;const clf=C.createOscillator();clf.type='square';const clg=C.createGain();clg.gain.value=.5;const cbias=C.createConstantSource?C.createConstantSource():null;
+    cn.connect(cbp);cbp.connect(cam_);clf.connect(clg);clg.connect(cam_.gain);if(cbias){cbias.offset.value=.5;cbias.connect(cam_.gain);cbias.start()}const cgo=C.createGain();cgo.gain.value=0;cam_.connect(cgo);cgo.connect(dst);cn.start();clf.start();
+    const tb=C.createOscillator(),tg=C.createGain();tb.type='sine';tg.gain.value=0;tb.connect(tg);tg.connect(dst);tb.start();
+    L={so1,so2,sbp,sg,cvt,cg,dz,dg,dlp,clf,cgo,tb,tg,nb};return L}
+  // ---- 1～3) 引擎與噪音：包住 audioFrame ----
+  if(typeof audioFrame==='function'){const _af=audioFrame;audioFrame=function(dt){_af.apply(this,arguments);try{if(!AU.c)return;const C=AU.c,t=C.currentTime,on=sound&&S.engine,rpm=Math.max(S.rpm||0,1),K=kindOf(),out=outside(),sp=Math.abs(S.v);
+      // 車外：風切幾乎關掉，路噪降低、變悶，進氣噪音降低
+      if(out){AU.wind.g.gain.setTargetAtTime(sound?Math.min(.012,sp*sp*.00008):0,t,.1);AU.road.g.gain.setTargetAtTime(sound?Math.min(.12,sp*.015):0,t,.1);AU.road.fl.frequency.setTargetAtTime(140+sp*14,t,.1);AU.intake.g.gain.setTargetAtTime(on?S.gas*.015*(rpm/2500):0,t,.05)}
+      const l=layers();if(!l)return;
+      if(K==='scoot'){const f0=Math.max(40,rpm/60);l.so1.frequency.setTargetAtTime(f0,t,.03);l.so2.frequency.setTargetAtTime(f0*2,t,.03);l.sbp.frequency.setTargetAtTime(1800+rpm*.15+S.gas*900,t,.05);
+        l.sg.gain.setTargetAtTime(on?.035+S.gas*.06:0,t,.05);l.cvt.frequency.setTargetAtTime(900+sp*95,t,.08);l.cg.gain.setTargetAtTime(on&&sp>.5?Math.min(.018,sp*.0018):0,t,.1);
+        AU.eg.gain.setTargetAtTime(on?(.16+S.gas*.22)*.28:0,t,.06)}else{l.sg.gain.setTargetAtTime(0,t,.05);l.cg.gain.setTargetAtTime(0,t,.05)}
+      if(K==='truck'){const f=Math.max(18,rpm/120);l.dz.frequency.setTargetAtTime(f,t,.05);l.dlp.frequency.setTargetAtTime(180+rpm*.08+S.gas*260,t,.05);l.dg.gain.setTargetAtTime(on?.09+S.gas*.12:0,t,.06);
+        l.clf.frequency.setTargetAtTime(Math.max(8,rpm/40),t,.05);l.cgo.gain.setTargetAtTime(on?.05+S.gas*.05:0,t,.06);l.tb.frequency.setTargetAtTime(2600+rpm*.9,t,.2);l.tg.gain.setTargetAtTime(on?S.gas*.008:0,t,.3);
+        AU.eng.playbackRate.setTargetAtTime(Math.max(.05,rpm/1150),t,.03);AU.ef.frequency.setTargetAtTime(220+rpm*.1+S.gas*700,t,.05)}else{l.dg.gain.setTargetAtTime(0,t,.06);l.cgo.gain.setTargetAtTime(0,t,.06);l.tg.gain.setTargetAtTime(0,t,.06)}
+    }catch(e){}}}
+  // ---- 4) 腳步聲依地面 ----
+  const rc=new THREE.Raycaster(),dn=new THREE.Vector3(0,-1,0),o3=new THREE.Vector3();let lastSurf='hard';
+  function surface(){try{const x=WALK.x,z=WALK.y;
+      for(const r of RTX.roads){const P=r.P,hw=(r.hw||3)+.2;for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1];if(Math.abs(a[0]-x)>60&&Math.abs(b[0]-x)>60)continue;const vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let tt=((x-a[0])*vx+(z-a[1])*vz)/l2;tt=tt<0?0:tt>1?1:tt;if(Math.hypot(x-a[0]-vx*tt,z-a[1]-vz*tt)<hw)return 'hard'}}
+      o3.set(x,hAt(x,z)+1.2,z);rc.set(o3,dn);rc.far=2.6;rc.camera=cam;const hs=rc.intersectObjects(scene.children,true);
+      for(const h of hs){const o=h.object;if(!o.visible||o.isSprite||o.isSkinnedMesh)continue;let p=o,vis=true;while(p){if(!p.visible){vis=false;break}p=p.parent}if(!vis)continue;const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();
+        if(g.boundingSphere.radius>200)return 'grass';   // 大地形網格＝草地
+        const m=Array.isArray(o.material)?o.material[0]:o.material,c=m&&m.color;if(c&&c.r>c.g*1.15&&c.g>c.b*1.1&&c.r<.75&&!m.map)return 'wood';
+        if(c&&c.g>c.r*1.15&&c.g>c.b*1.15)return 'grass';return 'hard'}
+      return 'grass'}catch(e){return lastSurf}}
+  function stepSound(){if(!AU.c||!sound)return;const sf=lastSurf=surface(),k=.85+Math.random()*.3;
+    if(sf==='grass'){burst(4200+Math.random()*1500,.11,.18*k,'highpass',.7);burst(900,.05,.08*k,'bandpass',1.2,.015);burst(140,.05,.12*k,'lowpass',1)}
+    else if(sf==='wood'){burst(420+Math.random()*80,.07,.45*k,'bandpass',5);tone(180+Math.random()*30,.06,'sine',.05*k);burst(2600,.02,.06*k,'bandpass',3)}
+    else{burst(2900+Math.random()*700,.025,.32*k,'bandpass',2.2);burst(130,.05,.35*k,'lowpass',1);burst(6200,.015,.06*k,'highpass',1,.012)}}
+  V.surface=surface;V.step=stepSound;
+  if(typeof sfx==='function'){const _sfx=sfx;sfx=function(k){if(k==='step'){try{stepSound()}catch(e){_sfx(k)}return}return _sfx.apply(this,arguments)}}
+  // ---- 5) 夜晚蟲鳴 ----
+  let crk=null;function cricket(){if(!AU.c||!sound)return;const C=AU.c;if(!crk){crk=C.createGain();crk.gain.value=0;const hp=C.createBiquadFilter();hp.type='highpass';hp.frequency.value=2500;crk.connect(hp);hp.connect(AU.master||C.destination)}
+    const n=(window.DAY39&&DAY39.night)||0;let inCab=false;try{inCab=!WALK.on&&camMode==='driver'}catch(e){}crk.gain.setTargetAtTime(n>.35?Math.min(1,(n-.35)/.4)*(inCab?.35:1):0,C.currentTime,.8);if(n<=.35)return;
+    // 一隻蟋蟀：3～5 個短脈衝（每個 25 ms、間隔 35 ms），音高 4～5.2 kHz，左右聲道隨機
+    const f=4000+Math.random()*1200,t0=C.currentTime+Math.random()*.2,np=3+(Math.random()*3|0),vol=.012+Math.random()*.02;const pan=C.createStereoPanner?C.createStereoPanner():null;if(pan){pan.pan.value=Math.random()*1.6-.8;pan.connect(crk)}
+    for(let i=0;i<np;i++){const o=C.createOscillator(),g=C.createGain(),ts=t0+i*.06;o.type='sine';o.frequency.value=f*(1+(Math.random()-.5)*.01);g.gain.setValueAtTime(0,ts);g.gain.linearRampToValueAtTime(vol,ts+.006);g.gain.linearRampToValueAtTime(0,ts+.028);o.connect(g);g.connect(pan||crk);o.start(ts);o.stop(ts+.04)}}
+  setInterval(()=>{try{if(typeof running!=='undefined'&&running&&!paused){const n=Math.random();if(n<.75)cricket();if(n<.35)cricket()}}catch(e){}},420);
+})();
+
+// 第四十三次：夜間靈異（使用者要求）
+//  1) 鬧鬼的公園是消防局對面的「無上和尚紀念公園」（Google 座標 24.7724339, 120.971989 ＝ 遊戲 (−775, 604)），不是靈隱寺對面的小公園：
+//     舊的小公園改名、拿掉鬼魂；和尚公園依 Google 衛星圖做出來（1075 巷東側的碎石空地、步道、四周濃密老樹、北側草坪）。
+//     紀念碑、石塔、石椅、路燈的樣式是推測（沒有實景照片）。
+//  2) 鬼魂只在晚上 8 點到清晨 4 點半出現（DAY39.h），靈隱寺是白衣長髮女鬼、和尚公園是灰袍無臉和尚；
+//     半透明、忽明忽暗、衣擺飄動；盯著看時會「瞬移」靠近，太近就消失，過一陣子回到原處。
+//  3) 晚上靠近這兩處會聽到：斷斷續續的收音機雜訊、走音的音樂盒、遠處像廣播的人聲、耳語；和尚公園另有木魚與低沉誦經。
+(function(){
+  const V=window.HAUNT43={ghosts:[],sites:[]};
+  const inPoly=(x,z,P)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if(((a[1]>z)!==(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))c=!c}return c};
+  const grow=(P,d)=>{let cx=0,cz=0;P.forEach(p=>{cx+=p[0];cz+=p[1]});cx/=P.length;cz/=P.length;return P.map(p=>{const dx=p[0]-cx,dz=p[1]-cz,l=Math.hypot(dx,dz)||1;return [p[0]+dx/l*d,p[1]+dz/l*d]})};
+  const rnd=s=>()=>(s=(s*16807)%2147483647)/2147483647;
+  const CLEAR=[[-768,571],[-768.8,586.5],[-778.9,602.4],[-796.2,601.0],[-809.1,588.0],[-809.1,575],[-796,571]],PATH=[[-772,573],[-781.8,585.1],[-796.2,588.0],[-807,580.7]],MEM=[-790,592];
+  function canvasTex(w,h,draw,rep){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);if(rep){t.wrapS=t.wrapT=THREE.RepeatWrapping}t.encoding=THREE.sRGBEncoding;return t}
+  function drape(P,mat,lift,S){S=S||.5;let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;P.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1])});const nx=Math.ceil((x1-x0)/S),nz=Math.ceil((z1-z0)/S),pos=[],uv=[],idx=[],vid=new Map();
+    const V3=(i,j)=>{const k=i*(nz+1)+j;let v=vid.get(k);if(v!==undefined)return v;const x=x0+i*S,z=z0+j*S;v=pos.length/3;pos.push(x,hAt(x,z)+lift,z);uv.push(z/4,x/4);vid.set(k,v);return v};
+    for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){const cx=x0+(i+.5)*S,cz=z0+(j+.5)*S;if(!inPoly(cx,cz,P))continue;const a=V3(i,j),b=V3(i+1,j),d=V3(i,j+1),e=V3(i+1,j+1);idx.push(a,d,b,b,d,e)}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;return m}
+  function ribbon(L,hw,mat,lift){const P=[];for(let i=0;i<L.length-1;i++){const a=L[i],b=L[i+1],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.5));for(let k=0;k<n;k++)P.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n])}P.push(L[L.length-1]);
+    const pos=[],uv=[],idx=[];let d=0;for(let i=0;i<P.length;i++){const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;if(i)d+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);
+      for(const s of[1,-1]){const x=P[i][0]+nx*hw*s,z=P[i][1]+nz*hw*s;pos.push(x,hAt(x,z)+lift,z);uv.push(s>0?0:1,d/1.2)}if(i){const k=(i-1)*2;idx.push(k,k+1,k+2,k+1,k+3,k+2)}}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;return m}
+  // ================= 和尚公園 =================
+  function buildPark(){const grp=new THREE.Group();grp.name='HAUNT43';const R=rnd(4343);const PS=o=>new THREE.MeshStandardMaterial(Object.assign({roughness:.9},o));
+    // 清場
+    const Z=grow(CLEAR,1.5),bb=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3();let nh=0;
+    for(const o of scene.children.slice()){if(o.isLight||o.isCamera||/^(SB|LO33)$/.test(o.name))continue;let p=o,veh=false;while(p){if(p.userData&&(p.userData.tails||p.userData.sd))veh=true;p=p.parent}if(veh)continue;
+      if(o.isInstancedMesh){const m4=new THREE.Matrix4(),Zm=new THREE.Matrix4().makeScale(0,0,0);let ch=false;for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);c.setFromMatrixPosition(m4).applyMatrix4(o.matrixWorld);if(inPoly(c.x,c.z,Z)){o.setMatrixAt(i,Zm);ch=true}}if(ch)o.instanceMatrix.needsUpdate=true;continue}
+      if(!(o.isMesh||o.isGroup))continue;bb.setFromObject(o);if(bb.isEmpty())continue;bb.getSize(sz);if(Math.max(sz.x,sz.z)>14||sz.y>14)continue;bb.getCenter(c);if(inPoly(c.x,c.z,Z)){o.visible=false;nh++}}
+    try{for(const [o] of [...SB.byMesh]){const g=o.geometry;if(!g.boundingSphere){if(window.SLIM34&&SLIM34.isSlim(o))continue;g.computeBoundingSphere()}c.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld);if(g.boundingSphere.radius<8&&inPoly(c.x,c.z,Z)){o.visible=false;nh++}}}catch(e){}
+    try{for(let i=OBC.length-1;i>=0;i--)if(inPoly(OBC[i].x,OBC[i].y,Z))OBC.splice(i,1);for(let i=OBO.length-1;i>=0;i--)if(inPoly(OBO[i].cx,OBO[i].cy,Z))OBO.splice(i,1)}catch(e){}
+    // 碎石空地、步道
+    const dirtT=canvasTex(256,256,(g,w,h)=>{g.fillStyle='#8c7a62';g.fillRect(0,0,w,h);const r=rnd(9);for(let i=0;i<3500;i++){const v=r();g.fillStyle=v<.5?`rgba(60,50,38,${.2+r()*.3})`:`rgba(190,175,150,${.2+r()*.3})`;g.fillRect(r()*w,r()*h,1+r()*3,1+r()*3)}for(let i=0;i<60;i++){g.fillStyle=`rgba(70,90,40,${.2+r()*.3})`;g.beginPath();g.ellipse(r()*w,r()*h,3+r()*10,2+r()*6,r()*3,0,7);g.fill()}},true);
+    const off=u=>({polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:u});
+    grp.add(drape(CLEAR,PS(Object.assign({map:dirtT},off(-4))),.05));
+    const stepT=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#8f8a80';g.fillRect(0,0,w,h);g.fillStyle='#a9a398';for(let y=8;y<h;y+=64)g.fillRect(8,y,w-16,48);const r=rnd(3);for(let i=0;i<400;i++){g.fillStyle=`rgba(50,45,40,${r()*.2})`;g.fillRect(r()*w,r()*h,2,2)}},true);
+    grp.add(ribbon(PATH,.8,PS(Object.assign({map:stepT,side:THREE.DoubleSide},off(-6))),.08));
+    // 紀念碑（黑色花崗石，直書碑文，面向巷子）＋石塔
+    {const [x,z]=MEM,y=hAt(x,z),dx=-772-x,dz=568-z,ry=Math.atan2(dx,dz);
+      const tt=canvasTex(160,512,(g,w,h)=>{g.fillStyle='#1d1f22';g.fillRect(0,0,w,h);g.fillStyle='#c9b98a';g.textAlign='center';g.font='900 54px "Noto Serif TC",serif';'無上和尚紀念'.split('').forEach((ch,i)=>g.fillText(ch,w/2,70+i*72))});
+      const gm=PS({color:'#24262a',roughness:.35}),base=new THREE.Mesh(new THREE.BoxGeometry(2,.5,1.2),PS({color:'#6e6a62'}));base.position.set(x,y+.25,z);base.rotation.y=ry;grp.add(base);
+      const st=new THREE.Mesh(new THREE.BoxGeometry(1.1,2.4,.35),gm);st.position.set(x,y+1.7,z);st.rotation.y=ry;st.castShadow=true;grp.add(st);
+      const f=new THREE.Mesh(new THREE.PlaneGeometry(.9,2.2),new THREE.MeshStandardMaterial({map:tt,roughness:.4}));f.position.set(x,y+1.72,z);f.rotation.y=ry;f.translateZ(.18);grp.add(f);try{addOBB(x,z,Math.atan2(dz,dx)+Math.PI/2,1,.6)}catch(e){}
+      // 石塔（三層）
+      const sx=x-5,sz2=z+4,sy=hAt(sx,sz2),sm=PS({color:'#8d8a82'});let yy=sy;[[1.6,.5],[1.1,.9],[.9,.25],[.75,.8],[.6,.2],[.45,.6]].forEach(([w,h],i)=>{const m=new THREE.Mesh(i%2?new THREE.CylinderGeometry(w*.45,w*.5,h,8):new THREE.BoxGeometry(w,h,w),sm);m.position.set(sx,yy+h/2,sz2);grp.add(m);yy+=h});const tip=new THREE.Mesh(new THREE.ConeGeometry(.22,.6,8),sm);tip.position.set(sx,yy+.3,sz2);grp.add(tip);try{OBC.push({x:sx,y:sz2,r:.9})}catch(e){}}
+    // 石椅、老路燈（其中一盞會閃）
+    const bm=PS({color:'#7d7870'});for(const [x,z,a] of [[-784,597,0.4],[-801,594,-.3],[-803,579,1.4]]){const y=hAt(x,z);for(const o of[-.6,.6]){const l=new THREE.Mesh(new THREE.BoxGeometry(.25,.42,.4),bm);l.position.set(x,y+.21,z);l.rotation.y=a;l.translateX(o);grp.add(l)}const s=new THREE.Mesh(new THREE.BoxGeometry(1.7,.12,.45),bm);s.position.set(x,y+.48,z);s.rotation.y=a;grp.add(s)}
+    const pm=PS({color:'#2f3337',metalness:.5}),lamps=[];for(const [x,z] of [[-776,578],[-799,597],[-806,584]]){const y=hAt(x,z),p=new THREE.Mesh(new THREE.CylinderGeometry(.06,.09,3.6,8),pm);p.position.set(x,y+1.8,z);grp.add(p);const h=new THREE.Mesh(new THREE.SphereGeometry(.2,10,8),new THREE.MeshBasicMaterial({color:'#fff1c0',toneMapped:false}));h.position.set(x,y+3.7,z);grp.add(h);lamps.push(h)}V.lamps=lamps;
+    // 路邊名牌
+    {const x=-775,z=569.5,y=hAt(x,z),t=canvasTex(512,128,(g,w,h)=>{g.fillStyle='#3d3226';g.fillRect(0,0,w,h);g.fillStyle='#efe2c0';g.textAlign='center';g.font='900 60px "Noto Serif TC",serif';g.fillText('無上和尚紀念公園',w/2,86)});
+      const ry=Math.atan2(-1,0)+0,s=new THREE.Mesh(new THREE.BoxGeometry(3.4,.9,.4),PS({color:'#6b645a'}));s.position.set(x,y+.45,z);s.rotation.y=-Math.PI/2;grp.add(s);const f=new THREE.Mesh(new THREE.PlaneGeometry(3.1,.78),new THREE.MeshStandardMaterial({map:t,roughness:.6}));f.position.set(x,y+.5,z);f.rotation.y=-Math.PI/2;f.translateZ(.21);grp.add(f)}
+    // 四周濃密老樹（東、南、北側）
+    {const L=[],REG=[[-760,560],[-760,640],[-830,640],[-830,555]];for(let i=0;i<420&&L.length<60;i++){const x=-830+R()*70,z=560+R()*80;if(!inPoly(x,z,REG)||inPoly(x,z,grow(CLEAR,2.5))||z<568)continue;if(L.some(p=>Math.hypot(p[0]-x,p[1]-z)<4.6))continue;L.push([x,z,9+R()*7])}
+      const tg=new THREE.CylinderGeometry(.2,.4,1,7);tg.translate(0,.5,0);const cg=new THREE.IcosahedronGeometry(1,1);const ti=new THREE.InstancedMesh(tg,PS({color:'#4a3a2a'}),L.length),ci=new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({color:'#ffffff'}),L.length);const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),v=new THREE.Vector3(),s=new THREE.Vector3(),col=new THREE.Color();
+      L.forEach(([x,z,h],i)=>{const y=hAt(x,z);v.set(x,y,z);q.identity();s.set(1,h*.6,1);m4.compose(v,q,s);ti.setMatrixAt(i,m4);e.set(R()*.3,R()*6.3,R()*.3);q.setFromEuler(e);const r=3+R()*2;v.set(x,y+h*.6+r*.5,z);s.set(r,r*.85,r);m4.compose(v,q,s);ci.setMatrixAt(i,m4);col.setHSL(.27+R()*.05,.38,.18+R()*.08);ci.setColorAt(i,col);try{OBC.push({x,y:z,r:.45})}catch(er){}});
+      ti.castShadow=ci.castShadow=true;grp.add(ti,ci);V.trees=L.length}
+    scene.add(grp);grp.updateMatrixWorld(true);
+    try{LAKE.poi.push({name:'無上和尚紀念公園',p:MEM.slice()})}catch(e){}V.park={hidden:nh}}
+  // ================= 鬼魂 =================
+  function texWoman(){return canvasTex(256,512,(g,w,h)=>{g.clearRect(0,0,w,h);const cx=w/2;
+      // 白衣（破爛衣擺）
+      const gr=g.createLinearGradient(0,90,0,h);gr.addColorStop(0,'rgba(226,232,240,.95)');gr.addColorStop(.6,'rgba(200,210,222,.75)');gr.addColorStop(1,'rgba(190,200,215,0)');g.fillStyle=gr;g.beginPath();g.moveTo(cx-40,120);
+      g.bezierCurveTo(cx-70,260,cx-62,380,cx-78,470);for(let i=0;i<=10;i++){const x=cx-78+i*15.6,y=470+(i%2?28:-6)+Math.random()*16;g.lineTo(x,y)}g.bezierCurveTo(cx+62,380,cx+70,260,cx+40,120);g.closePath();g.fill();
+      // 手臂垂下、灰白手
+      g.fillStyle='rgba(205,212,220,.85)';g.beginPath();g.ellipse(cx-56,250,12,70,.12,0,7);g.fill();g.beginPath();g.ellipse(cx+56,250,12,70,-.12,0,7);g.fill();g.fillStyle='rgba(170,180,190,.9)';g.beginPath();g.ellipse(cx-62,322,9,18,.1,0,7);g.fill();g.beginPath();g.ellipse(cx+62,322,9,18,-.1,0,7);g.fill();
+      // 臉（灰白）幾乎被長髮蓋住
+      g.fillStyle='rgba(215,220,226,.95)';g.beginPath();g.ellipse(cx,70,30,38,0,0,7);g.fill();
+      g.fillStyle='rgba(8,8,10,.97)';g.beginPath();g.moveTo(cx-34,48);g.quadraticCurveTo(cx,6,cx+34,48);g.lineTo(cx+46,300);g.lineTo(cx+20,290);g.lineTo(cx+10,96);g.lineTo(cx-10,96);g.lineTo(cx-20,290);g.lineTo(cx-46,300);g.closePath();g.fill();
+      for(let i=0;i<70;i++){g.strokeStyle=`rgba(5,5,8,${.5+Math.random()*.5})`;g.lineWidth=1+Math.random()*2;g.beginPath();const x0=cx-30+Math.random()*60;g.moveTo(x0,40);g.quadraticCurveTo(x0+(Math.random()-.5)*30,160,x0+(Math.random()-.5)*50,200+Math.random()*120);g.stroke()}
+      // 髮縫裡的一隻眼睛
+      g.fillStyle='rgba(235,235,230,.9)';g.beginPath();g.ellipse(cx+5,74,5,3,0,0,7);g.fill();g.fillStyle='rgba(20,0,0,1)';g.beginPath();g.arc(cx+5,74,2,0,7);g.fill()})}
+  function texMonk(){return canvasTex(256,512,(g,w,h)=>{g.clearRect(0,0,w,h);const cx=w/2;
+      const gr=g.createLinearGradient(0,100,0,h);gr.addColorStop(0,'rgba(120,118,112,.95)');gr.addColorStop(.7,'rgba(95,92,88,.7)');gr.addColorStop(1,'rgba(80,78,75,0)');g.fillStyle=gr;
+      g.beginPath();g.moveTo(cx-46,118);g.bezierCurveTo(cx-90,260,cx-84,400,cx-90,480);g.lineTo(cx+90,480);g.bezierCurveTo(cx+84,400,cx+90,260,cx+46,118);g.closePath();g.fill();
+      g.strokeStyle='rgba(60,58,55,.6)';g.lineWidth=3;for(const o of[-30,0,30]){g.beginPath();g.moveTo(cx+o,140);g.lineTo(cx+o*1.6,470);g.stroke()}
+      g.fillStyle='rgba(150,140,128,.9)';g.beginPath();g.ellipse(cx,212,22,30,0,0,7);g.fill();   // 合十的手
+      g.fillStyle='rgba(185,180,172,.96)';g.beginPath();g.ellipse(cx,74,32,40,0,0,7);g.fill();   // 光頭
+      g.fillStyle='rgba(5,5,5,.95)';g.beginPath();g.ellipse(cx-12,76,8,10,0,0,7);g.fill();g.beginPath();g.ellipse(cx+12,76,8,10,0,0,7);g.fill();g.beginPath();g.ellipse(cx,100,6,9,0,0,7);g.fill();   // 空洞的眼與口
+      g.fillStyle='rgba(60,40,30,.7)';for(let i=0;i<9;i++){g.beginPath();g.arc(cx-32+i*8,124+Math.abs(i-4)*2,4,0,7);g.fill()}})}   // 念珠
+  // 身後的冷色光暈（加法混色）：在黑暗裡透出蒼白
+  let GLOW=null;const glowTex=()=>GLOW||(GLOW=canvasTex(128,256,(g,w,h)=>{const gr=g.createRadialGradient(w/2,h*.42,4,w/2,h*.45,w*.62);gr.addColorStop(0,'rgba(170,200,255,.55)');gr.addColorStop(.5,'rgba(120,150,220,.18)');gr.addColorStop(1,'rgba(80,100,180,0)');g.fillStyle=gr;g.fillRect(0,0,w,h)}));
+  function addGhost(x,z,tex,hgt,site){const m=new THREE.Mesh(new THREE.PlaneGeometry(hgt*.5,hgt),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,opacity:0,toneMapped:false,fog:false,side:THREE.DoubleSide}));m.renderOrder=5;m.visible=false;m.userData.noElev=1;scene.add(m);
+    const gl=new THREE.Mesh(new THREE.PlaneGeometry(hgt*1.1,hgt*1.5),new THREE.MeshBasicMaterial({map:glowTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,opacity:.7,toneMapped:false,fog:false}));gl.position.z=-.05;gl.renderOrder=4;m.add(gl);
+    const g={m,home:[x,z],x,z,h:hgt,site,ph:Math.random()*6,blinkT:0,cool:0,state:'idle'};V.ghosts.push(g);return g}
+  const nightK=()=>{const h=window.DAY39?DAY39.h:12;if(h>=20.3||h<4.5)return 1;if(h>=19.5&&h<20.3)return (h-19.5)/.8;if(h>=4.5&&h<5.3)return 1-(h-4.5)/.8;return 0};V.nightK=nightK;
+  const cp=new THREE.Vector3(),fw=new THREE.Vector3();
+  function tick(dt){const k=nightK();try{cam.getWorldPosition(cp);cam.getWorldDirection(fw)}catch(e){return}const T=performance.now()/1000;
+    for(const g of V.ghosts){if(k<=0){g.m.visible=false;continue}
+      const dx=g.x-cp.x,dz=g.z-cp.z,d=Math.hypot(dx,dz);if(g.cool>0){g.cool-=dt;g.m.visible=false;if(g.cool<=0){g.x=g.home[0];g.z=g.home[1]}continue}
+      if(d>85){g.m.visible=false;continue}
+      const look=(fw.x*dx+fw.z*dz)/(d||1);
+      // 太近：消失（伴隨一聲反向耳語）
+      if(d<7){g.cool=18+Math.random()*12;g.m.visible=false;try{V.snd&&V.snd.vanish()}catch(e){}continue}
+      // 盯著看：偶爾瞬移靠近
+      if(g.blinkT>0){g.blinkT-=dt;g.m.visible=false;if(g.blinkT<=0){const s=Math.min(d-9,4+Math.random()*4);if(s>0){g.x-=dx/d*s;g.z-=dz/d*s}}continue}
+      if(look>.88&&d<40&&Math.random()<dt*.25){g.blinkT=.5+Math.random()*.6;continue}
+      const fl=.65+.35*Math.sin(T*7.3+g.ph)*Math.sin(T*2.1+g.ph*2),drop=Math.random()<.015?0:1,near=Math.min(1,(85-d)/30);
+      g.m.visible=true;g.m.material.opacity=k*near*fl*drop*.88;const y=hAt(g.x,g.z)+g.h/2+.1+Math.sin(T*1.1+g.ph)*.12;
+      const jit=Math.random()<.02?(Math.random()-.5)*.35:0;g.m.position.set(g.x+jit,y,g.z);g.m.lookAt(cp.x,y,cp.z);g.m.rotation.z=Math.sin(T*.9+g.ph)*.04}
+    // 路燈閃爍（和尚公園，晚上更嚴重）
+    if(V.lamps)V.lamps.forEach((l,i)=>{const bad=i===1;const off=k>0?(Math.random()<(bad?.25:.04)):(bad&&Math.random()<.03);l.material.color.set(off?'#2a2418':'#fff1c0')});
+    try{V.snd&&V.snd.tick(dt,k)}catch(e){}}
+  // ================= 怪聲 =================
+  function sounds(){const S2={};let N=null,nextRadio=3,nextVoice=8,nextKnock=6,nextWhisper=5,noise=null;
+    const ok=()=>window.AU&&AU.c&&sound;
+    function init(){if(N||!ok())return N;const C=AU.c;N={};N.out=C.createGain();N.out.gain.value=0;N.out.connect(AU.master||C.destination);
+      noise=C.createBuffer(1,C.sampleRate*2,C.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+      // 收音機雜訊（帶通、不規則開關）
+      const s=C.createBufferSource();s.buffer=noise;s.loop=true;const bp=C.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1700;bp.Q.value=.8;N.stG=C.createGain();N.stG.gain.value=0;s.connect(bp);bp.connect(N.stG);N.stG.connect(N.out);s.start();
+      // 誦經低鳴（兩個略為走音的鋸齒波，經母音共振峰）
+      N.ch=C.createGain();N.ch.gain.value=0;const f1=C.createBiquadFilter(),f2=C.createBiquadFilter();f1.type=f2.type='bandpass';f1.frequency.value=520;f2.frequency.value=880;f1.Q.value=f2.Q.value=6;
+      for(const f of[108,108.7]){const o=C.createOscillator();o.type='sawtooth';o.frequency.value=f;o.connect(f1);o.connect(f2);o.start()}f1.connect(N.ch);f2.connect(N.ch);N.ch.connect(N.out);return N}
+    const site=()=>{let best={k:0,name:''};try{for(const s of V.sites){const d=Math.hypot(s.p[0]-cp.x,s.p[1]-cp.z),k=Math.max(0,Math.min(1,(95-d)/60));if(k>best.k)best={k,name:s.name}}}catch(e){}return best};
+    function note(f,t,dur,vol,dest){const C=AU.c,o=C.createOscillator(),g=C.createGain(),vb=C.createOscillator(),vg=C.createGain();o.type='triangle';o.frequency.value=f;vb.frequency.value=5+Math.random()*2;vg.gain.value=f*.012;vb.connect(vg);vg.connect(o.frequency);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0005,t+dur);o.connect(g);g.connect(dest);o.start(t);vb.start(t);o.stop(t+dur+.05);vb.stop(t+dur+.05)}
+    function radioPhrase(){const C=AU.c,t0=C.currentTime+.05,bp=C.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1300;bp.Q.value=1.2;bp.connect(N.out);
+      const scale=[523,587,622,698,784,831,932,1047],n=5+(Math.random()*4|0);let t=t0;for(let i=0;i<n;i++){const f=scale[Math.random()*scale.length|0]*(Math.random()<.5?1:.5)*(1+(Math.random()-.5)*.03),dur=.25+Math.random()*.35;if(Math.random()>.18)note(f,t,dur*1.6,.05,bp);t+=dur}}
+    function voice(){const C=AU.c,t0=C.currentTime+.05,o=C.createOscillator(),f1=C.createBiquadFilter(),f2=C.createBiquadFilter(),g=C.createGain(),bp=C.createBiquadFilter();o.type='sawtooth';const base=130+Math.random()*60;o.frequency.setValueAtTime(base,t0);
+      for(let i=1;i<6;i++)o.frequency.linearRampToValueAtTime(base*(.85+Math.random()*.4),t0+i*.25);f1.type=f2.type='bandpass';f1.Q.value=f2.Q.value=8;f1.frequency.setValueAtTime(700,t0);f2.frequency.setValueAtTime(1150,t0);for(let i=1;i<6;i++){f1.frequency.linearRampToValueAtTime(400+Math.random()*600,t0+i*.25);f2.frequency.linearRampToValueAtTime(900+Math.random()*1300,t0+i*.25)}
+      bp.type='bandpass';bp.frequency.value=1400;bp.Q.value=1;g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.09,t0+.1);g.gain.setValueAtTime(.09,t0+1.2);g.gain.linearRampToValueAtTime(0,t0+1.5);o.connect(f1);o.connect(f2);f1.connect(g);f2.connect(g);g.connect(bp);bp.connect(N.out);o.start(t0);o.stop(t0+1.6)}
+    function whisper(){const C=AU.c,t0=C.currentTime+.02,s=C.createBufferSource();s.buffer=noise;const hp=C.createBiquadFilter();hp.type='highpass';hp.frequency.value=2800;const g=C.createGain(),pan=C.createStereoPanner?C.createStereoPanner():null;
+      g.gain.setValueAtTime(0,t0);for(let i=0;i<8;i++)g.gain.linearRampToValueAtTime(Math.random()*.12,t0+.15+i*.17);g.gain.linearRampToValueAtTime(0,t0+1.6);s.connect(hp);hp.connect(g);if(pan){pan.pan.value=Math.random()<.5?-.9:.9;g.connect(pan);pan.connect(N.out)}else g.connect(N.out);s.start(t0,Math.random());s.stop(t0+1.7)}
+    function knock(){const C=AU.c,t0=C.currentTime+.05,n=6+(Math.random()*5|0);for(let i=0;i<n;i++){const t=t0+i*.55,s=C.createBufferSource();s.buffer=noise;const bp=C.createBiquadFilter();bp.type='bandpass';bp.frequency.value=650;bp.Q.value=9;const g=C.createGain();g.gain.setValueAtTime(.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);s.connect(bp);bp.connect(g);g.connect(N.out);s.start(t,Math.random());s.stop(t+.15)}}
+    S2.vanish=()=>{if(!ok()||!init())return;const C=AU.c,t0=C.currentTime,s=C.createBufferSource();s.buffer=noise;const bp=C.createBiquadFilter();bp.type='bandpass';bp.frequency.setValueAtTime(400,t0);bp.frequency.exponentialRampToValueAtTime(4000,t0+.7);bp.Q.value=3;const g=C.createGain();g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.5,t0+.6);g.gain.linearRampToValueAtTime(0,t0+.75);s.connect(bp);bp.connect(g);g.connect(AU.master||C.destination);s.start(t0);s.stop(t0+.8)};
+    S2.tick=(dt,k)=>{if(!ok())return;if(!init())return;const C=AU.c,t=C.currentTime,st=site(),lvl=k*st.k;let inCab=false;try{inCab=!WALK.on&&camMode==='driver'}catch(e){}
+      N.out.gain.setTargetAtTime(lvl*(inCab?.6:1),t,.5);if(lvl<=.01)return;
+      N.stG.gain.setTargetAtTime(Math.random()<.55?.05+Math.random()*.08:0,t,.03);
+      const monk=/和尚/.test(st.name);N.ch.gain.setTargetAtTime(monk?.05+.04*Math.sin(t*.4):0,t,.8);
+      nextRadio-=dt;nextVoice-=dt;nextKnock-=dt;nextWhisper-=dt;
+      if(nextRadio<=0){nextRadio=7+Math.random()*9;radioPhrase()}if(nextVoice<=0){nextVoice=10+Math.random()*14;voice()}if(nextWhisper<=0){nextWhisper=6+Math.random()*10;whisper()}if(monk&&nextKnock<=0){nextKnock=14+Math.random()*10;knock()}};
+    return S2}
+  // ================= 啟動 =================
+  function start(){if(V.started)return;V.started=true;
+    // 舊的「傳說鬧鬼」小公園：改成一般公園，拿掉舊鬼魂與舊的低鳴
+    try{(LAKE.ghosts||[]).forEach(g=>{if(g.m){g.m.visible=false;g.m.material.opacity=0}});LAKE.ghosts.length=0;LAKE.poi.forEach(o=>{if(/傳說鬧鬼/.test(o.name))o.name='湖畔小公園'})}catch(e){}
+    try{buildPark()}catch(e){console.error('HAUNT43 park',e)}
+    const wt=texWoman(),mt=texMonk(),tc=(window.LAKE&&LAKE.temple)||[-871,765];
+    V.sites=[{name:'靈隱寺',p:[tc[0]+8,tc[1]+20]},{name:'無上和尚紀念公園',p:MEM}];
+    for(const [x,z] of [[tc[0]+14,tc[1]+30],[tc[0]-14,tc[1]+18],[tc[0]+26,tc[1]+4]])addGhost(x,z,wt,2.1,'temple');
+    for(const [x,z] of [[-792,597],[-803,583],[-781,595]])addGhost(x,z,mt,2.0,'monk');
+    V.snd=sounds();
+    if(typeof updateWorld==='function'){const _uw=updateWorld;updateWorld=function(dt){_uw.apply(this,arguments);try{tick(dt||.016)}catch(e){}}}
+    console.log('[haunt43]',JSON.stringify({ghosts:V.ghosts.length,park:V.park,trees:V.trees}))}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.TEMPLE43||!TEMPLE43.done)return;clearInterval(t);try{start()}catch(e){console.error('HAUNT43',e)}},400);
+})();
+
 </script>
 </body>
 </html>
