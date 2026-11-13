@@ -9329,7 +9329,7 @@ var CAFE56=(function(){
     const G=new THREE.Group();G.position.set(fx,0,fz);G.rotation.y=Math.atan2(-nx,-nz);G.name='CAFE56';G.userData.keep=1;
     // 區域 +x 的世界方向；轉角（地下道坡道）要在左邊（-x），不是的話左右對調
     const lx=[Math.cos(G.rotation.y),-Math.sin(G.rotation.y)];let SX=1;try{const U=window.CITY55&&CITY55.U&&CITY55.U[0];if(U){let rc=null,bd=1e9;for(const rp of U.ramps)for(const p of rp.P){const d=Math.hypot(p[0]-fx,p[1]-fz);if(d<bd){bd=d;rc=p}}if(rc&&(rc[0]-fx)*lx[0]+(rc[1]-fz)*lx[1]>0)SX=-1}}catch(e){}
-    const C=[[fx-ux*W/2,fz-uz*W/2],[fx+ux*W/2,fz+uz*W/2],[fx+ux*W/2+nx*(D+PORCH),fz+uz*W/2+nz*(D+PORCH)],[fx-ux*W/2+nx*(D+PORCH),fz-uz*W/2+nz*(D+PORCH)]];mark(C);
+    G.updateMatrixWorld(true);const C=[[-W/2-5,0],[W/2,0],[W/2,-(D+PORCH)],[-W/2-5,-(D+PORCH)]].map(([x,z])=>{const v=new THREE.Vector3(x*SX,0,z).applyMatrix4(G.matrixWorld);return[v.x,v.z]});mark(C);
     const add=(geo,mat,x,y,z,ry,rx)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x*SX,y,z);if(ry)m.rotation.y=ry*SX;if(rx)m.rotation.x=rx;m.userData.keep=1;m.castShadow=true;m.receiveShadow=true;G.add(m);return m};
     const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d),CY=(r,h,s,r2)=>new THREE.CylinderGeometry(r,r2==null?r:r2,h,s||10),SP=(r)=>new THREE.SphereGeometry(r,10,8);
     // ---- 材質 ----
@@ -9343,83 +9343,109 @@ var CAFE56=(function(){
     const steel=M('#4a4f54'),beamW=M('#5a3a24'),doorW=M('#b48a5a'),conc=M('#a9a59d'),glass=new THREE.MeshLambertMaterial({color:'#a7bcc4',transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false});
     const white=M('#f2efe8'),dark=M('#2a1d14'),woodT=M('#7a4f2c'),orange=M('#b8612a'),chrome=M('#c9cdd1'),black=M('#1c1c1e'),grayPot=M('#8a8d90'),terra=M('#a0603a'),leaf=M('#3f6a35'),leaf2=M('#5c8c3e'),plaster=M('#e8e2d6');
     const lampOn=new THREE.MeshBasicMaterial({color:'#ffcf8a'}),coneW=M('#e8e6e0');
-    // ===== 第 59 次：照照片比例重排（使用者：門在建物右方、店內小一點、桌子近一點、有小閣樓、要能走進去） =====
-    //  區域座標：x 沿店面（-x＝左＝地下道轉角那頭，+x＝右），+z 朝馬路，建物在 -z。正面牆在 z = -PORCH。
-    //  正面由左到右：木格柵 1.2 m → 三片大窗（到 x = +2.6）→ 木格柵 0.7 m → 門（淺木色，x 3.3～4.65）→ 招牌木格柵（燈箱）→ 右端木牆。
-    // ---- 外：簷廊地坪、鋼柱、簷廊天花、屋頂 ----
-    add(B(W,.12,PORCH+.2),conc,0,.06,-PORCH/2);
-    for(let k=0;k<=4;k++)add(B(.12,WH,.12),steel,-W/2+.2+k*(W-.4)/4,WH/2,-.15);add(B(W,.18,.16),steel,0,WH-.05,-.15);
-    add(B(W,.04,PORCH),cor,0,WH-.02,-PORCH/2);for(let k=0;k<8;k++)add(B(.12,.14,PORCH),beamW,-W/2+.8+k*(W-1.6)/7,WH-.12,-PORCH/2);
-    {const ov=.6,depth=D+PORCH+ov,rh=1.2,s=Math.hypot(depth,rh);const r=add(B(W+.8,.06,s),roofM,0,WH+.12+rh/2,-depth/2+ov);r.rotation.x=Math.atan2(rh,depth);
-      const cw=4.2,cx=-W/2+2.8;add(B(cw,1.2,2.8),woodW,cx,WH+1.4,-PORCH-2.6);const cr=add(B(cw+.4,.08,3.4),M('#ffffff',{map:plankT}),cx,WH+2.1,-PORCH-2.6);cr.rotation.x=.28;add(B(cw-.4,.45,.06),glass,cx,WH+1.45,-PORCH-1.18)}
+    // ===== 第 60 次：照使用者第二批 20 張照片重排 =====
+    //  區域座標：x 沿店面（-x＝左＝地下道轉角那頭），+z 朝馬路，正面牆 z = -PORCH。室內（圍起來的部分）x -7.5～+7.5；
+    //  轉角那頭（x -12.5～-7.5）是開放的有頂走廊：鐵架放盆栽、上方抬高的木板天窗屋頂。
+    //  正面由左到右：四片深色木框大窗（粗木柱分隔，窗外長木椅）→ 淺木色門（x 5.0～6.35，門框貼春聯）→ 木格柵（白燈箱招牌、紅色斗方「春」）→ 右端。
+    const OPEN=5,XL=-W/2-OPEN;
+    // ---- 簷廊地坪、鋼柱、天花、屋頂（涵蓋開放走廊）----
+    add(B(W+OPEN,.12,PORCH+.2),conc,-OPEN/2,.06,-PORCH/2);add(B(OPEN,.12,D),conc,-W/2-OPEN/2,.06,zf0()-D/2);
+    for(let k=0;k<=5;k++)add(B(.13,WH,.13),M('#c9ccc9'),XL+.3+k*(W+OPEN-.6)/5,WH/2,-.15);add(B(W+OPEN,.2,.18),M('#a9aca9'),-OPEN/2,WH-.05,-.15);
+    add(B(W+OPEN,.04,PORCH),cor,-OPEN/2,WH-.02,-PORCH/2);for(let k=0;k<11;k++)add(B(.12,.14,PORCH),beamW,XL+.8+k*(W+OPEN-1.6)/10,WH-.12,-PORCH/2);
+    add(B(OPEN,.04,D),cor,-W/2-OPEN/2,WH-.02,zf0()-D/2);for(let k=0;k<4;k++)add(B(.12,.14,D),beamW,XL+.6+k*(OPEN-1.2)/3,WH-.12,zf0()-D/2);
+    {const ov=.6,depth=D+PORCH+ov,rh=1.1,s=Math.hypot(depth,rh);const r=add(B(W+OPEN+.8,.06,s),roofM,-OPEN/2,WH+.12+rh/2,-depth/2+ov);r.rotation.x=Math.atan2(rh,depth);
+      // 轉角上方抬高的木板天窗屋頂（照片左上那塊斜木板）
+      const cw=5.2,cx=XL+2.9;add(B(cw,1.0,3.2),woodW,cx,WH+1.3,-PORCH-1.6);const cr=add(B(cw+.4,.08,3.8),M('#ffffff',{map:plankT}),cx,WH+2.05,-PORCH-1.4);cr.rotation.x=-.32}
+    function zf0(){return -PORCH}
     const zf=-PORCH;
+    // 開放走廊：鐵架盆栽、地上盆栽
+    for(const x of[XL+.6,XL+1.6]){for(let k=0;k<4;k++){add(B(.9,.04,.45),M('#d8d8d4'),x,.5+k*.45,zf-.6);for(let i=0;i<2;i++){add(CY(.11,.16,8,.09),terra,x-.2+i*.4,.6+k*.45,zf-.6);add(new THREE.IcosahedronGeometry(.14,0),leaf2,x-.2+i*.4,.75+k*.45,zf-.6)}}for(const dx of[-.42,.42])add(B(.04,2.0,.04),M('#c9ccc9'),x+dx,1.0,zf-.6)}
+    for(let i=0;i<5;i++)add(CY(.2,.4,10,.17),i%2?grayPot:terra,XL+.6+i*.9,.26,zf-2.2);
     const panel=(x0,x1,mat)=>add(B(x1-x0,WH,.14),mat,(x0+x1)/2,WH/2,zf);
-    const win=(x0,x1,sill)=>{add(B(x1-x0,sill,.16),woodW,(x0+x1)/2,sill/2,zf);add(B(x1-x0,WH-sill-.15,.04),glass,(x0+x1)/2,sill+(WH-sill-.15)/2,zf);add(B(x1-x0,.16,.2),dark,(x0+x1)/2,WH-.08,zf);add(B(x1-x0,.1,.22),dark,(x0+x1)/2,sill,zf);for(const x of[x0,x1])add(B(.14,WH,.2),dark,x,WH/2,zf)};
-    const DX0=3.3,DX1=4.65,DC=(DX0+DX1)/2;
-    panel(-W/2,-W/2+1.2,slat);win(-W/2+1.2,-W/2+4.3,.45);win(-W/2+4.3,-W/2+7.4,.45);win(-W/2+7.4,2.6,.45);panel(2.6,DX0,slat);
-    {add(B(DX1-DX0,.2,.18),doorW,DC,2.45,zf);for(const x of[DX0+.08,DX1-.08])add(B(.12,2.5,.12),doorW,x,1.25,zf+.02);add(B(1.2,.12,.1),doorW,DC,1.0,zf+.02);
-      add(B(1.15,1.35,.03),glass,DC,1.72,zf+.02);add(B(1.15,.85,.03),M('#9aa3a8',{transparent:true,opacity:.55}),DC,.52,zf+.02);add(B(DX1-DX0,WH-2.55,.14),woodW,DC,2.55+(WH-2.55)/2,zf);
-      const matT=cv(128,64,(g,w,h)=>{g.fillStyle='#c9ab76';g.fillRect(0,0,w,h);g.strokeStyle='#8a6a3a';g.lineWidth=3;g.strokeRect(10,8,w-20,h-16);g.fillStyle='#7a5a2a';g.font='bold 12px serif';g.textAlign='center';g.fillText('WELCOME',w/2,h/2+4)});add(B(1.3,.02,.75),M('#ffffff',{map:matT}),DC,.13,zf+.55);V.matPos=[DC*SX,zf+.55]}
-    panel(DX1,6.3,slat);panel(6.3,W/2,woodW);
+    // 窗：深色木框、粗木柱（0.3 m）、窗台高 0.45、窗上木板
+    const win=(x0,x1)=>{add(B(x1-x0,.45,.16),woodW,(x0+x1)/2,.225,zf);add(B(x1-x0,WH-.45-.55,.04),glass,(x0+x1)/2,.45+(WH-1)/2,zf);add(B(x1-x0,.55,.16),woodW,(x0+x1)/2,WH-.275,zf);add(B(x1-x0,.1,.22),dark,(x0+x1)/2,.45,zf);add(B(x1-x0,.1,.22),dark,(x0+x1)/2,WH-.55,zf)};
+    const posts=[-7.5,-4.3,-1.1,2.0,4.95];for(let i=0;i<posts.length;i++)add(B(.32,WH,.32),M('#3a2a1e'),posts[i]+(i?0:.16),WH/2,zf);for(let i=0;i<posts.length-1;i++)win(posts[i]+.16,posts[i+1]-.16);
+    const DX0=5.1,DX1=6.45,DC=(DX0+DX1)/2;
+    {add(B(DX1-DX0+.1,.2,.18),doorW,DC,2.45,zf);for(const x of[DX0+.07,DX1-.07])add(B(.12,2.5,.12),doorW,x,1.25,zf+.02);add(B(1.2,.12,.1),doorW,DC,.75,zf+.02);add(B(1.2,.1,.1),doorW,DC,.05,zf+.02);
+      add(B(1.15,1.6,.03),glass,DC,1.6,zf+.02);add(B(1.15,.62,.03),M('#9aa3a8',{transparent:true,opacity:.55}),DC,.42,zf+.02);add(B(DX1-DX0,WH-2.55,.14),woodW,DC,2.55+(WH-2.55)/2,zf);
+      // 春聯（門框兩側、上方橫批）
+      const red=M('#c62a22');for(const x of[DX0-.02,DX1+.02])add(B(.14,1.05,.02),red,x,1.7,zf+.1);add(B(.9,.18,.02),red,DC,2.36,zf+.1);
+      const matT=cv(128,64,(g,w,h)=>{g.fillStyle='#b89a66';g.fillRect(0,0,w,h);g.strokeStyle='#7a5a2a';g.lineWidth=3;g.strokeRect(10,8,w-20,h-16);for(let i=0;i<3;i++){g.fillStyle='#6a4a22';g.fillRect(24+i*30,24,18,16)}});add(B(1.25,.02,.72),M('#ffffff',{map:matT}),DC,.13,zf+.5);V.matPos=[DC*SX,zf+.5]}
+    panel(DX1,W/2,slat);
     {const t=cv(320,320,(g,w,h)=>{g.fillStyle='#f6f4ef';g.fillRect(0,0,w,h);g.fillStyle='#d42a2a';g.font='600 52px "Helvetica Neue",Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('Café',w/2,62);
         g.fillStyle='#111';g.font='400 66px "BiauKai","DFKai-SB","Kaiti TC","KaiTi","Songti TC",serif';g.fillText(GAME_NAMES.cafe,w/2,172);g.fillStyle='#d42a2a';g.font='italic 20px Georgia,"Times New Roman",serif';g.fillText('In The Shadow Of Gleam',w/2,224)});
-      const sm=M('#ffffff',{map:t,emissive:'#ffffff',emissiveMap:t,emissiveIntensity:.25});V.sign=sm;add(B(1.05,1.05,.12),M('#3a2a1e'),5.5,2.0,zf+.12);add(new THREE.PlaneGeometry(1.0,1.0),sm,5.5,2.0,zf+.19)}
-    add(B(.14,WH,D),woodW,-W/2,WH/2,zf-D/2);add(B(.14,WH,D),woodW,W/2,WH/2,zf-D/2);add(B(W,WH+1.2,.14),woodW,0,(WH+1.2)/2,zf-D);
-    for(let k=0;k<4;k++){const x=-W/2+2+k*(W-4)/3;add(CY(.01,.4,4),black,x,WH-.25,-PORCH/2);add(CY(.04,.32,12,.3),coneW,x,WH-.6,-PORCH/2);add(SP(.08),lampOn,x,WH-.72,-PORCH/2)}
-    add(B(2.6,.07,.42),woodT,-W/2+3,.48,zf+.4);add(B(2.6,.4,.06),woodT,-W/2+3,.78,zf+.15);for(const x of[-W/2+1.9,-W/2+4.1])add(B(.08,.45,.38),dark,x,.23,zf+.4);
-    add(CY(.32,.04,16),woodT,1.6,.75,zf+.55);add(CY(.04,.73,6),black,1.6,.38,zf+.55);add(CY(.22,.03,12),black,1.6,.02,zf+.55);
-    add(B(.42,.04,.42),M('#7a4a3a'),6.6,.47,zf+.5);add(B(.42,.5,.03),M('#7a4a3a'),6.6,.72,zf+.29);
-    for(let x=-W/2+.4;x<W/2-.2;x+=.62){if(Math.abs(x-DC)<1.0)continue;const big=rnd()<.45,gp=rnd()<.6,r=big?.26:.18,h=big?.55:.32,z=-.05+rnd()*.25;
+      const sm=M('#ffffff',{map:t,emissive:'#ffffff',emissiveMap:t,emissiveIntensity:.25});V.sign=sm;const sx=(DX1+W/2)/2;add(B(.85,.85,.1),M('#3a2a1e'),sx,2.15,zf+.12);add(new THREE.PlaneGeometry(.8,.8),sm,sx,2.15,zf+.18);
+      const dia=add(new THREE.PlaneGeometry(.38,.38),M('#c62a22'),sx,1.35,zf+.09);dia.rotation.z=Math.PI/4}
+    add(B(.14,WH,D),woodW,-W/2,WH/2,zf-D/2);add(B(.14,WH,D),woodW,W/2,WH/2,zf-D/2);add(B(W,WH+1.1,.14),woodW,0,(WH+1.1)/2,zf-D);
+    // 簷廊：白色圓錐吊燈、窗外長木椅（有靠背）、門邊小圓桌、門右鐵椅＋小凳＋大盆琴葉榕
+    for(let k=0;k<6;k++){const x=XL+1.5+k*(W+OPEN-3)/5;add(CY(.01,.45,4),black,x,WH-.25,-PORCH/2);add(CY(.05,.3,14,.24),coneW,x,WH-.62,-PORCH/2);add(SP(.07),lampOn,x,WH-.74,-PORCH/2)}
+    {const x0=-6.8,x1=1.5;add(B(x1-x0,.08,.44),woodT,(x0+x1)/2,.46,zf+.42);add(B(x1-x0,.36,.06),woodT,(x0+x1)/2,.82,zf+.2);add(B(x1-x0,.06,.08),woodT,(x0+x1)/2,1.02,zf+.2);for(const x of[x0+.1,(x0+x1)/2,x1-.1]){add(B(.08,.46,.4),woodT,x,.23,zf+.42);add(B(.08,.6,.06),woodT,x,.75,zf+.2)}}
+    add(CY(.3,.04,16),woodT,3.9,.75,zf+.5);add(CY(.04,.73,6),black,3.9,.38,zf+.5);add(CY(.22,.03,12),black,3.9,.02,zf+.5);
+    add(B(.4,.04,.4),M('#6a4a3a'),6.85,.47,zf+.4);add(B(.4,.5,.03),M('#6a4a3a'),6.85,.72,zf+.21);for(const dx of[-.18,.18])for(const dz of[-.18,.18])add(B(.03,.47,.03),M('#4a3a2e'),6.85+dx,.23,zf+.4+dz);
+    add(CY(.18,.45,10),M('#4a3a2e'),7.35,.23,zf+.5);add(CY(.35,.6,12,.3),M('#2b2b2b'),8,.3,zf+.45);add(CY(.04,1.2,6),M('#5a4630'),8,1.2,zf+.45);for(let i=0;i<6;i++)add(new THREE.IcosahedronGeometry(.32,0),leaf,8+Math.cos(i)*.3,1.3+i*.22,zf+.45+Math.sin(i)*.3);
+    // 沿路盆栽（墊鏤空水泥磚），門口、椅子前留通道
+    for(let x=XL+.4;x<W/2+1.2;x+=.62){if(Math.abs(x-DC)<1.0||(x>-7&&x<1.6))continue;const big=rnd()<.5,gp=rnd()<.6,r=big?.26:.18,h=big?.55:.32,z=-.05+rnd()*.25;
       add(B(.4,.12,.4),conc,x,.06,z);add(CY(r,h,10,r*.85),gp?grayPot:terra,x,.12+h/2,z);if(big){add(CY(.03,.6,5),M('#5a4630'),x,.12+h+.3,z);add(new THREE.IcosahedronGeometry(.42,0),rnd()<.5?leaf:leaf2,x,.12+h+.75,z)}else add(new THREE.IcosahedronGeometry(.28,0),rnd()<.5?leaf:leaf2,x,.12+h+.18,z)}
-    // ---- 室內（約 15 × 8.5 m） ----
+    for(let x=-6.6;x<1.4;x+=1.3){add(B(.4,.12,.4),conc,x,.06,.05);add(CY(.24,.5,10,.2),grayPot,x,.37,.05);add(CY(.03,.5,5),M('#5a4630'),x,.85,.05);add(new THREE.IcosahedronGeometry(.36,0),leaf2,x,1.2,.05)}
+    // ---- 室內 ----
     const zi0=zf-.1,zi1=zf-D+.1,zc=(zi0+zi1)/2,DI=zi0-zi1;add(B(W-.3,.03,DI),floorM,0,.04,zc);
-    add(B(W-.3,.04,DI),corIn,0,WH+.05,zc);for(let k=0;k<7;k++)add(B(.12,.14,DI),beamW,-W/2+1+k*(W-2)/6,WH-.05,zc);for(let k=0;k<3;k++)add(B(W-.3,.16,.12),steel,0,WH-.15,zi0-1-k*(DI-2)/2);for(const x of[-1.5,3])add(B(.16,WH,.16),steel,x,WH/2,zc);
-    {const t=cv(512,64,(g,w,h)=>{g.fillStyle='#c22a22';g.fillRect(0,0,w,h);g.fillStyle='#111';g.font='700 40px "BiauKai","DFKai-SB","Kaiti TC",serif';g.textAlign='center';g.textBaseline='middle';g.fillText('建 立 鴻 圖 大 振 興',w/2,h/2)});add(B(W-.4,1.1,.05),M('#ffffff',{map:cv(128,64,(g,w,h)=>{for(let x=0;x<w;x+=12){g.fillStyle=['#9a5a2a','#a8652f','#8f5226'][x/12%3];g.fillRect(x,0,11,h)}},[8,1])}),0,WH+.6,zi1+.12);add(new THREE.PlaneGeometry(2.6,.34),M('#ffffff',{map:t}),0,WH+.6,zi1+.16)}
-    // 後方左側小閣樓（鋼桁架、鋼梯木踏板沿左牆）
-    {const mx0=-W/2+.2,mx1=-W/2+4.6,mz0=zi1+.1,mz1=zi1+2.6,my=2.35;add(B(mx1-mx0,.12,mz1-mz0),steel,(mx0+mx1)/2,my,(mz0+mz1)/2);add(B(mx1-mx0,.06,.06),steel,(mx0+mx1)/2,my+.9,mz1);
+    add(B(W-.3,.04,DI),corIn,0,WH+.05,zc);for(let k=0;k<7;k++)add(B(.12,.14,DI),beamW,-W/2+1+k*(W-2)/6,WH-.05,zc);for(let k=0;k<3;k++)add(B(W-.3,.16,.12),steel,0,WH-.15,zi0-1-k*(DI-2)/2);for(const x of[-2.5,2.6])add(B(.16,WH,.16),steel,x,WH/2,zc+.6);
+    // 門那頭：小閣樓（鋼桁架欄杆）、鋼梯（木踏板，沿右牆往後上）、飲料冰箱、海報
+    {const mx0=2.9,mx1=W/2-.2,mz0=zi1+.1,mz1=zi1+3.0,my=2.4;add(B(mx1-mx0,.12,mz1-mz0),steel,(mx0+mx1)/2,my,(mz0+mz1)/2);add(B(mx1-mx0,.06,.06),steel,(mx0+mx1)/2,my+.9,mz1);
       for(let k=0;k<8;k++){const x=mx0+k*(mx1-mx0)/7;add(B(.04,.9,.04),steel,x,my+.45,mz1);if(k<7){const d=add(B(.03,1.0,.03),steel,x+(mx1-mx0)/14,my+.45,mz1);d.rotation.z=.55}}
-      add(B(.14,my,.14),steel,mx1-.1,my/2,mz1-.1);
-      for(let i=0;i<10;i++){const t=i/9;add(B(.8,.05,.26),woodT,mx0+.5,.2+t*(my-.2),mz1+.4+(1-t)*2.6)}add(B(.06,my+1,.06),steel,mx0+.95,(my+1)/2,mz1+1.5);
-      // 閣樓上：小桌、紙箱、櫃子
-      add(B(.7,.05,.6),woodT,mx0+2.2,my+.75,(mz0+mz1)/2);add(B(.5,.4,.4),M('#b89a6a'),mx0+.6,my+.26,mz0+.4);add(B(1.2,1.2,.4),dark,mx0+3.5,my+.66,mz0+.3);
-      add(B(mx1-mx0,my,.06),plaster,(mx0+mx1)/2,my/2,zi1+.08);{const t=cv(128,180,(g,w,h)=>{g.fillStyle='#f3efe4';g.fillRect(0,0,w,h);g.fillStyle='#e0a83a';g.fillRect(20,60,90,70);g.fillStyle='#7ab0a0';g.fillRect(0,130,w,50);g.fillStyle='#222';g.font='bold 16px serif';g.fillText('BEACH',12,24);g.fillText('HOUSE',12,42)});add(new THREE.PlaneGeometry(.65,.9),M('#ffffff',{map:t}),mx0+1.0,1.55,zi1+.12)}
-      add(B(.65,1.85,.55),M('#dfe6ea'),mx1-.5,.93,zi1+.4);add(B(.55,1.55,.02),M('#bfe4f2',{emissive:'#9fd8ff',emissiveIntensity:.35}),mx1-.5,1.0,zi1+.68)}
-    // 吧台：後方中右，與後牆平行（白檯面、深色木格櫃、黃磨豆機、招財貓），後牆黑馬賽克＋木層架
-    const bx0=-1.6,bx1=W/2-1.2,bz=zi1+2.1,bc=(bx0+bx1)/2,bw=bx1-bx0;
-    {add(B(bw,1.0,.55),dark,bc,.5,bz);add(B(bw+.1,.05,.65),white,bc,1.03,bz);for(let k=0;k<5;k++)add(B(.04,.9,.04),M('#4a3424'),bx0+.4+k*(bw-.8)/4,.5,bz+.29);add(B(.28,.28,.2),M('#e0b030'),bx0+.8,.6,bz+.2);
-      {const cat=new THREE.Group();cat.position.set((bx0+2.6)*SX,.45,bz+.2);const wh=M('#f4f1ea');const b1=new THREE.Mesh(B(.2,.26,.18),wh);b1.position.y=.13;cat.add(b1);const h1=new THREE.Mesh(SP(.11),wh);h1.position.y=.34;cat.add(h1);const pw=new THREE.Mesh(B(.05,.14,.05),wh);pw.position.set(.08,.4,.05);cat.add(pw);const cl=new THREE.Mesh(B(.21,.03,.02),M('#c22a22'));cl.position.set(0,.25,.09);cat.add(cl);cat.traverse(o=>o.userData.keep=1);G.add(cat)}
-      for(let i=0;i<4;i++)add(CY(.05,.08,8),white,bx0+3.6+i*.18,.52,bz+.2);
-      add(B(bw,2.0,.06),tile,bc,2.05,zi1+.12);for(let k=0;k<2;k++){add(B(bw,.04,.28),woodT,bc,1.6+k*.7,zi1+.28);for(let i=0;i<14;i++)add(CY(.04,.16+(i%3)*.06,6),M(['#2a6a3a','#c9b28a','#7a2f2a','#e8dcc0','#2b4a7a','#d0a040'][(i+k)%6]),bx0+.3+i*(bw-.6)/13,1.7+k*.7,zi1+.28)}
-      add(B(.75,.55,.55),M('#c9cdd1'),bx1-1,1.33,bz-.05);add(B(.7,.1,.5),black,bx1-1,1.65,bz-.05);add(B(.5,.9,.3),M('#8a8f93'),bc-.4,1.5,zi1+.4);for(let i=0;i<3;i++)add(SP(.08),glass,bc-.55+i*.15,1.75,zi1+.48);
-      for(const x of[bc-1.4,bc+1.4]){add(CY(.01,.6,4),black,x,WH-.3,bz);add(CY(.06,.22,12,.24),M('#b8763a'),x,WH-.7,bz);add(SP(.07),lampOn,x,WH-.78,bz)}
-      try{if(typeof makeHuman==='function'){const H1=makeHuman('#2b2b2b','#3a3a3a','#1d1b1a',{});H1.g.position.set((bc+1)*SX,0,bz-.7);G.add(H1.g);const H2=makeHuman('#d8cfbe','#4a3a2a','#2b2b2b',{});H2.g.position.set((bc-1.3)*SX,0,bz-.7);G.add(H2.g);
+      add(B(.14,my,.14),steel,mx0+.1,my/2,mz1-.1);
+      for(let i=0;i<10;i++){const t=i/9;add(B(.85,.05,.26),woodT,mx1-.5,.2+t*(my-.2),mz1+.4+(1-t)*2.6)}add(B(.06,my+1,.06),steel,mx1-.95,(my+1)/2,mz1+1.5);
+      add(B(.7,.05,.6),woodT,mx0+1.6,my+.75,(mz0+mz1)/2);add(B(.5,.4,.4),M('#b89a6a'),mx0+.5,my+.26,mz0+.4);add(B(1.0,1.1,.4),dark,mx1-.8,my+.6,mz0+.3);
+      add(B(mx1-mx0,my,.06),plaster,(mx0+mx1)/2,my/2,zi1+.08);
+      const post=(x,c1,c2)=>{const t=cv(128,180,(g,w,h)=>{g.fillStyle='#eef0ea';g.fillRect(0,0,w,h);g.fillStyle=c1;g.fillRect(16,40,96,90);g.fillStyle=c2;g.beginPath();g.arc(64,85,30,0,7);g.fill()});add(new THREE.PlaneGeometry(.55,.75),M('#ffffff',{map:t}),x,1.6,zi1+.12)};post(mx0+.6,'#8ab4d8','#2b5a8a');post(mx0+1.3,'#e8c48a','#e0a83a');
+      add(B(.65,1.85,.55),M('#dfe6ea'),mx0+2.4,.93,zi1+.4);add(B(.55,1.55,.02),M('#bfe4f2',{emissive:'#9fd8ff',emissiveIntensity:.35}),mx0+2.4,1.0,zi1+.68)}
+    // 正面上方：鋼桁架＋山牆木板＋紅布條（從店內看在窗上方）
+    {add(B(W-.4,.08,.08),steel,0,WH-.6,zf-.4);for(let k=0;k<20;k++){const x=-W/2+.4+k*(W-.8)/19;const d=add(B(.03,.55,.03),steel,x,WH-.33,zf-.4);d.rotation.z=k%2?.6:-.6}
+      const t=cv(512,64,(g,w,h)=>{g.fillStyle='#c22a22';g.fillRect(0,0,w,h);g.fillStyle='#111';g.font='700 40px "BiauKai","DFKai-SB","Kaiti TC",serif';g.textAlign='center';g.textBaseline='middle';g.fillText('建 立 鴻 圖 大 振 興',w/2,h/2)});
+      const gab=add(B(W-.4,1.1,.05),M('#ffffff',{map:cv(128,64,(g,w,h)=>{for(let x=0;x<w;x+=12){g.fillStyle=['#9a5a2a','#a8652f','#8f5226'][x/12%3];g.fillRect(x,0,11,h)}},[8,1])}),0,WH+.55,zf-.25);add(new THREE.PlaneGeometry(2.4,.32),M('#ffffff',{map:t}),0,WH+.55,zf-.29,Math.PI)}
+    // 吧台：沿後牆（轉角那頭），面向馬路；白檯面、深色木格櫃（黃磨豆機、招財貓、杯子、罐子）；後牆黑色格子磁磚＋木層架；檯面上木格櫃、虹吸塔、Synesso 咖啡機
+    const bx0=-W/2+.6,bx1=2.2,bz=zi1+2.2,bc=(bx0+bx1)/2,bw=bx1-bx0;
+    {add(B(bw,1.0,.55),dark,bc,.5,bz);add(B(bw+.1,.06,.65),M('#e8e2d4'),bc,1.03,bz);for(let k=0;k<7;k++)add(B(.04,.9,.04),M('#2a1d14'),bx0+.3+k*(bw-.6)/6,.5,bz+.29);add(B(bw-.2,.04,.5),M('#2a1d14'),bc,.55,bz+.02);
+      add(B(.24,.3,.18),M('#e8b020'),bx0+1.2,.72,bz+.2);for(let i=0;i<4;i++)add(CY(.07,.18,10),glass,bx0+.4+i*.2,.65,bz+.2);
+      {const cat=new THREE.Group();cat.position.set((bx0+4.6)*SX,.57,bz+.2);const wh=M('#f4f1ea');const b1=new THREE.Mesh(B(.18,.22,.16),wh);b1.position.y=.11;cat.add(b1);const h1=new THREE.Mesh(SP(.1),wh);h1.position.y=.3;cat.add(h1);const pw=new THREE.Mesh(B(.05,.12,.05),wh);pw.position.set(.07,.36,.05);cat.add(pw);const cl=new THREE.Mesh(B(.19,.03,.02),M('#c22a22'));cl.position.set(0,.22,.08);cat.add(cl);cat.traverse(o=>o.userData.keep=1);G.add(cat)}
+      for(let i=0;i<4;i++)add(CY(.05,.08,8),white,bx0+3.2+i*.16,.6,bz+.2);
+      const gridT=cv(128,128,(g,w,h)=>{g.fillStyle='#16181c';g.fillRect(0,0,w,h);g.strokeStyle='#5a5e64';g.lineWidth=1;for(let i=0;i<=w;i+=16){g.beginPath();g.moveTo(i,0);g.lineTo(i,h);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(w,i);g.stroke()}},[6,3]);
+      add(B(bw,2.1,.06),M('#ffffff',{map:gridT}),bc,2.05,zi1+.12);for(let k=0;k<2;k++){add(B(bw,.04,.28),woodT,bc,1.75+k*.6,zi1+.28);for(let i=0;i<16;i++)add(CY(.045,.14+(i%3)*.05,6),M(['#2a6a3a','#c9b28a','#7a2f2a','#e8dcc0','#2b4a7a','#d0a040'][(i+k)%6]),bx0+.3+i*(bw-.6)/15,1.85+k*.6,zi1+.28)}
+      // 檯面上：木格櫃（收藏品）、虹吸塔、Synesso
+      add(B(.9,.75,.32),woodT,bx0+1.2,1.44,bz-.12);for(let i=0;i<6;i++)add(B(.1,.12,.08),M(['#d42a2a','#e8dcc0','#2b4a7a','#e0a83a'][i%4]),bx0+.88+(i%3)*.3,1.2+Math.floor(i/3)*.3,bz-.06);
+      add(B(.55,1.1,.35),woodT,bc+.6,1.6,bz-.1);for(let i=0;i<2;i++){add(SP(.12),glass,bc+.45+i*.3,1.95,bz-.1);add(SP(.11),glass,bc+.45+i*.3,1.3,bz-.1)}
+      add(B(.85,.5,.55),M('#c9cdd1'),bx1-.7,1.31,bz-.08);add(B(.8,.1,.5),black,bx1-.7,1.61,bz-.08);
+      for(const x of[bc-1.6,bc+.2,bc+1.9]){add(CY(.01,.6,4),black,x,WH-.3,bz);add(CY(.06,.22,12,.26),M('#b8763a'),x,WH-.7,bz);add(SP(.07),lampOn,x,WH-.78,bz)}
+      try{if(typeof makeHuman==='function'){const H1=makeHuman('#2b2b2b','#3a3a3a','#1d1b1a',{});H1.g.position.set((bc+1)*SX,0,bz-.7);G.add(H1.g);const H2=makeHuman('#d8cfbe','#4a3a2a','#2b2b2b',{});H2.g.position.set((bc-1.4)*SX,0,bz-.7);G.add(H2.g);
           for(const H of[H1,H2]){H.g.traverse(o=>{o.userData.keep=1});const ap=new THREE.Mesh(B(.42,.6,.04),M('#3a2a1e'));ap.position.set(0,1.0,.16);ap.userData.keep=1;H.g.add(ap)}V.owners=[H1,H2]}}catch(e){console.error('CAFE56 owners',e)}}
-    // 窗邊長吧檯＋橘色夾板椅（左段三片窗）；門旁格子木櫃；右牆書櫃
-    {const x0=-W/2+1.3,x1=2.5;add(B(x1-x0,.06,.48),woodT,(x0+x1)/2,1.05,zf-.32);for(let x=x0+.4;x<x1-.2;x+=.75){add(B(.42,.04,.4),orange,x,.68,zf-.95);add(B(.42,.42,.04),orange,x,.9,zf-1.15);add(B(.03,.68,.03),chrome,x,.34,zf-.95)}
-      for(let k=0;k<2;k++){const xx=2.7+k*1.1;add(B(1.0,.04,.3),woodT,xx+.5,2.0,zf-.3);add(B(.04,.95,.3),woodT,xx,2.47,zf-.3);for(let i=0;i<3;i++)add(B(.12,.2,.1),M(['#e8dcc0','#7a2f2a','#2b4a7a','#c9a46a'][(i+k)%4]),xx+.2+i*.32,2.12,zf-.3)}
-      add(B(.32,2.3,2.6),dark,W/2-.3,1.15,zf-2.4);for(let k=0;k<5;k++)for(let i=0;i<10;i++)add(B(.2,.26,.05+(i%4)*.02),M(['#7a2f2a','#1f5fb4','#e8dcc0','#2e7d4f','#c9a46a','#2b2b2b'][(i+k)%6]),W/2-.33,.3+k*.44,zf-2.4-1.15+i*.25)}
-    // 方桌（木面黑腳）兩排，間距 1.6 m（店內比較擠）
-    const TB=[];for(const z of[zf-2.1,zf-3.7])for(let x=-W/2+2.2;x<1.2;x+=1.7)TB.push([x,z]);TB.push([1.4,zf-5.2],[-.5,zf-5.2]);
-    for(const [x,z] of TB){add(B(.7,.05,.7),woodT,x,.75,z);for(const [a,b] of[[-.3,-.3],[.3,-.3],[-.3,.3],[.3,.3]])add(B(.04,.73,.04),black,x+a,.37,z+b);for(const dz of[-.52,.52]){add(B(.4,.04,.4),M('#8a5a32'),x,.46,z+dz);add(B(.4,.4,.04),M('#8a5a32'),x,.7,z+dz*1.38)}}
-    // 黑板立架（門內）、煤油暖爐、龜背芋、吊掛黃金葛、稜紋玻璃吊燈
-    {const t=cv(128,192,(g,w,h)=>{g.fillStyle='#22261f';g.fillRect(0,0,w,h);g.strokeStyle='#8a6a48';g.lineWidth=8;g.strokeRect(4,4,w-8,h-8);g.fillStyle='#e8e4d8';for(let i=0;i<9;i++)g.fillRect(16,24+i*17,40+((i*37)%50),2)});add(new THREE.PlaneGeometry(.7,1.0),M('#ffffff',{map:t}),2.2,.85,zf-.8)}
-    add(CY(.22,.55,14),M('#efefe9'),-.6,.28,zf-4.5);add(CY(.16,.08,14),M('#c8c8c0'),-.6,.6,zf-4.5);
-    for(const [x,z] of[[W/2-1,zf-.9],[-W/2+5.2,zf-6.4]]){add(CY(.25,.45,10),black,x,.23,z);for(let i=0;i<5;i++){const lf=add(new THREE.PlaneGeometry(.5,.38),leaf,x+Math.cos(i*1.3)*.25,.75+i*.1,z+Math.sin(i*1.3)*.25);lf.rotation.x=-.9;lf.rotation.y=i*1.3}}
-    for(const x of[-3.2,1.5]){add(CY(.01,.7,4),black,x,WH-.35,zf-1.4);add(CY(.13,.16,10,.1),white,x,WH-.78,zf-1.4);for(let i=0;i<4;i++)add(new THREE.IcosahedronGeometry(.13,0),leaf2,x+Math.cos(i*1.6)*.16,WH-.95-i*.12,zf-1.4+Math.sin(i*1.6)*.16)}
-    for(const [x,z] of TB){add(CY(.01,.55,4),black,x,WH-.28,z);add(new THREE.SphereGeometry(.2,12,8,0,Math.PI*2,0,Math.PI/2),M('#e9d4a8',{transparent:true,opacity:.75}),x,WH-.68,z);add(SP(.05),lampOn,x,WH-.7,z)}
-    // ---- 店貓 ----
-    {const cat=new THREE.Group(),W1=M('#f4f2ec'),K=M('#1a1a1a'),pink=M('#e9a0a0');const body=new THREE.Mesh(SP(.18),W1);body.scale.set(1.7,.6,.85);body.position.set(0,.11,0);cat.add(body);
-      const spot=new THREE.Mesh(SP(.1),K);spot.scale.set(1.2,.35,.8);spot.position.set(.12,.17,-.03);cat.add(spot);
-      const head=new THREE.Mesh(SP(.1),W1);head.position.set(-.32,.12,.05);cat.add(head);const hp=new THREE.Mesh(SP(.075),K);hp.position.set(-.3,.17,.02);cat.add(hp);
-      for(const s of[-1,1]){const e=new THREE.Mesh(new THREE.ConeGeometry(.035,.07,4),K);e.position.set(-.32,.22,.05+s*.05);cat.add(e)}const ns=new THREE.Mesh(SP(.015),pink);ns.position.set(-.41,.11,.06);cat.add(ns);
-      const tail=new THREE.Mesh(CY(.025,.36,6),K);tail.rotation.z=Math.PI/2;tail.rotation.y=.4;tail.position.set(.42,.05,.08);cat.add(tail);
-      for(const [x,z] of[[-.2,.12],[-.12,.15],[.18,.13],[.24,.1]]){const p=new THREE.Mesh(CY(.03,.18,6),W1);p.rotation.z=Math.PI/2;p.position.set(x-.06,.04,z);cat.add(p)}
-      cat.position.set(V.matPos[0]+.1,.14,V.matPos[1]);cat.rotation.y=.35;cat.traverse(o=>{o.userData.keep=1;o.castShadow=true});G.add(cat);V.cat=cat}
+    // 窗邊長吧檯（木）＋各式椅子；門旁那片窗前：高格子木櫃＋黑板立架
+    {add(B(2.0-(-7.3),.07,.5),woodT,(-7.3+2.0)/2,1.0,zf-.34);const chairs=[orange,M('#c9a46a'),orange,M('#b07a4a')];let ci=0;
+      for(let x=-6.9;x<1.8;x+=.8){const cm=chairs[ci++%4];add(B(.4,.04,.4),cm,x,.68,zf-.95);add(B(.4,.42,.04),cm,x,.9,zf-1.15);for(const dx of[-.17,.17])add(B(.03,.68,.03),chrome,x+dx,.34,zf-.95)}
+      const sx0=2.1,sx1=4.85;add(B(sx1-sx0,.06,.4),woodT,(sx0+sx1)/2,1.0,zf-.3);for(let k=0;k<3;k++)add(B(sx1-sx0,.04,.32),woodT,(sx0+sx1)/2,1.55+k*.55,zf-.3);for(let k=0;k<4;k++)add(B(.05,1.7,.32),woodT,sx0+k*(sx1-sx0)/3,1.85,zf-.3);
+      for(let k=0;k<3;k++)for(let i=0;i<4;i++)add(B(.14,.18,.12),M(['#e8dcc0','#2b4a7a','#7a2f2a','#c9a46a','#5a6e4a'][(i+k)%5]),sx0+.3+i*.65,1.67+k*.55,zf-.3);
+      const t=cv(128,192,(g,w,h)=>{g.fillStyle='#22261f';g.fillRect(0,0,w,h);g.fillStyle='#e8e4d8';for(let i=0;i<12;i++)g.fillRect(12,14+i*14,44+((i*37)%56),2)});add(B(.74,1.05,.04),M('#b07a4a'),3.4,.98,zf-.85);add(new THREE.PlaneGeometry(.66,.95),M('#ffffff',{map:t}),3.4,.98,zf-.82)}
+    // 方桌兩排（木面黑腳）＋混搭椅子
+    const TB=[];for(const z of[zf-2.0,zf-3.4])for(let x=-6.2;x<2.5;x+=1.75)TB.push([x,z]);
+    {const cm=[M('#8a5a32'),M('#4a4a4a'),orange];let ci=0;for(const [x,z] of TB){add(B(.72,.05,.72),woodT,x,.75,z);for(const [a,b] of[[-.32,-.32],[.32,-.32],[-.32,.32],[.32,.32]])add(B(.04,.73,.04),black,x+a,.37,z+b);for(const dz of[-.52,.52]){const m=cm[ci++%3];add(B(.42,.06,.42),m,x,.47,z+dz);add(B(.42,.42,.05),m,x,.72,z+dz*1.38)}}}
+    // 煤油暖爐、龜背芋／琴葉榕、吊掛黃金葛、稜紋玻璃燈罩
+    add(CY(.22,.55,14),M('#efefe9'),-1.3,.28,zf-4.6);add(CY(.16,.08,14),M('#c8c8c0'),-1.3,.6,zf-4.6);
+    for(const [x,z] of[[-7.0,zf-1.6],[2.4,zf-5.2],[4.4,zf-1.2]]){add(CY(.25,.45,10),grayPot,x,.23,z);for(let i=0;i<6;i++){const lf=add(new THREE.PlaneGeometry(.5,.38),leaf,x+Math.cos(i*1.1)*.25,.7+i*.14,z+Math.sin(i*1.1)*.25);lf.rotation.x=-.9;lf.rotation.y=i*1.1}}
+    for(const x of[-4,1.2,3.8]){add(CY(.01,.7,4),black,x,WH-.35,zf-1.4);add(CY(.14,.17,10,.1),white,x,WH-.78,zf-1.4);for(let i=0;i<4;i++)add(new THREE.IcosahedronGeometry(.13,0),leaf2,x+Math.cos(i*1.6)*.17,WH-.95-i*.12,zf-1.4+Math.sin(i*1.6)*.17)}
+    for(const [x,z] of TB.concat([[-5,zf-.9],[-2,zf-.9],[1,zf-.9]])){add(CY(.01,.55,4),black,x,WH-.28,z);add(new THREE.SphereGeometry(.2,12,8,0,Math.PI*2,0,Math.PI/2),M('#f2ecdc',{transparent:true,opacity:.8}),x,WH-.68,z);add(SP(.05),lampOn,x,WH-.7,z)}
+    // ---- 店貓：白底；黑耳＋頭頂到右眼一塊黑、鼻下一撇黑「鬍子」、背上與側腹大塊黑斑、黑尾巴。躺在門口腳踏墊上 ----
+    {const cat=new THREE.Group(),W1=M('#f6f4ee'),K=M('#161616'),pink=M('#e9a0a0'),eye=M('#8fae6a');const body=new THREE.Mesh(SP(.19),W1);body.scale.set(1.75,.62,.9);body.position.set(0,.12,0);cat.add(body);
+      for(const [x,y,z,sx,sy,sz] of[[.05,.2,-.02,1.3,.35,.9],[.25,.16,-.06,.8,.4,.8],[-.1,.14,-.12,.7,.45,.55]]){const sp=new THREE.Mesh(SP(.1),K);sp.scale.set(sx,sy,sz);sp.position.set(x,y,z);cat.add(sp)}
+      const head=new THREE.Mesh(SP(.105),W1);head.position.set(-.34,.13,.06);cat.add(head);const cap=new THREE.Mesh(SP(.085),K);cap.scale.set(.9,.7,1.05);cap.position.set(-.33,.19,.03);cat.add(cap);
+      for(const s of[-1,1]){const e=new THREE.Mesh(new THREE.ConeGeometry(.04,.08,4),K);e.position.set(-.32,.24,.06+s*.055);cat.add(e);const ey=new THREE.Mesh(SP(.016),eye);ey.position.set(-.43,.15,.06+s*.035);cat.add(ey)}
+      const mus=new THREE.Mesh(B(.02,.02,.05),K);mus.position.set(-.44,.1,.06);cat.add(mus);const ns=new THREE.Mesh(SP(.012),pink);ns.position.set(-.445,.125,.06);cat.add(ns);
+      const tail=new THREE.Mesh(CY(.028,.4,6),K);tail.rotation.z=Math.PI/2;tail.rotation.y=.45;tail.position.set(.45,.05,.1);cat.add(tail);
+      for(const [x,z] of[[-.22,.13],[-.13,.16],[.18,.14],[.25,.11]]){const p=new THREE.Mesh(CY(.032,.2,6),W1);p.rotation.z=Math.PI/2;p.position.set(x-.07,.04,z);cat.add(p)}
+      cat.position.set(V.matPos[0]+.05,.14,V.matPos[1]);cat.rotation.y=.3;cat.traverse(o=>{o.userData.keep=1;o.castShadow=true});G.add(cat);V.cat=cat}
     ctx.root.add(G);G.updateMatrixWorld(true);
-    // ---- 碰撞：牆（門口留空，可以走進去）、吧台、書櫃；簷廊鋼柱 ----
+    // ---- 碰撞：牆（門口留空，可以走進去）、吧台、閣樓樓梯；開放走廊不擋 ----
     {const toW=(x,z)=>{const v=new THREE.Vector3(x*SX,0,z).applyMatrix4(G.matrixWorld);return[v.x,v.z]},a=Math.atan2(uz,ux),bx=(x0,x1,z0,z1)=>{const c=toW((x0+x1)/2,(z0+z1)/2);ctx.box(c[0],c[1],a,Math.abs(x1-x0)/2,Math.abs(z1-z0)/2)};
       bx(-W/2,DX0,zf-.1,zf+.1);bx(DX1,W/2,zf-.1,zf+.1);bx(-W/2-.1,-W/2+.1,zf-D,zf);bx(W/2-.1,W/2+.1,zf-D,zf);bx(-W/2,W/2,zf-D-.1,zf-D+.1);
-      bx(bx0,bx1,bz-.3,bz+.3);bx(W/2-.5,W/2-.1,zf-3.7,zf-1.1);bx(-W/2+.1,-W/2+4.7,zi1,zi1+.8)}
+      bx(bx0,bx1,bz-.3,bz+.3);bx(W/2-1.4,W/2-.1,zi1,zi1+5.6)}
     V.spot={x:fx-nx*1.2,z:fz-nz*1.2,face:Math.atan2(nz,nx),name:GAME_NAMES.cafe,road:road.n};V.group=G;return V.spot};
   setInterval(()=>{if(!V.sign)return;const n=(window.DAY39&&DAY39.night)||0;V.sign.emissiveIntensity=.25+n*.6;for(const m of V.glow||[])m.emissiveIntensity=n*.9},600);   // 晚上店內暖光（透過玻璃看得到）
   return V})();
