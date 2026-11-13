@@ -7318,7 +7318,7 @@ var SIGN46=(function(){
     cell(type,rnd,v){if(type==='drink'&&v!=null)return 64+v*3+Math.floor((rnd||R)()*3);const r=RNG[type]||RNG.gen;return r[0]+Math.floor((rnd||R)()*r[1])},rectH,rectV,
     h(type,rnd,v){return rectH(this.cell(type,rnd,v))},v(rnd){return rectV(Math.floor((rnd||R)()*32))},
     // 招牌材質：白天受光照，晚上自發光（燈箱）
-    mat(double){const k=double?'d':'s';if(MAT[k])return MAT[k];const t=this.tex();const m=new THREE.MeshLambertMaterial({map:t,emissive:'#ffffff',emissiveMap:t,emissiveIntensity:0,side:double?THREE.DoubleSide:THREE.FrontSide});m.userData.sign46=1;return MAT[k]=m},
+    mat(double){const k=double?'d':'s';if(MAT[k])return MAT[k];const t=this.tex();const m=new THREE.MeshLambertMaterial({map:t,emissive:'#ffffff',emissiveMap:t,emissiveIntensity:0,side:double?THREE.DoubleSide:THREE.FrontSide});m.userData.sign46=1;m.userData.shared=1;return MAT[k]=m},
     mats(){return Object.values(MAT)}}})();
 
 var SHOP46P=(function(){
@@ -7403,7 +7403,7 @@ var SHOP46P=(function(){
   return{BASE,DPAL,
     shopCanvas(){build();return C},
     shopTex(){if(!T){build();T=new THREE.CanvasTexture(C);T.anisotropy=4}return T},
-    shopMat(){if(!M){buildE();TE=new THREE.CanvasTexture(E);M=new THREE.MeshLambertMaterial({map:this.shopTex(),emissive:'#ffffff',emissiveMap:TE,emissiveIntensity:0});M.userData.shop46=1}return M},
+    shopMat(){if(!M){buildE();TE=new THREE.CanvasTexture(E);M=new THREE.MeshLambertMaterial({map:this.shopTex(),emissive:'#ffffff',emissiveMap:TE,emissiveIntensity:0});M.userData.shop46=1;M.userData.shared=1}return M},
     // 每種店兩種變化；回傳 16 格中的格號
     cellOf(type,rnd){return type==='drink'?16+Math.floor((rnd||R)()*4):BASE[type]+((rnd||R)()<.5?0:1)},
     rect(cell){const e=1,x0=cell>=16?2048+(cell-16)*256:cell*CW,w=cell>=16?256:CW;return{u0:(x0+e)/SW,u1:(x0+w-e)/SW}},
@@ -8957,7 +8957,7 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
         rot.makeRotationY(ang);loc.makeTranslation(lx,0,lz).multiply(rot);const w=m4.clone().multiply(loc);addInst('scoot',w,col.set(SC[Math.floor(R()*SC.length)]).clone());
         if(s.type==='drink'&&i===0&&R()<.65){loc.makeTranslation(DB.x,DB.y,0);addInst('dbox',w.clone().multiply(loc),col.set(['#d81b60','#2e7d32','#1d1d1d','#d81b60'][Math.floor(R()*4)]).clone())}}
       if(s.type==='drink'&&ns===0&&R()<.5){const lx=(R()<.5?-1:1)*2.0,ang=Math.PI/2+(R()<.5?Math.PI:0);rot.makeRotationY(ang);loc.makeTranslation(lx,0,1.7).multiply(rot);const w=m4.clone().multiply(loc);addInst('scoot',w,col.set('#2b2b2b').clone());loc.makeTranslation(DB.x,DB.y,0);addInst('dbox',w.clone().multiply(loc),col.set(R()<.5?'#d81b60':'#2e7d32').clone())}}
-    const G={drink0:kitDrink(0),drink1:kitDrink(1),drink2:kitDrink(2),drink3:kitDrink(3),dbox:kitDbox(),bfast:kitBfast(),repair:kitRepair(),conv:kitConv(),scoot:SG};const mat=new THREE.MeshLambertMaterial({vertexColors:true,emissive:'#5a5048',emissiveIntensity:0}),matC=new THREE.MeshLambertMaterial({vertexColors:true});V.inst=[];V.kitMat=mat;
+    const G={drink0:kitDrink(0),drink1:kitDrink(1),drink2:kitDrink(2),drink3:kitDrink(3),dbox:kitDbox(),bfast:kitBfast(),repair:kitRepair(),conv:kitConv(),scoot:SG};const mat=new THREE.MeshLambertMaterial({vertexColors:true,emissive:'#5a5048',emissiveIntensity:0}),matC=new THREE.MeshLambertMaterial({vertexColors:true});V.inst=[];V.kitMat=mat;V.kitMatC=matC;V.kitG=G;mat.userData.shared=matC.userData.shared=1;for(const k in G)if(G[k])G[k].userData.shared=1;   // 第 55 次：市區建構器共用
     for(const k in SET){const g=G[k];if(!g)continue;const L=SET[k],n=L.M.length,im=new THREE.InstancedMesh(g,L.C[0]?matC:mat,n);im.name='SHOP46_'+k;im.frustumCulled=false;im.userData.noElev=1;im.castShadow=false;im.receiveShadow=true;
       const all=new Float32Array(n*16),pos=new Float32Array(n*2);L.M.forEach((m,i)=>{m.toArray(all,i*16);pos[i*2]=m.elements[12];pos[i*2+1]=m.elements[14];im.setMatrixAt(i,m)});
       let allC=null;if(L.C[0]){allC=new Float32Array(n*3);L.C.forEach((c,i)=>{c.toArray(allC,i*3);im.setColorAt(i,c)})}scene.add(im);V.inst.push({im,all,pos,allC,n});V.stat[k]=n}
@@ -9254,7 +9254,9 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     G.maps.set(arr,m);G.len.set(arr,arr.length);G.rebuilds++}
   const EMPTY=[];
   G.q=function(arr,x,y){if(!G.on)return arr;const now=performance.now();if(now-G.t>10000){G.t=now;G.maps.clear()}if(!G.maps.has(arr)||G.len.get(arr)!==arr.length)build(arr);
-    const m=G.maps.get(arr),L=m.get(key(Math.floor(x/G.C),Math.floor(y/G.C)))||EMPTY,B=m.get('big');return B?L.concat(B):L};
+    const m=G.maps.get(arr);let L=m.get(key(Math.floor(x/G.C),Math.floor(y/G.C)))||EMPTY;const B=m.get('big');if(B)L=L.concat(B);
+    // 第 55 次：分層（地下道）。碰撞資料帶 lv（0 地面、-1 地下）的，只在玩家同一層時算；沒帶 lv 的永遠算
+    if(G.hasLv){const lv=G.level||0;let f=false;for(const o of L)if(o.lv!=null&&o.lv!==lv){f=true;break}if(f)L=L.filter(o=>o.lv==null||o.lv===lv)}return L};
   G.dirty=()=>G.maps.clear();
   // ---------------- 2) 區域 ----------------
   const R=window.REGION={list:[],loaded:new Map(),LOAD:700,UNLOAD:1000,stat:{built:0,removed:0},on:!/[?&]region=0/.test(location.search)};
@@ -9264,12 +9266,12 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     const ctx={root,tag,own:{geo:new Set(),mat:new Set(),tex:new Set()},
       rnd(){return(sd=(sd*16807)%2147483647)/2147483647},
       mesh(g,m,x,y,z){const o=new THREE.Mesh(g,m);if(x!=null)o.position.set(x,y,z);root.add(o);ctx.own.geo.add(g);if(!m.userData.shared)ctx.own.mat.add(m);return o},
-      box(cx,cz,a,hl,hw){const o={cx,cy:cz,ux:Math.cos(a),uy:Math.sin(a),vx:-Math.sin(a),vy:Math.cos(a),hl,hw,__rg:tag};OBO.push(o);return o},
+      box(cx,cz,a,hl,hw,lv){const o={cx,cy:cz,ux:Math.cos(a),uy:Math.sin(a),vx:-Math.sin(a),vy:Math.cos(a),hl,hw,__rg:tag};if(lv!=null){o.lv=lv;G.hasLv=true}OBO.push(o);return o},
       rect(x0,z0,x1,z1){const o={x0,y0:z0,x1,y1:z1,__rg:tag};OBR.push(o);return o},
       circ(x,z,r){const o={x,y:z,r,__rg:tag};OBC.push(o);return o},
       road(r){r.__rg=tag;RTX.roads.push(r);return r},
       // 區域內同材質（純色或同一張貼圖）的網格合併：位置烘進世界座標，原網格丟掉
-      merge(){root.updateMatrixWorld(true);const B=new Map();root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!Array.isArray(o.material)&&!o.userData.keep){let L=B.get(o.material);if(!L){L=[];B.set(o.material,L)}L.push(o)}});
+      merge(){root.updateMatrixWorld(true);const B=new Map();root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!Array.isArray(o.material)&&!o.userData.keep&&!o.geometry.userData.shared&&!o.material.vertexColors){let L=B.get(o.material);if(!L){L=[];B.set(o.material,L)}L.push(o)}});
         const v=new THREE.Vector3(),nm=new THREE.Matrix3();let n0=0,n1=0;
         for(const [m,L] of B){if(L.length<2)continue;let nv=0,ni=0;for(const o of L){const g=o.geometry;nv+=g.attributes.position.count;ni+=g.index?g.index.count:g.attributes.position.count}
           const P=new Float32Array(nv*3),N=new Float32Array(nv*3),U=new Float32Array(nv*2),I=nv>65535?new Uint32Array(ni):new Uint16Array(ni);let vo=0,io=0;
@@ -9284,8 +9286,8 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     try{await spec.build(ctx)}catch(e){console.error('REGION build',spec.id,e)}
     ctx.root.updateMatrixWorld(true);scene.add(ctx.root);G.dirty();R.loaded.get(spec.id).busy=false;R.stat.built++;R.stat.lastMs=Math.round(performance.now()-t0);console.log('[region] load',spec.id,R.stat.lastMs+'ms')}
   function unload(spec){const e=R.loaded.get(spec.id);if(!e||e.busy)return;R.loaded.delete(spec.id);const{ctx}=e,tag=ctx.tag;
-    scene.remove(ctx.root);ctx.root.traverse(o=>{if(o.geometry)ctx.own.geo.add(o.geometry)});
-    for(const g of ctx.own.geo)g.dispose();for(const m of ctx.own.mat){for(const k in m){const t=m[k];if(t&&t.isTexture&&!t.userData.shared)t.dispose()}m.dispose()}
+    scene.remove(ctx.root);ctx.root.traverse(o=>{if(o.geometry&&!o.geometry.userData.shared)ctx.own.geo.add(o.geometry);if(o.isInstancedMesh)o.dispose&&o.dispose()});
+    for(const g of ctx.own.geo)g.dispose();for(const m of ctx.own.mat){for(const k in m){const t=m[k];if(t&&t.isTexture&&!(t.userData&&t.userData.shared))t.dispose()}m.dispose()}
     for(const arr of [OBO,OBR,OBC]){for(let i=arr.length-1;i>=0;i--)if(arr[i]&&arr[i].__rg===tag)arr.splice(i,1)}
     for(let i=RTX.roads.length-1;i>=0;i--)if(RTX.roads[i].__rg===tag)RTX.roads.splice(i,1);
     try{spec.unload&&spec.unload(ctx)}catch(er){}G.dirty();R.stat.removed++;console.log('[region] unload',spec.id)}
@@ -9304,38 +9306,196 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     ctx.merge()}});
 })();
 
-// 第五十四次（M-5(c)-2 驗證）：把 tools/osm_region.py 產生的 regions/<id>.json 載入成區域，先用簡單方塊預覽（確認位置、比例對不對）。
-//  網址加 ?city=1 才啟用（還沒有連接道路、地形、正式建構器，一般玩家看不到）。
-//  道路：可開車的灰色帶（寬度照資料），人行道類淺色細帶；建物輪廓：依樓層擠出；店家：彩色柱子（手搖飲青綠、便利商店綠、餐廳橘、其他灰）；公園綠地；鐵路深色。
-//  地面先平的（高度 0），高程之後（(c)-4）。
+// 第五十五次（M-5(c)-3）：市區建構器。讀 regions/<id>.json（tools/osm_region.py 產生），建成街景。網址加 ?city=1 才啟用（還沒有連接道路）。
+//  地面：平的（使用者確認市區大多平面路），只有地下道、高架橋照實景做。
+//  1) 道路：柏油（共用 matAsph）、雙黃線、邊線、車道虛線（路口附近不畫），兩側人行道＋路緣（路口處斷開）。
+//  2) 地下道（OSM tunnel 的汽車道路，例如西大路地下道）：主線和兩側機車地下道合成一條「溝」：覆蓋段深 6 m（牆、頂板、燈），
+//     兩端沿相連道路各 80 m 坡道（擋土牆＋欄杆），地面在坡道處開口。坡道上方的橋（OSM bridge）照樣通過。
+//     高度：區域內 hAt 改查表；玩家從坡道下到 -2.5 m 以下就算「在地下」（CITY55.under），覆蓋段回傳 -6 m，否則 0。
+//     碰撞分層：地下道牆只在地下時算（lv:-1），坡道欄杆兩層都算。
+//  3) 建物：OSM 有輪廓的照輪廓擠出（外牆貼圖、屋頂）；其他沿路自動補連棟透天（寬 4.2～6 m、深 12～16 m、3～5 樓，一樓店面＋招牌、雨遮），
+//     避開道路、鐵路、公園、已有建物。
+//  4) 店家：OSM 的手搖飲（beverages）、便利商店（convenience）、機車行（motorcycle）照實際位置，選最近的店面改成開放式店面＋門口擺設（共用第 46～48 次的擺設模型）。
+//  5) 行道樹、路燈（實例網格）。全部同材質合併，拆區時釋放。
 (function(){
   if(!/[?&]city=1/.test(location.search)||!window.REGION)return;
-  const V=window.CITY54={data:{}};
-  function defRegion(id,game){const [x0,z0,x1,z1]=game;REGION.def({id,x0,z0,x1,z1,async build(ctx){
-    const d=V.data[id]||(V.data[id]=await (await fetch('regions/'+id+'.json')).json());const Y=0;
-    const M=c=>{const m=new THREE.MeshLambertMaterial({color:c});return m};
-    const asph=M('#4a4e52'),walk=M('#b9b4aa'),park=M('#6f9a4e'),water=M('#4f7fa6'),railM=M('#3a3530'),gnd=M('#8d8a80');
-    const bm=['#e8e1d4','#d9d2c2','#e6d6b0','#c9c3b5','#d8d0c4'].map(M);
-    const pinC={beverages:'#13a89e',convenience:'#2e9b4f',restaurant:'#e0761f',cafe:'#8a5a2b',fast_food:'#e53935',bank:'#1f5fb4',clothes:'#7a2f8a'},pinM={};
-    // 地面
-    {const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);ctx.mesh(g,gnd,(x0+x1)/2,Y-.05,(z0+z1)/2).receiveShadow=true}
-    // 帶狀（道路、鐵路）
-    const ribbon=(P,hw,mat,y)=>{const pos=[],idx=[];for(let i=0;i<P.length;i++){const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,nx=-dz/l*hw,nz=dx/l*hw;pos.push(P[i][0]+nx,y,P[i][1]+nz,P[i][0]-nx,y,P[i][1]-nz);if(i){const k=(i-1)*2;idx.push(k,k+2,k+1,k+1,k+2,k+3)}}
-      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();const n=g.attributes.normal;for(let i=0;i<n.count;i++)n.setXYZ(i,0,1,0);ctx.mesh(g,mat).receiveShadow=true};
-    for(const r of d.roads){if(r.tu)continue;if(r.car)ribbon(r.P,r.hw,asph,Y+.02+(r.t==='primary'?.004:0));else ribbon(r.P,Math.min(r.hw,1.2),walk,Y+.015)}
-    for(const r of d.rail)ribbon(r.P,1.6,railM,Y+.03);
-    for(const a of d.areas){if(a.P.length<3)continue;const mat=/park|grass|garden|wood|forest/.test(a.k)?park:/water/.test(a.k)?water:null;if(!mat)continue;
-      const sh=new THREE.Shape(a.P.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ShapeGeometry(sh);g.rotateX(-Math.PI/2);ctx.mesh(g,mat,0,Y+.01,0)}
-    // 建物：依輪廓擠出
-    for(const b of d.buildings){if(b.P.length<3)continue;const h=b.h||(b.lv?b.lv*3.2:9+Math.floor(ctx.rnd()*3)*3.2);
-      try{const sh=new THREE.Shape(b.P.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false});g.rotateX(-Math.PI/2);ctx.mesh(g,bm[Math.floor(ctx.rnd()*bm.length)],0,Y,0).castShadow=true;
-        const cx=b.P.reduce((s,p)=>s+p[0],0)/b.P.length,cz=b.P.reduce((s,p)=>s+p[1],0)/b.P.length;let r=0;for(const p of b.P)r=Math.max(r,Math.hypot(p[0]-cx,p[1]-cz));if(r<40)ctx.box(cx,cz,0,r*.7,r*.7)}catch(e){}}
-    // 店家柱子
-    const pg=new THREE.CylinderGeometry(.6,.6,6,8);
-    for(const p of d.pois){const c=pinC[p.v]||'#9aa0a6';const m=pinM[c]||(pinM[c]=M(c));const g=pg.clone();ctx.mesh(g,m,p.x,Y+3,p.z)}
-    for(const r of d.roads)if(r.car)ctx.road({P:r.P,hw:r.hw,center:r.hw>=4,lanes:r.lanes||0,name:r.n||r.t,__city:1});
-    const[n0,n1]=ctx.merge();V.stat={roads:d.roads.length,bld:d.buildings.length,pois:d.pois.length,merged:[n0,n1]}}})}
-  defRegion('xidalu',[1838.8,-406.1,2836.9,554.4]);   // 範圍＝regions/xidalu.json 的 game
+  const V=window.CITY55={data:{},under:false,U:[],stat:{}};
+  const tick0=()=>new Promise(r=>setTimeout(r,0));
+  // ---------- 折線工具 ----------
+  const seglen=P=>{let L=0;for(let i=1;i<P.length;i++)L+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);return L};
+  function sub(P,from,len){const out=[P[0].slice()];let acc=0;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(acc+l>=len){const t=(len-acc)/l;out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);return out}acc+=l;out.push(b.slice())}return out}
+  function resample(P,step){const L=seglen(P),n=Math.max(1,Math.ceil(L/step)),out=[];for(let k=0;k<=n;k++)out.push(at(P,L*k/n));return out}
+  function at(P,s){let acc=0;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(acc+l>=s||i===P.length-1){const t=l?Math.min(1,(s-acc)/l):0;return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}acc+=l}return P[0].slice()}
+  function proj(P,x,z){let best=1e9,bs=0,acc=0,side=0;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1,l=Math.sqrt(l2);let t=((x-a[0])*vx+(z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;const px=a[0]+vx*t,pz=a[1]+vz*t,d=Math.hypot(x-px,z-pz);
+      if(d<best){best=d;bs=acc+t*l;side=Math.sign(vx*(z-a[1])-vz*(x-a[0]))}acc+=l}return{d:best,s:bs,side}}
+  const nrm=(P,i)=>{const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;return[-dz/l,dx/l]};
+  const near=(a,b,m)=>Math.hypot(a[0]-b[0],a[1]-b[1])<m;
+  // 簡單的格子索引（道路線段）
+  function segIndex(roads){const C=20,M=new Map(),k=(i,j)=>i*100003+j;roads.forEach((r,ri)=>{for(let i=1;i<r.P.length;i++){const a=r.P[i-1],b=r.P[i],m=r.hw+4;for(let x=Math.floor((Math.min(a[0],b[0])-m)/C);x<=Math.floor((Math.max(a[0],b[0])+m)/C);x++)for(let z=Math.floor((Math.min(a[1],b[1])-m)/C);z<=Math.floor((Math.max(a[1],b[1])+m)/C);z++){const kk=k(x,z);let L=M.get(kk);if(!L)M.set(kk,L=[]);L.push([ri,i])}}});
+    return(x,z)=>M.get(k(Math.floor(x/C),Math.floor(z/C)))||[]}
+  const dseg=(x,z,a,b)=>{const vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let t=((x-a[0])*vx+(z-a[1])*vz)/l2;t=t<0?0:t>1?1:t;return Math.hypot(x-a[0]-vx*t,z-a[1]-vz*t)};
+  // ---------- 幾何累積器（同材質一個） ----------
+  function Acc(){const P=[],N=[],U=[];return{P,N,U,
+    // 依給定的法線決定繞序（三角形的正面一定朝法線方向），不用每個呼叫的地方自己算
+    quad(a,b,c,d,n,uv){const ex=b[0]-a[0],ey=b[1]-a[1],ez=b[2]-a[2],fx=c[0]-a[0],fy=c[1]-a[1],fz=c[2]-a[2],gx=ey*fz-ez*fy,gy=ez*fx-ex*fz,gz=ex*fy-ey*fx,flip=gx*n[0]+gy*n[1]+gz*n[2]<0;
+      const ord=flip?[[a,0],[c,2],[b,1],[a,0],[d,3],[c,2]]:[[a,0],[b,1],[c,2],[a,0],[c,2],[d,3]];for(const [p,t] of ord){P.push(p[0],p[1],p[2]);N.push(n[0],n[1],n[2]);U.push(uv?uv[t][0]:p[0],uv?uv[t][1]:p[2])}},
+    tri(a,b,c,n){const ex=b[0]-a[0],ey=b[1]-a[1],ez=b[2]-a[2],fx=c[0]-a[0],fy=c[1]-a[1],fz=c[2]-a[2],gx=ey*fz-ez*fy,gy=ez*fx-ex*fz,gz=ex*fy-ey*fx;const L=(gx*n[0]+gy*n[1]+gz*n[2]<0)?[a,c,b]:[a,b,c];for(const p of L){P.push(p[0],p[1],p[2]);N.push(n[0],n[1],n[2]);U.push(p[0],p[2])}},
+    geo(){if(!P.length)return null;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.computeBoundingSphere();return g}}}
+  // 帶狀（沿折線、左右偏移 o0～o1、高度函式 yf(x,z,s)）
+  function band(A,P,o0,o1,yf,uvScale){const L=[];let acc=0;for(let i=0;i<P.length;i++){if(i)acc+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);const n=nrm(P,i);L.push({p:P[i],n,s:acc})}
+    for(let i=1;i<L.length;i++){const a=L[i-1],b=L[i],q=(e,o)=>[e.p[0]+e.n[0]*o,yf(e.p[0]+e.n[0]*o,e.p[1]+e.n[1]*o,e.s),e.p[1]+e.n[1]*o];
+      const A0=q(a,o0),A1=q(a,o1),B0=q(b,o0),B1=q(b,o1),us=uvScale||0;A.quad(A0,B0,B1,A1,[0,1,0],us?[[a.s/us,o0/us],[b.s/us,o0/us],[b.s/us,o1/us],[a.s/us,o1/us]]:null)}}
+  // 垂直牆（沿折線偏移 o，高度 y0f～y1f，法線朝 side）
+  function wall(A,P,o,y0f,y1f,face){let acc=0;for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i],na=nrm(P,i-1),nb=nrm(P,i),l=Math.hypot(b[0]-a[0],b[1]-a[1]);const pa=[a[0]+na[0]*o,a[1]+na[1]*o],pb=[b[0]+nb[0]*o,b[1]+nb[1]*o];
+      const fn=[(na[0]+nb[0])/2*face,0,(na[1]+nb[1])/2*face],sa=acc,sb=acc+l;acc+=l;const A0=[pa[0],y0f(pa[0],pa[1],sa),pa[1]],B0=[pb[0],y0f(pb[0],pb[1],sb),pb[1]],B1=[pb[0],y1f(pb[0],pb[1],sb),pb[1]],A1=[pa[0],y1f(pa[0],pa[1],sa),pa[1]];
+      const uv=[[sa/3,A0[1]/3],[sb/3,B0[1]/3],[sb/3,B1[1]/3],[sa/3,A1[1]/3]];if(face>0)A.quad(A0,B0,B1,A1,fn,uv);else A.quad(B0,A0,A1,B1,fn,[uv[1],uv[0],uv[3],uv[2]])}}
+  // 稜柱建物（多邊形外牆＋屋頂）
+  function prism(wallA,roofA,poly,y0,h){let acc=0;const n=poly.length;let area=0;for(let i=0;i<n;i++){const a=poly[i],b=poly[(i+1)%n];area+=a[0]*b[1]-b[0]*a[1]}const ccw=area>0;
+    for(let i=0;i<n;i++){const a=poly[i],b=poly[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l<.05)continue;let nx=(b[1]-a[1])/l,nz=-(b[0]-a[0])/l;if(!ccw){nx=-nx;nz=-nz}
+      const A0=[a[0],y0,a[1]],B0=[b[0],y0,b[1]],B1=[b[0],y0+h,b[1]],A1=[a[0],y0+h,a[1]],uv=[[acc/3.4,0],[(acc+l)/3.4,0],[(acc+l)/3.4,h/3.2],[acc/3.4,h/3.2]];
+      if(ccw)wallA.quad(B0,A0,A1,B1,[nx,0,nz],[uv[1],uv[0],uv[3],uv[2]]);else wallA.quad(A0,B0,B1,A1,[nx,0,nz],uv);acc+=l}
+    try{const sh=new THREE.Shape(poly.map(p=>new THREE.Vector2(p[0],p[1])));const tris=THREE.ShapeUtils.triangulateShape(sh.getPoints(),[]);const pts=sh.getPoints();for(const t of tris){const a=pts[t[0]],b=pts[t[1]],c=pts[t[2]];const cr=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+        if(cr<0)roofA.tri([a.x,y0+h,a.y],[b.x,y0+h,b.y],[c.x,y0+h,c.y],[0,1,0]);else roofA.tri([a.x,y0+h,a.y],[c.x,y0+h,c.y],[b.x,y0+h,b.y],[0,1,0])}}catch(e){}}
+  // ---------- 區域定義 ----------
+  function defRegion(id,game){const [x0,z0,x1,z1]=game;const spec={id,x0,z0,x1,z1,async build(ctx){const t0=performance.now();
+    const d=V.data[id]||(V.data[id]=await (await fetch('regions/'+id+'.json')).json());
+    const shared=m=>{m.userData.shared=1;return m};const M=c=>new THREE.MeshLambertMaterial({color:c,side:THREE.DoubleSide});
+    try{asphaltTex.userData.shared=1}catch(e){}const asph=typeof matAsph!=='undefined'?shared(matAsph):M('#4a4e52');
+    const walkT=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#bdb8ae';g.fillRect(0,0,64,64);g.strokeStyle='#a39e94';g.lineWidth=2;g.strokeRect(1,1,62,62);g.beginPath();g.moveTo(32,0);g.lineTo(32,64);g.moveTo(0,32);g.lineTo(64,32);g.stroke();const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.5,.5);return t})();
+    const walkM=new THREE.MeshLambertMaterial({map:walkT,side:THREE.DoubleSide}),curbM=M('#c9c4b8'),gndM=M('#9a968c'),yel=M('#f0c93a'),whi=M('#ecebe4'),conc=M('#b3aea4'),concD=M('#8f8b84'),railM=M('#4a443d'),parkM=M('#6f9a4e');
+    const ceilM=M('#7d7a74'),tubeL=new THREE.MeshBasicMaterial({color:'#fff4d8'});
+    const fac=new THREE.CanvasTexture(facadeCanvas);fac.wrapS=fac.wrapT=THREE.RepeatWrapping;const facM=[ '#efe6cf','#e8e1d4','#d9d2c2','#e6d6b0'].map(c=>new THREE.MeshLambertMaterial({map:fac,color:c,side:THREE.DoubleSide}));const roofM=M('#8d8b86');
+    const A=new Map(),acc=m=>{let a=A.get(m);if(!a){a=Acc();A.set(m,a)}return a};
+    const roads=d.roads.filter(r=>!r.tu&&r.car&&r.P.length>1);
+    // ===== 地下道走廊 =====
+    const U=[];
+    for(const t of d.roads){if(!t.tu||!t.car||t.hw<4)continue;   // 主線（汽車），機車地下道併進同一條溝
+      const T=t.P,tubes=d.roads.filter(r=>r!==t&&r.tu&&r.car&&r.P.every(p=>proj(T,p[0],p[1]).d<16));let W=t.hw;for(const r of tubes)for(const p of r.P)W=Math.max(W,proj(T,p[0],p[1]).d+r.hw);W+=.5;
+      const ramps=[];for(const end of[0,1]){const pe=end?T[T.length-1]:T[0],pin=end?T[T.length-2]:T[1];
+        let best=null;for(const r of roads){if(r.n!==t.n.replace(/地下道$/,'')&&r.n!==t.n&&!(r.hw>=4))continue;for(const e2 of[0,1]){const q=e2?r.P[r.P.length-1]:r.P[0];if(!near(q,pe,3))continue;const Q=e2?r.P.slice().reverse():r.P;const dir=[Q[1][0]-Q[0][0],Q[1][1]-Q[0][1]],ind=[pe[0]-pin[0],pe[1]-pin[1]];if(dir[0]*ind[0]+dir[1]*ind[1]<=0)continue;if(!best||r.hw>best.r.hw)best={r,Q}}}
+        if(best){const L=Math.min(80,seglen(best.Q));ramps.push({P:sub(best.Q,0,L),L,src:best.r})}}
+      const u={T,W,D:6,ramps,tubes,name:t.n||'地下道'};U.push(u)}
+    V.U=U;const rampH=(u,rp,s)=>{const k=Math.max(0,Math.min(1,s/rp.L)),sm=k*k*(3-2*k);return -u.D*(1-sm)};
+    // 坡道佔用的原道路：畫地面道路時把那一段切掉
+    const inRampC=(x,z)=>U.some(u=>u.ramps.some(rp=>{const q=proj(rp.P,x,z);return q.d<u.W+.6&&q.s<=rp.L+1}));
+    const surf=[];for(const r of roads){if(r.br||!U.length){surf.push(r);continue}const P=resample(r.P,2);let cur=[];const flush=()=>{if(cur.length>1&&seglen(cur)>2)surf.push(Object.assign({},r,{P:cur}));cur=[]};
+      for(const p of P){if(inRampC(p[0],p[1]))flush();else cur.push(p)}flush()}
+    const SI=segIndex(surf);
+    const inJunction=(x,z,self,m)=>{for(const [ri,i] of SI(x,z)){const r=surf[ri];if(r===self)continue;if(dseg(x,z,r.P[i-1],r.P[i])<r.hw+m)return true}return false};
+    // ===== 1) 道路 =====
+    for(const r of surf){if(r.br&&r.hw<4){}const P=resample(r.P,4);band(acc(asph),P,-r.hw,r.hw,()=>.02,0)}
+    await tick0();
+    for(const r of surf){if(r.hw<3)continue;const P=resample(r.P,2),pr=[];   // 沿線分段，在路口內的段落不畫標線、不畫人行道
+      let segs=[],cur=[];for(const p of P){const j=inJunction(p[0],p[1],r,3);if(j){if(cur.length>1)segs.push(cur);cur=[]}else cur.push(p)}if(cur.length>1)segs.push(cur);
+      for(const S of segs){if(r.hw>=4.5&&!r.ow){band(acc(yel),S,-.22,-.1,()=>.035);band(acc(yel),S,.1,.22,()=>.035)}band(acc(whi),S,-r.hw+.25,-r.hw+.4,()=>.035);band(acc(whi),S,r.hw-.4,r.hw-.25,()=>.035);
+        if(r.lanes>=4||r.hw>=7){const L=seglen(S);for(let s=0;s<L-3;s+=8){const Q=sub(resample(S,1).slice(Math.round(s)),0,3);if(Q.length>1){band(acc(whi),Q,-r.hw/2-.07,-r.hw/2+.07,()=>.035);band(acc(whi),Q,r.hw/2-.07,r.hw/2+.07,()=>.035)}}}}
+      // 人行道＋路緣（坡道旁不做）
+      if(r.t!=='service'){let sw=[],c2=[];for(const p of P){const j=inJunction(p[0],p[1],r,5.5);if(j){if(c2.length>1)sw.push(c2);c2=[]}else c2.push(p)}if(c2.length>1)sw.push(c2);
+        for(const S of sw)for(const sg of[-1,1]){const o0=sg*r.hw,o1=sg*(r.hw+2.6);band(acc(walkM),S,Math.min(o0,o1),Math.max(o0,o1),()=>.14,1);wall(acc(curbM),S,o0,()=>0,()=>.14,-sg)}}}
+    for(const r of d.rail){band(acc(railM),resample(r.P,6),-1.7,1.7,()=>.04)}
+    for(const a of d.areas){if(a.P.length<3||!/park|grass|garden|wood|forest|recreation/.test(a.k))continue;try{const sh=new THREE.Shape(a.P.map(p=>new THREE.Vector2(p[0],p[1])));const pts=sh.getPoints(),tris=THREE.ShapeUtils.triangulateShape(pts,[]);for(const t of tris){const p=[pts[t[0]],pts[t[1]],pts[t[2]]].map(q=>[q.x,.01,q.y]);const cr=(p[1][0]-p[0][0])*(p[2][2]-p[0][2])-(p[1][2]-p[0][2])*(p[2][0]-p[0][0]);if(cr<0)acc(parkM).tri(p[0],p[1],p[2],[0,1,0]);else acc(parkM).tri(p[0],p[2],p[1],[0,1,0])}}catch(e){}}
+    await tick0();
+    // ===== 2) 地下道 =====
+    for(const u of U){const flat=y=>()=>y;
+      // 覆蓋段：路面、側牆、頂板、燈、機車道分隔牆
+      const T=resample(u.T,3);band(acc(asph),T,-u.W,u.W,flat(-u.D+.02));wall(acc(concD),T,-u.W,flat(-u.D),flat(-.6),1);wall(acc(concD),T,u.W,flat(-u.D),flat(-.6),-1);
+      band(acc(ceilM),T.slice().reverse(),-u.W,u.W,flat(-.6));for(const sg of[-1,1])wall(acc(conc),T,sg*5.6,flat(-u.D),flat(-u.D+1),sg<0?1:-1),wall(acc(conc),T,sg*5.9,flat(-u.D),flat(-u.D+1),sg<0?-1:1);
+      {const L=seglen(T);for(let s=4;s<L;s+=8){const p=at(T,s);const g=new THREE.BoxGeometry(.5,.08,1.6);const n=nrm(T,Math.min(T.length-1,Math.round(s/3)));const o=ctx.mesh(g,tubeL,p[0],-.66,p[1]);o.rotation.y=Math.atan2(n[1],-n[0]);o.userData.keep=0}}
+      for(const sg of[-1,1]){const L=seglen(T);for(let s=0;s<L;s+=4){const p=at(T,s+2),q=at(T,Math.min(L,s+4)),pp=at(T,s),n=nrm([pp,q],0);ctx.box(p[0]+n[0]*sg*(u.W+.3),p[1]+n[1]*sg*(u.W+.3),Math.atan2(q[1]-pp[1],q[0]-pp[0]),2.1,.3,-1);ctx.box(p[0]+n[0]*sg*5.75,p[1]+n[1]*sg*5.75,Math.atan2(q[1]-pp[1],q[0]-pp[0]),2.1,.2,-1)}}
+      // 坡道：路面、擋土牆、欄杆、碰撞
+      for(const rp of u.ramps){const R=resample(rp.P,2),hf=(x,z,s)=>rampH(u,rp,s);band(acc(asph),R,-u.W,u.W,(x,z,s)=>hf(x,z,s)+.02);
+        for(const sg of[-1,1]){wall(acc(concD),R,sg*u.W,hf,()=>.9,-sg);wall(acc(concD),R,sg*(u.W+.35),()=>0,()=>.9,sg);band(acc(conc),R,sg<0?-u.W-.35:u.W,sg<0?-u.W:u.W+.35,()=>.9);
+          wall(acc(conc),R,sg*5.6,hf,(x,z,s)=>Math.min(hf(x,z,s)+1,.9),sg<0?1:-1)}
+        const L=rp.L;for(let s=0;s<L;s+=4){const pp=at(rp.P,s),q=at(rp.P,Math.min(L,s+4)),p=at(rp.P,s+2),n=nrm([pp,q],0),a=Math.atan2(q[1]-pp[1],q[0]-pp[0]);
+          const bridge=d.roads.some(r=>r.br&&r.car&&r.P.some((b,i)=>i&&dseg(p[0],p[1],r.P[i-1],r.P[i])<r.hw+2));if(bridge)continue;
+          for(const sg of[-1,1])ctx.box(p[0]+n[0]*sg*(u.W+.2),p[1]+n[1]*sg*(u.W+.2),a,2.1,.25)}
+        // 洞口上方的牆＋名牌
+        const pe=rp.P[0],n=nrm(rp.P,0),dir=[rp.P[1][0]-pe[0],rp.P[1][1]-pe[1]],dl=Math.hypot(...dir);const hd=new THREE.BoxGeometry(u.W*2+.7,1.2,.6);const ho=ctx.mesh(hd,concD,pe[0],-.0,pe[1]);ho.rotation.y=Math.atan2(n[1],-n[0])+Math.PI/2;
+        {const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.fillStyle='#1d5f3a';g.fillRect(0,0,512,96);g.fillStyle='#fff';g.font='900 58px "PingFang TC","Microsoft JhengHei",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(u.name,256,52);
+          const t=new THREE.CanvasTexture(c);const sm=new THREE.MeshBasicMaterial({map:t});const sp=ctx.mesh(new THREE.PlaneGeometry(6,1.1),sm,pe[0]+dir[0]/dl*.32,-.05,pe[1]+dir[1]/dl*.32);sp.rotation.y=Math.atan2(dir[0],dir[1]);sp.userData.keep=1}}}
+    // 地面：整個範圍一塊，坡道開洞
+    {const holes=[];for(const u of U)for(const rp of u.ramps){const R=resample(rp.P,4),L=[],Rr=[];R.forEach((p,i)=>{const n=nrm(R,i);L.push([p[0]+n[0]*(u.W+.35),p[1]+n[1]*(u.W+.35)]);Rr.push([p[0]-n[0]*(u.W+.35),p[1]-n[1]*(u.W+.35)])});holes.push(L.concat(Rr.reverse()))}
+      const sh=new THREE.Shape([[x0,z0],[x1,z0],[x1,z1],[x0,z1]].map(p=>new THREE.Vector2(p[0],p[1])));for(const h of holes)sh.holes.push(new THREE.Path(h.map(p=>new THREE.Vector2(p[0],p[1]))));
+      const pts=sh.extractPoints();const tris=THREE.ShapeUtils.triangulateShape(pts.shape,pts.holes);const all=pts.shape.concat(...pts.holes);
+      for(const t of tris){const p=t.map(i=>[all[i].x,0,all[i].y]);const cr=(p[1][0]-p[0][0])*(p[2][2]-p[0][2])-(p[1][2]-p[0][2])*(p[2][0]-p[0][0]);if(cr<0)acc(gndM).tri(p[0],p[1],p[2],[0,1,0]);else acc(gndM).tri(p[0],p[2],p[1],[0,1,0])}}
+    await tick0();
+    // ===== 3) 建物 =====
+    const occ=new Set(),ok=(x,z)=>!occ.has(Math.floor(x)+','+Math.floor(z)),mark=poly=>{let a=1e9,b=-1e9,c=1e9,e=-1e9;for(const p of poly){a=Math.min(a,p[0]);b=Math.max(b,p[0]);c=Math.min(c,p[1]);e=Math.max(e,p[1])}for(let x=Math.floor(a);x<=b;x++)for(let z=Math.floor(c);z<=e;z++)if(pip(poly,x+.5,z+.5))occ.add(x+','+z)};
+    const pip=(poly,x,z)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])c=!c}return c};
+    let nOsm=0,nGen=0;
+    for(const b of d.buildings){if(b.P.length<3)continue;if(U.some(u=>b.P.some(p=>u.ramps.some(rp=>proj(rp.P,p[0],p[1]).d<u.W+.5))))continue;const h=b.h||(b.lv?b.lv*3.2:6.4+Math.floor(ctx.rnd()*3)*3.2);
+      prism(acc(facM[nOsm%4]),acc(roofM),b.P,0,h);mark(b.P);nOsm++;const cx=b.P.reduce((s,p)=>s+p[0],0)/b.P.length,cz=b.P.reduce((s,p)=>s+p[1],0)/b.P.length;let r=0;for(const p of b.P)r=Math.max(r,Math.hypot(p[0]-cx,p[1]-cz));if(r<30)ctx.box(cx,cz,0,r*.65,r*.65,0)}
+    const railNear=(x,z)=>d.rail.some(r=>r.P.some((p,i)=>i&&dseg(x,z,r.P[i-1],p)<9));
+    const parkIn=(x,z)=>d.areas.some(a=>/park|grass|garden|recreation|parking/.test(a.k)&&pip(a.P,x,z));
+    const roadNear=(x,z,m)=>{for(const [ri,i] of SI(x,z)){const r=surf[ri];if(dseg(x,z,r.P[i-1],r.P[i])<r.hw+m)return true}return false};
+    const underNear=(x,z)=>U.some(u=>proj(u.T,x,z).d<u.W+1||u.ramps.some(rp=>proj(rp.P,x,z).d<u.W+1.5));
+    const shopC=SHOP46P.shopTex();const shopM=SHOP46P.shopMat(),signM=SIGN46.mat(true);const units=[];
+    const ACCS=acc(shopM),ACCG=acc(signM);
+    for(const r of surf){if(r.hw<2.4||r.t==='footway'||r.t==='pedestrian')continue;const L=seglen(r.P),lane=r.hw<3||r.t==='service';
+      for(const sg of[-1,1]){let s=2;while(s<L-2){const w=4.2+ctx.rnd()*1.8,dep=(lane?9:12)+ctx.rnd()*4,fl=(lane?2:3)+Math.floor(ctx.rnd()*(r.hw>=5?3:2)),H=fl*3.2+.3;
+          const m=at(r.P,s+w/2),m0=at(r.P,s),m1=at(r.P,s+w);const tx=m1[0]-m0[0],tz=m1[1]-m0[1],tl=Math.hypot(tx,tz)||1,ux=tx/tl,uz=tz/tl,nx=-uz*sg,nz=ux*sg;const F=lane?r.hw+.8:r.hw+2.6;
+          const fx=m[0]+nx*F,fz=m[1]+nz*F,cx=fx+nx*dep/2,cz=fz+nz*dep/2;const C=[[fx-ux*w/2,fz-uz*w/2],[fx+ux*w/2,fz+uz*w/2],[fx+ux*w/2+nx*dep,fz+uz*w/2+nz*dep],[fx-ux*w/2+nx*dep,fz-uz*w/2+nz*dep]];
+          let good=C.concat([[cx,cz],[fx+nx*1,fz+nz*1]]).every(p=>ok(p[0],p[1])&&!roadNear(p[0],p[1],.4)&&!railNear(p[0],p[1])&&!parkIn(p[0],p[1])&&!underNear(p[0],p[1])&&p[0]>x0&&p[0]<x1&&p[1]>z0&&p[1]<z1);
+          if(!good){s+=1.5;continue}mark(C);
+          // 外牆（樓上用外牆貼圖，一樓正面用店面貼圖）
+          const fm=facM[Math.floor(ctx.rnd()*4)];prism(acc(fm),acc(roofM),C,3.6,H-3.6);   // 二樓以上
+          {const W2=acc(fm);for(let i=1;i<4;i++){const a=C[i],b=C[(i+1)%4],l=Math.hypot(b[0]-a[0],b[1]-a[1]),ex=(b[1]-a[1])/l,ez=-(b[0]-a[0])/l;W2.quad([b[0],0,b[1]],[a[0],0,a[1]],[a[0],3.6,a[1]],[b[0],3.6,b[1]],[-ex,0,-ez],[[l/3.4,0],[0,0],[0,1.1],[l/3.4,1.1]])}}
+          const sv=Math.floor(ctx.rnd()*8),rc=SHOP46P.rect(sv);const unit={C,fx,fz,nx,nz,ux,uz,w,sv,type:null,H,sg};units.push(unit);
+          // 招牌、雨遮
+          const sr=SIGN46.h('gen',ctx.rnd),sh=.75+ctx.rnd()*.5,sw=w*(.7+ctx.rnd()*.25),sy=3.75+ctx.rnd()*.2;unit.sign={sr,sh,sw,sy};
+          acc(M2('#'+['9aa2a8','3f6f9e','c8c2b4','7a2f2a','2e7d4f'][Math.floor(ctx.rnd()*5)])).quad([fx-ux*w/2-nx*1,3.55,fz-uz*w/2-nz*1],[fx+ux*w/2-nx*1,3.55,fz+uz*w/2-nz*1],[fx+ux*w/2,3.55,fz+uz*w/2],[fx-ux*w/2,3.55,fz-uz*w/2],[0,1,0]);
+          ctx.box(cx,cz,Math.atan2(uz,ux),w/2,dep/2,0);nGen++;s+=w+.05}}}
+    // 街廓內部：還空著的地方補一般建物（8～11 m 見方、3～6 樓，方向對齊附近道路）
+    {let nIn=0;const STEP=10;for(let x=x0+6;x<x1-6;x+=STEP)for(let z=z0+6;z<z1-6;z+=STEP){const cx=x+(ctx.rnd()-.5)*2,cz=z+(ctx.rnd()-.5)*2;if(!ok(cx,cz)||roadNear(cx,cz,3)||railNear(cx,cz)||parkIn(cx,cz)||underNear(cx,cz))continue;
+        let ang=0,bd=40;for(const [ri,i] of SI(cx,cz)){const r=surf[ri],a=r.P[i-1],b=r.P[i],dd=dseg(cx,cz,a,b);if(dd<bd){bd=dd;ang=Math.atan2(b[1]-a[1],b[0]-a[0])}}
+        const w=8+ctx.rnd()*3,dp=8+ctx.rnd()*3,ca=Math.cos(ang),sa=Math.sin(ang),C=[[-w/2,-dp/2],[w/2,-dp/2],[w/2,dp/2],[-w/2,dp/2]].map(([u,v])=>[cx+u*ca-v*sa,cz+u*sa+v*ca]);
+        if(!C.every(p=>ok(p[0],p[1])&&!roadNear(p[0],p[1],1.5)&&!railNear(p[0],p[1])))continue;mark(C);const H=(3+Math.floor(ctx.rnd()*4))*3.2+.3;prism(acc(facM[Math.floor(ctx.rnd()*4)]),acc(roofM),C,0,H);ctx.box(cx,cz,ang,w/2,dp/2,0);nIn++}V.stat.inner=nIn}
+    function M2(c){return M2[c]||(M2[c]=M(c))}
+    // ===== 4) 實景店家 =====
+    const want={beverages:'drink',convenience:'conv',motorcycle:'repair',motorcycle_repair:'repair'};const used=new Set();const typed=[];
+    for(const p of d.pois){const ty=want[p.v];if(!ty)continue;let best=null,bd=14;for(const u of units){if(used.has(u))continue;const dd=Math.hypot(u.fx-p.x,u.fz-p.z);if(dd<bd){bd=dd;best=u}}if(best){used.add(best);best.type=ty;best.poi=p.n;typed.push(best)}}
+    for(const u of units){const cell=u.type?SHOP46P.cellOf(u.type,ctx.rnd):u.sv,rc=SHOP46P.rect(cell);u.cell=cell;const{C}=u;const Lp=u.sg>0?C[1]:C[0],Rp=u.sg>0?C[0]:C[1];   // 正面一樓：從馬路看過去的左、右
+      ACCS.quad([Lp[0],0,Lp[1]],[Rp[0],0,Rp[1]],[Rp[0],3.6,Rp[1]],[Lp[0],3.6,Lp[1]],[-u.nx,0,-u.nz],[[rc.u0,0],[rc.u1,0],[rc.u1,.98],[rc.u0,.98]]);
+      const sr=u.type?SIGN46.h(u.type,ctx.rnd,u.type==='drink'?cell-16:null):u.sign.sr,{sh,sw,sy}=u.sign,ex=u.fx-u.nx*.14,ez=u.fz-u.nz*.14;
+      const k=u.sg>0?1:-1,Lx=ex+u.ux*sw/2*k,Lz=ez+u.uz*sw/2*k,Rx=ex-u.ux*sw/2*k,Rz=ez-u.uz*sw/2*k;
+      ACCG.quad([Lx,sy,Lz],[Rx,sy,Rz],[Rx,sy+sh,Rz],[Lx,sy+sh,Lz],[-u.nx,0,-u.nz],[[sr.u0,sr.v0],[sr.u1,sr.v0],[sr.u1,sr.v1],[sr.u0,sr.v1]])}
+    // 擺設（共用第 46 次的模型）
+    if(window.SHOP46&&SHOP46.kitG){const G=SHOP46.kitG,SET={},m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=new THREE.Vector3();
+      for(const u of typed){Z.set(-u.nx,0,-u.nz);X.set(Z.z,0,-Z.x);m4.makeBasis(X,Y,Z).setPosition(u.fx-u.nx*.0,.14,u.fz-u.nz*.0);const k=u.type==='drink'?'drink'+(u.cell-16):u.type;(SET[k]||(SET[k]=[])).push(m4.clone())}
+      for(const k in SET){const g=G[k];if(!g)continue;const im=new THREE.InstancedMesh(g,SHOP46.kitMat,SET[k].length);SET[k].forEach((m,i)=>im.setMatrixAt(i,m));im.userData.keep=1;ctx.root.add(im)}}
+    await tick0();
+    // ===== 5) 行道樹、路燈 =====
+    {const trunkG=new THREE.CylinderGeometry(.12,.18,2.6,6),crownG=new THREE.IcosahedronGeometry(1.5,0),poleG=new THREE.CylinderGeometry(.08,.11,7,6),headG=new THREE.BoxGeometry(.9,.15,.35);
+      const TR=[],LP=[];for(const r of surf){if(r.hw<4)continue;const L=seglen(r.P);for(let s=6;s<L-6;s+=13){const p=at(r.P,s),q=at(r.P,s+1),dx=q[0]-p[0],dz=q[1]-p[1],l=Math.hypot(dx,dz)||1;
+          for(const sg of[-1,1]){const o=r.hw+1.2,x=p[0]-dz/l*o*sg,z=p[1]+dx/l*o*sg;if(roadNear(x,z,-.2)||inJunction(x,z,r,4)||underNear(x,z))continue;if(Math.round(s/13)%3===0)LP.push([x,z,Math.atan2(dz,dx)+(sg>0?Math.PI:0)]);else if(ok(x,z))TR.push([x,z,ctx.rnd()])}}}
+      const mk=(g,mat,list,f)=>{if(!list.length)return;const im=new THREE.InstancedMesh(g,mat,list.length);const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),p=new THREE.Vector3();list.forEach((e,i)=>{f(e,p,q,s);m.compose(p,q,s);im.setMatrixAt(i,m)});im.userData.keep=1;im.castShadow=true;ctx.root.add(im);ctx.own.geo.add(g)};
+      const trM=M('#5d4633'),crM=M('#3f7a3a'),plM=M('#8f969c'),hdM=new THREE.MeshBasicMaterial({color:'#fff2d0'});
+      mk(trunkG,trM,TR,(e,p,q,s)=>{p.set(e[0],1.3,e[1]);q.identity();s.set(1,1,1)});mk(crownG,crM,TR,(e,p,q,s)=>{p.set(e[0],3.4,e[1]);q.setFromAxisAngle(Y0,e[2]*6);const k=.85+e[2]*.4;s.set(k,k*.9,k)});
+      mk(poleG,plM,LP,(e,p,q,s)=>{p.set(e[0],3.5,e[1]);q.identity();s.set(1,1,1)});mk(headG,hdM,LP,(e,p,q,s)=>{p.set(e[0],6.9,e[1]);q.setFromAxisAngle(Y0,-e[2]);s.set(1,1,1)});V.stat.trees=TR.length;V.stat.lamps=LP.length}
+    // ===== 寫入場景 =====
+    for(const [m,a] of A){const g=a.geo();if(!g)continue;const me=ctx.mesh(g,m);me.receiveShadow=true;me.castShadow=(facM.includes(m)||m===roofM||m===concD);me.userData.keep=1}
+    ctx.merge();ctx.root.traverse(o=>{const m=o.material;if(m&&!Array.isArray(m)&&!m.userData.shared)ctx.own.mat.add(m)});for(const r of surf)ctx.road({P:r.P,hw:r.hw,center:r.hw>=4,lanes:r.lanes||0,name:r.n||r.t});
+    // 高度與分層
+    installH(id,game);
+    V.stat=Object.assign(V.stat,{id,roads:surf.length,osmBld:nOsm,genBld:nGen,shops:typed.length,underpass:U.map(u=>({n:u.name,W:+u.W.toFixed(1),ramps:u.ramps.length,T:Math.round(seglen(u.T))})),ms:Math.round(performance.now()-t0),meshes:ctx.root.children.length})},
+    unload(ctx){uninstallH(id)}};REGION.def(spec);return spec}
+  const Y0=new THREE.Vector3(0,1,0);
+  // ---------- 高度、分層 ----------
+  const HS=new Map();let hOrig=null;
+  function cityH(x,z){for(const u of V.U){for(const rp of u.ramps){const q=proj(rp.P,x,z);if(q.d<u.W+.3&&q.s<=rp.L+.5){const k=Math.max(0,Math.min(1,q.s/rp.L)),sm=k*k*(3-2*k);return -u.D*(1-sm)}}const c=proj(u.T,x,z);if(c.d<u.W+.3&&c.s>.1&&c.s<seglen(u.T)-.1)return V.under?-u.D:0}return 0}
+  // 原地圖有一塊 80 km 見方的「無限地面」（y = -2），會穿過地下道：區域載入時用 4 個裁切面把它在區域範圍內挖掉，拆區時恢復
+  const CLIP=new Map();
+  function clipBase(id,g,on){if(on){const mats=new Set();scene.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.boundingBox&&o.geometry.computeBoundingBox)return;const b=o.geometry.boundingBox;if(!b)return;if(b.max.x-b.min.x>10000&&b.max.y-b.min.y<5&&!o.name.startsWith('REGION'))mats.add(o.material)});
+      const P=[new THREE.Plane(new THREE.Vector3(-1,0,0),g[0]),new THREE.Plane(new THREE.Vector3(1,0,0),-g[2]),new THREE.Plane(new THREE.Vector3(0,0,-1),g[1]),new THREE.Plane(new THREE.Vector3(0,0,1),-g[3])];
+      R.localClippingEnabled=true;for(const m of mats){if(Array.isArray(m))continue;m.clippingPlanes=P;m.clipIntersection=true;m.needsUpdate=true}CLIP.set(id,mats)}
+    else{const mats=CLIP.get(id);CLIP.delete(id);if(mats)for(const m of mats){if(Array.isArray(m))continue;m.clippingPlanes=null;m.clipIntersection=false;m.needsUpdate=true}}}
+  function installH(id,g){clipBase(id,g,true);HS.set(id,g);if(hOrig)return;hOrig=hAt;hAt=function(x,z){for(const b of HS.values())if(x>b[0]&&x<b[2]&&z>b[1]&&z<b[3])return cityH(x,z);return hOrig(x,z)}}
+  function uninstallH(id){clipBase(id,null,false);HS.delete(id);if(!HS.size&&hOrig){hAt=hOrig;hOrig=null}}
+  // 玩家在坡道深處（< -2.5 m）就算進入地下；離開地下道範圍回到地面
+  setInterval(()=>{if(!V.U.length)return;let x,z;try{if(typeof WALK!=='undefined'&&WALK.on){x=WALK.x;z=WALK.y}else{x=S.x;z=S.y}}catch(e){return}if(V.at){x=V.at[0];z=V.at[1]}
+    let inRamp=null,inT=false;for(const u of V.U){for(const rp of u.ramps){const q=proj(rp.P,x,z);if(q.d<u.W+.3&&q.s<=rp.L+.5){const k=Math.max(0,Math.min(1,q.s/rp.L));inRamp=-u.D*(1-k*k*(3-2*k))}}const c=proj(u.T,x,z);if(c.d<u.W+.3)inT=true}
+    if(inRamp!=null)V.under=inRamp<-2.5;else if(!inT)V.under=false;if(window.COLGRID)COLGRID.level=V.under?-1:0},100);
+  defRegion('xidalu',[1838.8,-406.1,2836.9,554.4]);
 })();
 
 </script>
