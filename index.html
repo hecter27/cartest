@@ -7961,7 +7961,8 @@ function fix32(){
   function fill(g){const r=REC.get(g);if(!r)return;REC.delete(g);
     const p0=r.parts[0],A=p0.G.attributes,n=r.vn,v=new THREE.Vector3(),out={};
     const inv=new THREE.Matrix4().copy(r.mw).invert(),mt=new THREE.Matrix3().setFromMatrix4(r.mw).transpose();
-    const P=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,p0.v0+i).applyMatrix4(inv);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z}out.position=new THREE.BufferAttribute(P,3);
+    const q50=p0.G.userData&&p0.G.userData.q50;   // 第 50 次：合併網格的位置可能已改成整數，先乘回矩陣
+    const P=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,p0.v0+i);if(q50)v.applyMatrix4(q50);v.applyMatrix4(inv);P[i*3]=v.x;P[i*3+1]=v.y;P[i*3+2]=v.z}out.position=new THREE.BufferAttribute(P,3);
     if(r.hasN&&A.normal){const N=new Float32Array(n*3);for(let i=0;i<n;i++){v.fromBufferAttribute(A.normal,p0.v0+i).applyMatrix3(mt).normalize();N[i*3]=v.x;N[i*3+1]=v.y;N[i*3+2]=v.z}out.normal=new THREE.BufferAttribute(N,3)}
     const pu=r.parts.find(p=>p.uv&&p.G.attributes.uv);
     if(r.hasU&&pu){const ua=pu.G.attributes.uv,U=new Float32Array(n*2);for(let i=0;i<n;i++){U[i*2]=ua.getX(pu.v0+i);U[i*2+1]=ua.getY(pu.v0+i)}out.uv=new THREE.BufferAttribute(U,2)}
@@ -9154,6 +9155,36 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
   const _dp=THREE.BufferGeometry.prototype.dispose;THREE.BufferGeometry.prototype.dispose=function(){if(this.userData&&(this.userData.inst49k>0||this.userData.inst49))return;return _dp.call(this)};
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late)return;clearInterval(t);
     setTimeout(()=>{try{run()}catch(e){console.error('INST49',e);V.done=true}},3000)},500);
+})();
+
+// 第五十次（階段 M-5(b) 第一步）：靜態合併網格的頂點位置改成「相對網格原點的 16 位元整數」。
+//  合併網格（約 900 個、位置陣列約 69 MB）是世界座標的 Float32。改成 Int16（不正規化），把原點和縮放放進網格的矩陣：
+//   世界座標 = 原點 + 整數 × (範圍 / 65534)。著色器、射線、視錐剔除都用「矩陣 × 屬性值」，所以照常運作；法線矩陣會處理不等比縮放。
+//  精度：範圍 400 m 以內約 6 mm 以下（一般網格 1～3 mm）；範圍超過 400 m 的不轉。CPU、顯示卡兩邊的位置資料都減半。
+//  配套：slim34 還原原物件時，從合併網格讀出的整數要先乘回矩陣（`geometry.userData.q50`）；sbRebuild 重建後的新網格再轉一次。
+//  載入後的修正（temple43 等會直接改合併網格的世界座標）全部做完才轉。網址加 ?sbq=0 可關掉。
+(function(){
+  const V=window.SBQ50={on:!/[?&]sbq=0/.test(location.search)&&!window.SAFE34,stat:{n:0,skip:0,saved:0}};if(!V.on)return;
+  function quant(mesh){const g=mesh.geometry;if(!g||g.userData.q50)return false;const P=g.attributes.position;if(!P||!(P.array instanceof Float32Array)||P.itemSize!==3)return false;
+    const e=mesh.matrixWorld.elements;if(Math.abs(e[0]-1)+Math.abs(e[5]-1)+Math.abs(e[10]-1)+Math.abs(e[12])+Math.abs(e[13])+Math.abs(e[14])>1e-6)return false;   // 只處理世界座標的（矩陣是單位矩陣）
+    const a=P.array,n=P.count;let x0=1e9,y0=1e9,z0=1e9,x1=-1e9,y1=-1e9,z1=-1e9;for(let i=0;i<n;i++){const x=a[i*3],y=a[i*3+1],z=a[i*3+2];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;if(z<z0)z0=z;if(z>z1)z1=z}
+    const rx=x1-x0,ry=y1-y0,rz=z1-z0;if(rx>400||ry>400||rz>400){V.stat.skip++;return false}
+    const cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2,sx=Math.max(rx,1e-3)/65534,sy=Math.max(ry,1e-3)/65534,sz=Math.max(rz,1e-3)/65534;
+    const Q=new Int16Array(n*3);for(let i=0;i<n;i++){Q[i*3]=Math.round((a[i*3]-cx)/sx);Q[i*3+1]=Math.round((a[i*3+1]-cy)/sy);Q[i*3+2]=Math.round((a[i*3+2]-cz)/sz)}
+    const na=new THREE.BufferAttribute(Q,3,false);g.setAttribute('position',na);g.userData.q50=new THREE.Matrix4().compose(new THREE.Vector3(cx,cy,cz),new THREE.Quaternion(),new THREE.Vector3(sx,sy,sz));
+    g.boundingSphere=null;g.boundingBox=null;g.computeBoundingSphere();g.computeBoundingBox();
+    mesh.matrixAutoUpdate=false;mesh.matrix.copy(g.userData.q50);mesh.matrix.decompose(mesh.position,mesh.quaternion,mesh.scale);mesh.matrixWorld.copy(mesh.matrix);
+    try{g.dispose()}catch(er){}   // 舊的 Float32 位置在顯示卡上的那份放掉，下次畫時上傳新的
+    V.stat.n++;V.stat.saved+=n*6;return true}
+  V.quant=quant;
+  // 分批做（每 40 ms 最多 25 ms），手機上不會一次卡住半秒以上
+  function all(){const L=(SB.groups||[]).slice();let i=0,busy=0;V.done=true;   // done 先設：分批期間 sbRebuild 重建的也會轉
+    const step=()=>{const t0=performance.now();while(i<L.length&&performance.now()-t0<25){const grp=L[i++];if(grp.mesh&&grp.mesh.parent)quant(grp.mesh)}busy+=performance.now()-t0;
+      if(i<L.length)setTimeout(step,40);else{V.stat.MB=+(V.stat.saved/1048576).toFixed(1);V.stat.ms=Math.round(busy);V.finished=true;console.log('[sbq50]',JSON.stringify(V.stat))}};step()}
+  // sbRebuild 重建後再轉
+  if(typeof sbRebuild==='function'){const _r=sbRebuild;sbRebuild=function(){const L=[...(SB.dirty||[])];const r=_r.apply(this,arguments);if(V.done)for(const grp of L)if(grp.mesh&&grp.mesh.geometry){grp.mesh.matrix.identity();grp.mesh.matrixWorld.identity();grp.mesh.position.set(0,0,0);grp.mesh.scale.set(1,1,1);quant(grp.mesh)}return r}}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late||(window.INST49&&!INST49.done))return;clearInterval(t);
+    setTimeout(()=>{try{all()}catch(e){console.error('SBQ50',e)}},1000)},500);
 })();
 
 </script>
