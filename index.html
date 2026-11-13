@@ -4953,11 +4953,11 @@ async function elevPass(){const t0=performance.now();let G=null;try{if(ELEVJOB&&
   const move=(o,cx,cz)=>{let d=h(cx,cz),pitch=0;if(isVeh(o)){o.getWorldQuaternion(qv);fv.set(1,0,0).applyQuaternion(qv);fv.y=0;if(fv.lengthSq()>1e-6){fv.normalize();const wb=o.userData.sd?1.3:2.65,hF=h(cx+fv.x*wb/2,cz+fv.z*wb/2),hB=h(cx-fv.x*wb/2,cz-fv.z*wb/2);d=(hF+hB)/2;pitch=Math.atan2(hF-hB,wb);if(pitch)nP++}}if(!d&&!pitch)return;o.getWorldPosition(v1);v2.copy(v1);v2.y+=d;if(o.parent&&o.parent!==scene){o.parent.worldToLocal(v1);o.parent.worldToLocal(v2);o.position.x+=v2.x-v1.x;o.position.y+=v2.y-v1.y;o.position.z+=v2.z-v1.z}else o.position.y+=d;if(pitch)o.rotateZ(pitch);nT++};
   // 第四十三次：建物整體平移。原本水平超過 14 m 的網格一律逐頂點跟著地形變形，大型建物因此被扭成斜的；組合建物的零件各自依中心點高度移動，彼此錯位。
   //  高 2.5 m 以上、水平 70 m 以內、不是貼地鋪面的物件改成整體平移：取底面四角＋中心的最低地高（不會懸空，上坡側埋進坡裡）。window.ELEV43 記錄處理過的物件。
-  const E43=window.ELEV43={on:!/[?&]tilt=1/.test(location.search),n:0,list:[]};
+  const E43=window.ELEV43={on:!/[?&]tilt=1/.test(location.search),n:0,list:[],disp:[]};
   const rigid=(o,bb)=>{let d=1e9;for(const [x,z] of [[bb.min.x,bb.min.z],[bb.max.x,bb.min.z],[bb.min.x,bb.max.z],[bb.max.x,bb.max.z],[(bb.min.x+bb.max.x)/2,(bb.min.z+bb.max.z)/2]])d=Math.min(d,h(x,z));if(!isFinite(d)||!d)return;
     o.getWorldPosition(v1);v2.copy(v1);v2.y+=d;if(o.parent&&o.parent!==scene){o.parent.worldToLocal(v1);o.parent.worldToLocal(v2);o.position.x+=v2.x-v1.x;o.position.y+=v2.y-v1.y;o.position.z+=v2.z-v1.z}else o.position.y+=d;
     E43.n++;if(E43.list.length<400)E43.list.push([Math.round((bb.min.x+bb.max.x)/2),Math.round((bb.min.z+bb.max.z)/2),Math.round(bb.max.x-bb.min.x),Math.round(bb.max.z-bb.min.z),+(bb.max.y-bb.min.y).toFixed(1),o.isMesh?'m':'g',o.name||'']);nT++};
-  const solid=(o,ht,ext,flat)=>E43.on&&!flat&&ht>=2.5&&ext<=70&&!o.userData._hasInst&&!o.userData._reG&&!o.userData.isGround;
+  const solid=(o,ht,ext,flat)=>E43.on&&!flat&&ht>=2.5&&ext<=80&&!o.userData._hasInst&&!o.userData._reG&&!o.userData.isGround&&!(o.geometry&&o.geometry.type==='SphereGeometry');   // 球體是山丘，照舊跟著地形
   const visit=o=>{if(skip.has(o)||o.isLight||o.isCamera||o.userData.noElev)return;if(o.isInstancedMesh){inst(o);return}
     bx.makeEmpty();bx.setFromObject(o);if(bx.isEmpty()){o.children.slice().forEach(visit);return}
     // 駕訓班場地平台（地面 y≈0）上的東西一律不動：場地草皮、柏油、圍籬若稍微超出場地範圍，逐頂點位移會把整片拉斜（草地蓋過場地、穿進車內）
@@ -4965,7 +4965,7 @@ async function elevPass(){const t0=performance.now();let G=null;try{if(ELEVJOB&&
     if(bx.min.x>-163&&bx.max.x<503&&bx.min.z>-118&&bx.max.z<112.7)return;
     const ext=Math.max(bx.max.x-bx.min.x,bx.max.z-bx.min.z),flat=bx.max.y-bx.min.y<.3&&bx.max.y<-1.15,cx=(bx.min.x+bx.max.x)/2,cz=(bx.min.z+bx.max.z)/2;
     const ht=bx.max.y-bx.min.y;
-    if(o.isMesh||o.isLine||o.isPoints||o.isSprite){if((ext>14||flat)&&!o.isSprite){if(o.isMesh&&solid(o,ht,ext,flat)){rigid(o,bx.clone());return}disp(o,flat);o.children.slice().forEach(visit)}else move(o,cx,cz);return}
+    if(o.isMesh||o.isLine||o.isPoints||o.isSprite){if((ext>14||flat)&&!o.isSprite){if(o.isMesh&&solid(o,ht,ext,flat)){rigid(o,bx.clone());return}if(ht>=3&&!flat&&E43.disp.length<300)E43.disp.push([Math.round(cx),Math.round(cz),Math.round(ext),+ht.toFixed(1),o.geometry&&o.geometry.type,o.name||'']);disp(o,flat);o.children.slice().forEach(visit)}else move(o,cx,cz);return}
     if(ext<=14&&!o.userData._hasInst){move(o,cx,cz);return}
     if(solid(o,ht,ext,flat)){rigid(o,bx.clone());return}
     o.children.slice().forEach(visit)};
@@ -8530,6 +8530,72 @@ function fix32(){
     if(typeof updateWorld==='function'){const _uw=updateWorld;updateWorld=function(dt){_uw.apply(this,arguments);try{tick(dt||.016)}catch(e){}}}
     console.log('[haunt43]',JSON.stringify({ghosts:V.ghosts.length,park:V.park,trees:V.trees}))}
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.TEMPLE43||!TEMPLE43.done)return;clearInterval(t);try{start()}catch(e){console.error('HAUNT43',e)}},400);
+})();
+
+// 第四十四次：夜景（使用者要求）
+//  1) 路燈照亮地面：不加真的光源（光源數改變會讓全部材質重新編譯，手機會卡），改在每盞燈正下方放一片加法混色的暖色光圈（一個實例網格），
+//     燈泡外加一圈光暈（一個 Points）。全部依 DAY39.night 淡入淡出，白天不畫。
+//  2) 建物窗戶夜間發光：載入時（靜態合併後、預先畫一幀之前，材質還沒編譯）分析建物立面貼圖，把「暗色偏藍的窗戶像素」做成自發光貼圖，
+//     隨機一部分窗戶亮暖黃燈、一部分偏白（日光燈），其餘不亮；emissiveIntensity 白天 0，入夜調高。
+//  網址加 ?night=0 可關掉。
+(function(){
+  const V=window.NIGHT44={on:!/[?&]night=0/.test(location.search)&&!window.SAFE34,mats:[],lamps:[],texN:0,winPx:0};if(!V.on)return;
+  // ================= 2) 窗戶 =================
+  const CACHE=new Map();
+  function windowMask(img){if(CACHE.has(img))return CACHE.get(img);let res=null;try{const w=img.width,h=img.height;if(!(w>=64&&h>=64)){CACHE.set(img,null);return null}
+      const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(img,0,0);const d=g.getImageData(0,0,w,h).data;let win=0,bright=0;const n=w*h,isWin=new Uint8Array(n);
+      for(let i=0,p=0;i<n;i++,p+=4){const r=d[p],gg=d[p+1],b=d[p+2],L=(.3*r+.59*gg+.11*b)/255;if(L>.5)bright++;if(L<.42&&b>=r-4&&gg<=b+18&&d[p+3]>200){isWin[i]=1;win++}}
+      const fw=win/n,fb=bright/n;if(fw<.03||fw>.5||fb<.2){CACHE.set(img,null);return null}
+      // 找出每一扇窗（窗玻璃＋窗格連成一塊）的範圍，整扇均勻點亮：暖黃、日光燈白、或不亮
+      // 鐵窗的直條彼此不相連：先把窗戶像素向外擴 2 px，讓同一扇窗的窗格連成一塊
+      {const t=new Uint8Array(isWin);for(let pass=0;pass<2;pass++){const src=pass?new Uint8Array(isWin):t;for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;if(src[i])continue;if((x>0&&src[i-1])||(x<w-1&&src[i+1])||(y>0&&src[i-w])||(y<h-1&&src[i+w]))isWin[i]=1}}}
+      const lab=new Int32Array(n).fill(-1),boxes=[],st=[];for(let s0=0;s0<n;s0++){if(!isWin[s0]||lab[s0]>=0)continue;const id=boxes.length;let x0=1e9,x1=-1,y0=1e9,y1=-1,cnt=0;st.length=0;st.push(s0);lab[s0]=id;
+        while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;cnt++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;const nb=[x>0?i-1:-1,x<w-1?i+1:-1,y>0?i-w:-1,y<h-1?i+w:-1];for(const j of nb)if(j>=0&&isWin[j]&&lab[j]<0){lab[j]=id;st.push(j)}}
+        boxes.push([x0,y0,x1,y1,cnt])}
+      let seed=(w*7919+h*104729+win)%2147483647||1;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;g.fillStyle='#000';g.fillRect(0,0,w,h);let lit=0;
+      for(const [x0,y0,x1,y1,cnt] of boxes){const bw=x1-x0+1,bh=y1-y0+1;if(cnt<12||bw<3||bh<3||bw>w*.7||bh>h*.7)continue;const few=boxes.length<=2,v=rnd();const col=few?'rgb(196,138,78)':v<.45?'rgb(255,190,112)':v<.6?'rgb(214,226,255)':null;if(!col)continue;
+        g.fillStyle=col;g.fillRect(x0+1,y0+1,Math.max(1,bw-2),Math.max(1,bh-2));g.fillStyle='rgba(0,0,0,.35)';g.fillRect(x0+1,y0+1,Math.max(1,bw-2),Math.max(1,(bh-2)*.18));lit++}   // 上緣一點陰影（窗簾盒）
+      // 備案（鐵窗、百葉）：窗格把整面連成一大塊時，改以窗格之間的玻璃為單位，同一區塊（寬 1/6、高 1/8）一起亮或一起暗
+      if(!lit){const lab2=new Int32Array(n).fill(-1),pane=i=>{const p=i*4,L=(d[p]+d[p+1]+d[p+2])/765;return isWin[i]&&L>.1};const CL=new Map();
+        for(let s0=0;s0<n;s0++){if(!pane(s0)||lab2[s0]>=0)continue;let x0=1e9,x1=-1,y0=1e9,y1=-1,cnt=0;st.length=0;st.push(s0);lab2[s0]=1;
+          while(st.length){const i=st.pop(),x=i%w,y=(i/w)|0;cnt++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;const nb=[x>0?i-1:-1,x<w-1?i+1:-1,y>0?i-w:-1,y<h-1?i+w:-1];for(const j of nb)if(j>=0&&lab2[j]<0&&pane(j)){lab2[j]=1;st.push(j)}}
+          if(cnt<4||x1-x0>w*.5||y1-y0>h*.5)continue;const k=((((y0+y1)/2)/(h/8))|0)*31+((((x0+x1)/2)/(w/6))|0);let col=CL.get(k);if(col===undefined){const v=rnd();col=v<.45?'rgb(255,190,112)':v<.6?'rgb(214,226,255)':null;CL.set(k,col)}
+          if(col){g.fillStyle=col;g.fillRect(x0,y0,x1-x0+1,y1-y0+1);lit++}}}
+      if(!lit){CACHE.set(img,null);return null}res=c;V.winPx+=win}catch(e){res=null}CACHE.set(img,res);return res}
+  function setupWindows(){const seen=new Set();let n=0;
+    scene.traverse(o=>{if(!o.isMesh||o.isSkinnedMesh)return;(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(!m||seen.has(m))return;seen.add(m);
+        if(!(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial)||m.emissiveMap||m.transparent||!m.map||!m.emissive)return;if(m.emissive.r+m.emissive.g+m.emissive.b>.02)return;
+        const img=m.map.image;if(!img||!(img instanceof HTMLCanvasElement||img instanceof HTMLImageElement))return;const cv=windowMask(img);if(!cv)return;
+        const t=new THREE.CanvasTexture(cv);t.wrapS=m.map.wrapS;t.wrapT=m.map.wrapT;t.repeat.copy(m.map.repeat);t.offset.copy(m.map.offset);t.rotation=m.map.rotation;t.center.copy(m.map.center);t.flipY=m.map.flipY;t.encoding=THREE.sRGBEncoding;
+        m.emissiveMap=t;m.emissive.setRGB(1,1,1);m.emissiveIntensity=0;m.needsUpdate=true;V.mats.push(m);n++})});
+    V.texN=CACHE.size;V.winMats=n}
+  // 掛在 staticBatch 之後（pre38 的處理也在那裡，之後才預先畫一幀、編譯材質）
+  if(typeof staticBatch==='function'){const _sb=staticBatch;staticBatch=function(){const r=_sb.apply(this,arguments);try{const t0=performance.now();setupWindows();V.winMs=Math.round(performance.now()-t0)}catch(e){console.error('NIGHT44 win',e)}return r}}
+  // ================= 1) 路燈 =================
+  function poolTex(){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),gr=g.createRadialGradient(64,64,0,64,64,64);gr.addColorStop(0,'rgba(255,214,150,.95)');gr.addColorStop(.35,'rgba(255,196,120,.5)');gr.addColorStop(.7,'rgba(255,180,100,.14)');gr.addColorStop(1,'rgba(255,170,90,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t}
+  function glowTex(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'rgba(255,240,210,1)');gr.addColorStop(.25,'rgba(255,220,170,.55)');gr.addColorStop(1,'rgba(255,200,140,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t}
+  function findLamps(){const P=[],w=new THREE.Vector3(),m4=new THREE.Matrix4(),c=new THREE.Vector3();
+    const lampMat=m=>{if(!m||Array.isArray(m))return false;if(m.type==='MeshBasicMaterial'&&!m.map&&!m.transparent){const k=m.color;return (k.r+k.g+k.b)/3>.8&&k.b<=k.r}return false};
+    scene.traverse(o=>{if(!o.isMesh||!lampMat(o.material))return;let p=o,vis=true,veh=false;while(p){if(!p.visible)vis=false;if(p.userData&&(p.userData.tails||p.userData.sd))veh=true;p=p.parent}if(!vis||veh)return;let top=o;while(top.parent&&top.parent!==scene)top=top.parent;if(typeof car!=='undefined'&&top===car)return;
+      const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();g.boundingBox.getCenter(c);const sz=g.boundingBox.getSize(new THREE.Vector3());if(Math.max(sz.x,sz.y,sz.z)>1.2)return;
+      if(o.isInstancedMesh){for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);if(Math.abs(m4.elements[0])+Math.abs(m4.elements[5])+Math.abs(m4.elements[10])<1e-6)continue;w.copy(c).applyMatrix4(m4).applyMatrix4(o.matrixWorld);const h=w.y-hAt(w.x,w.z);if(h>1.3&&h<12)P.push([w.x,w.y,w.z,h])}}
+      else{w.copy(c).applyMatrix4(o.matrixWorld);const h=w.y-hAt(w.x,w.z);if(h>2.3&&h<12)P.push([w.x,w.y,w.z,h])}});
+    const out=[];for(const p of P)if(!out.some(q=>Math.abs(q[0]-p[0])<1.2&&Math.abs(q[2]-p[2])<1.2))out.push(p);return out}
+  function buildLamps(){const L=V.lamps=findLamps();if(!L.length)return;
+    const pg=new THREE.PlaneGeometry(1,1);pg.rotateX(-Math.PI/2);const pm=new THREE.MeshBasicMaterial({map:poolTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8});
+    const pool=new THREE.InstancedMesh(pg,pm,L.length),m4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),s=new THREE.Vector3();
+    L.forEach(([x,y,z,h],i)=>{const r=Math.min(16,4+h*1.5);v.set(x,hAt(x,z)+.07,z);s.set(r,1,r);m4.compose(v,q,s);pool.setMatrixAt(i,m4)});pool.frustumCulled=false;pool.renderOrder=2;pool.visible=false;pool.name='NIGHT44pool';pool.userData.noElev=1;scene.add(pool);
+    const pos=new Float32Array(L.length*3);L.forEach(([x,y,z],i)=>{pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=z});const gg=new THREE.BufferGeometry();gg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const glow=new THREE.Points(gg,new THREE.PointsMaterial({map:glowTex(),size:2.2,sizeAttenuation:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0}));glow.frustumCulled=false;glow.visible=false;glow.name='NIGHT44glow';glow.userData.noElev=1;scene.add(glow);
+    V.pool=pool;V.glow=glow}
+  let lastN=-1;function update(){const n=(window.DAY39&&DAY39.night)||0;if(Math.abs(n-lastN)<.01)return;lastN=n;const k=Math.max(0,Math.min(1,(n-.2)/.5));
+    if(V.pool){V.pool.visible=k>0;V.pool.material.opacity=.55*k}if(V.glow){V.glow.visible=k>0;V.glow.material.opacity=.9*k}
+    for(const m of V.mats)m.emissiveIntensity=.95*k}
+  V.update=update;
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.HAUNT43||!HAUNT43.started)return;clearInterval(t);
+    // 載入後才補上的立面（fix30 的 facade30、north30 店面等）：再處理一次（只處理還沒有窗光的材質）
+    try{const n0=V.mats.length;setupWindows();V.winLate=V.mats.length-n0;V.winMats=V.mats.length}catch(e){console.error('NIGHT44 win2',e)}
+    try{buildLamps()}catch(e){console.error('NIGHT44 lamps',e)}setInterval(()=>{try{update()}catch(e){}},500);update();console.log('[night44]',JSON.stringify({lamps:V.lamps.length,winMats:V.winMats,tex:V.texN,ms:V.winMs}))},400);
 })();
 
 </script>
