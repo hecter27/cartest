@@ -6541,9 +6541,9 @@ function hotel27Build(){if(HOTEL27)return HOTEL27;const t0=performance.now(),out
   const nearRoad=(x,z,re)=>{let best=null,bd=1e9;for(const r of RTX.roads||[]){if(re&&!re.test(r.name||''))continue;const P=r.P||[];for(let i=0;i+1<P.length;i++){const a=P[i],b=P[i+1],vx=b[0]-a[0],vz=b[1]-a[1],l2=vx*vx+vz*vz||1;let k=((x-a[0])*vx+(z-a[1])*vz)/l2;k=k<0?0:k>1?1:k;const qx=a[0]+k*vx,qz=a[1]+k*vz,d=Math.hypot(x-qx,z-qz);if(d<bd){bd=d;const l=Math.sqrt(l2);best={q:[qx,qz],d,u:[vx/l,vz/l],hw:r.hw||4,name:r.name}}}}return best};
   const onRoadSide=(x,z,re,setback)=>{const n=nearRoad(x,z,re);if(!n)return null;let nx=x-n.q[0],nz=z-n.q[1],l=Math.hypot(nx,nz)||1;nx/=l;nz/=l;const off=n.hw+2.2+(setback||0);return{front:[n.q[0]+nx*off,n.q[1]+nz*off],face:[-nx,-nz],road:n}};
   // 第二十八次：依衛星圖 20z，全家（新竹向陽店）在明湖路 644 巷與 648 巷之間的三角地，店面朝東正對 644 巷（hotel28 補建兩條巷子）
-  try{const s={front:[-494.4,95.0],face:[0,1]};if(s)shopAt(s.front[0],s.front[1],s.face,{W:9,D:10,fl:3,upper:'#e4dccb',sign:(g,W,H)=>{const st=['#00a040','#ffffff','#0068b7'];for(let i=0;i<3;i++){g.fillStyle=st[i];g.fillRect(0,i*H/3,W,H/3)}g.fillStyle='#0068b7';g.font='900 46px Arial';g.textAlign='left';g.fillText('FamilyMart',20,64);g.fillStyle='#00a040';g.font='900 40px "Noto Sans TC",sans-serif';g.textAlign='right';g.fillText('全家便利商店',W-16,62)}});out.fm=s?s.front.map(v=>+v.toFixed(1)).concat(s.face.map(v=>+v.toFixed(2))):0}catch(e){console.warn('h27 fm',e)}
+  try{const s={front:[-494.4,95.0],face:[0,1]};if(s)shopAt(s.front[0],s.front[1],s.face,{W:9,D:10,fl:3,upper:'#e4dccb',sign:(g,W,H)=>{const st=['#00a040','#ffffff','#0068b7'];for(let i=0;i<3;i++){g.fillStyle=st[i];g.fillRect(0,i*H/3,W,H/3)}}   /* 第 48 次：便利商店只用接近真實的配色，不寫店名（使用者決定） */});out.fm=s?s.front.map(v=>+v.toFixed(1)).concat(s.face.map(v=>+v.toFixed(2))):0}catch(e){console.warn('h27 fm',e)}
   // ---------- 6) 7-ELEVEN 青草湖門市（明湖路往 1016 巷口西南角）----------
-  try{const s=onRoadSide(-1206,1170,/明湖路（東段）/,.6);if(s)shopAt(s.front[0],s.front[1],s.face,{W:12,D:14,fl:2,upper:'#ddd6c8',sign:(g,W,H)=>{g.fillStyle='#ffffff';g.fillRect(0,0,W,H);const c=['#f58220','#00843d','#e2231a'];for(let i=0;i<3;i++){g.fillStyle=c[i];g.fillRect(0,18+i*14,150,10)}g.fillStyle='#00843d';g.font='900 52px Arial';g.textAlign='left';g.fillText('7-ELEVEN',170,66);g.fillStyle='#333';g.font='700 30px "Noto Sans TC",sans-serif';g.textAlign='right';g.fillText('青草湖門市',W-12,64)}});out.s711=s?s.front.map(v=>+v.toFixed(1)).concat(s.face.map(v=>+v.toFixed(2))):0}catch(e){console.warn('h27 711',e)}
+  try{const s=onRoadSide(-1206,1170,/明湖路（東段）/,.6);if(s)shopAt(s.front[0],s.front[1],s.face,{W:12,D:14,fl:2,upper:'#ddd6c8',sign:(g,W,H)=>{g.fillStyle='#ffffff';g.fillRect(0,0,W,H);const c=['#f58220','#00843d','#e2231a'];for(let i=0;i<3;i++){g.fillStyle=c[i];g.fillRect(0,H*.2+i*H*.2,W,H*.14)}}});out.s711=s?s.front.map(v=>+v.toFixed(1)).concat(s.face.map(v=>+v.toFixed(2))):0}catch(e){console.warn('h27 711',e)}
   // ---------- 7) 台灣中油 明湖站（明湖路東段，往 1016 巷口東北）----------
   try{const s=onRoadSide(-1265.7,1248.8,/明湖路（東段）/,1);if(s){const face=s.face,ang=Math.atan2(face[1],face[0])-Math.PI/2,cx=s.front[0]-face[0]*9,cz=s.front[1]-face[1]*9;clearRects([{cx,cz,L:24,W:20,ang}],.5,built);
       const G=new THREE.Group(),y0=gy(cx,cz);G.position.set(cx,y0,cz);G.rotation.y=-ang;scene.add(G);built.push(G);
@@ -9018,6 +9018,48 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
   const _sb=staticBatch;staticBatch=function(){const r=_sb.apply(this,arguments);try{shrinkSky()}catch(e){console.error('TEX47 sky',e)}try{run('batch')}catch(e){console.error('TEX47',e)}return r};
   // 載入後才建的（hotel41、park42、temple43、haunt43、night44…）再做一次：只處理還沒上傳的
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam)return;clearInterval(t);try{run('late')}catch(e){console.error('TEX47 late',e)}},500);
+})();
+
+// 第四十八次（階段 M-3）：模型上傳顯示卡後，釋放記憶體裡的那份頂點陣列。
+//  iPhone 的記憶體是 CPU、GPU 共用，同一個模型在 JS 陣列和顯示卡上各存一份。未合併的一般網格約 120 MB，上傳後 JS 那份大多沒人再讀。
+//  做法：
+//   1) 靜態合併後（預先畫一幀之前）在候選幾何的每個屬性掛 onUpload，記下已上傳的屬性。
+//   2) 載入後的修正全部做完（night45 建好）再等 5 秒，把符合條件的幾何先算好包圍盒／包圍球，已上傳的屬性陣列換成同型別的空陣列；之後才上傳的，上傳當下換掉。
+//  不處理（之後還會讀寫陣列的）：靜態合併網格與其原始物件（slim34 還原、sbMerge 重建）、車輛模型工廠（veh33 近距離生成精細車）、
+//   人物（蒙皮）、實例網格、點／線／精靈、停車場分級網格 LO33（執行中會改索引）、路人簡化 LO34、駕駛艙點擊盒 HIT、路考導引線、屬性設成動態的。
+//  配套：射線不測已釋放的網格（腳步聲判斷地面會略過，查不到就當草地）；evict39 不卸下已釋放的（沒有資料可以重新上傳）；
+//   顯示卡 context 遺失又恢復時，已釋放的模型無法重傳 → 顯示訊息並重新載入頁面。網址加 ?geo=0 可關掉。
+(function(){
+  const V=window.GEO48={on:!/[?&]geo=0/.test(location.search)&&!window.SAFE34,stat:{freed:0,bytes:0,late:0,lateBytes:0}};if(!V.on||typeof staticBatch!=='function')return;
+  const UP=new WeakSet(),ELIG=new WeakSet(),EMPTY=new Map();let READY=false;
+  const empty=a=>{const C=a.constructor;let e=EMPTY.get(C);if(!e){e=new C(0);EMPTY.set(C,e)}return e};
+  function free(a,late){if(!a||a.__geo48||!a.array||!a.array.length)return;const b=a.array.byteLength;a.array=empty(a.array);a.__geo48=1;V.stat.freed++;V.stat.bytes+=b;if(late){V.stat.late++;V.stat.lateBytes+=b}}
+  function hook(a){if(!a||a.__geo48h||a.isInterleavedBufferAttribute)return;a.__geo48h=1;const prev=a.onUploadCallback;a.onUploadCallback=function(){try{prev&&prev.call(this)}catch(e){}UP.add(this);if(READY&&ELIG.has(this))free(this,true)}}
+  const attrs=g=>{const L=[];for(const k in g.attributes)L.push(g.attributes[k]);if(g.index)L.push(g.index);return L};
+  // 1) 掛上傳紀錄
+  const _sb=staticBatch;staticBatch=function(){const r=_sb.apply(this,arguments);try{let n=0;scene.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&o.name!=='SB'&&o.geometry&&o.geometry.attributes){for(const a of attrs(o.geometry))hook(a);n++}});V.stat.hooked=n}catch(e){console.error('GEO48 hook',e)}return r};
+  // 2) 選出可以釋放的幾何
+  function pick(){const ex=new Set(),use=new Map();
+    try{for(const [o] of SB.byMesh)if(o.geometry)ex.add(o.geometry)}catch(e){}
+    try{for(const k in makeCarModel.v4.g)ex.add(makeCarModel.v4.g[k])}catch(e){}
+    try{HIT.list.forEach(m=>ex.add(m.geometry))}catch(e){}
+    try{(window.guideLines||guideLines||[]).forEach(l=>l&&l.geometry&&ex.add(l.geometry))}catch(e){}
+    scene.traverse(o=>{if(!o.geometry)return;const g=o.geometry;
+      const bad=!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.name==='SB'||/^LO3[34]/.test(o.name||'')||(g.morphAttributes&&Object.keys(g.morphAttributes).length)||attrs(g).some(a=>a.isInterleavedBufferAttribute||a.usage===THREE.DynamicDrawUsage);
+      if(bad)ex.add(g);else use.set(g,1)});
+    const out=[];for(const [g] of use)if(!ex.has(g))out.push(g);return out}
+  function go(){const t0=performance.now(),G=pick();let n=0;
+    for(const g of G){try{if(!g.boundingBox)g.computeBoundingBox();if(!g.boundingSphere)g.computeBoundingSphere()}catch(e){continue}g.userData.geo48=1;n++;
+      for(const a of attrs(g)){ELIG.add(a);if(UP.has(a))free(a,false)}}
+    READY=true;V.stat.geos=n;V.stat.ms=Math.round(performance.now()-t0);V.stat.MB=+(V.stat.bytes/1048576).toFixed(1);console.log('[geo48]',JSON.stringify(V.stat))}
+  // 射線：已釋放的網格不測
+  const _rc=THREE.Mesh.prototype.raycast;THREE.Mesh.prototype.raycast=function(r,i){const g=this.geometry;if(g&&g.userData&&g.userData.geo48&&g.attributes.position&&g.attributes.position.__geo48)return;return _rc.call(this,r,i)};
+  // 不卸下已釋放的（evict39 會呼叫 dispose）
+  const _dp=THREE.BufferGeometry.prototype.dispose;THREE.BufferGeometry.prototype.dispose=function(){if(this.userData&&this.userData.geo48&&attrs(this).some(a=>a.__geo48))return;return _dp.call(this)};
+  // 複製已釋放的幾何會得到空模型：記下來方便查
+  const _cl=THREE.BufferGeometry.prototype.clone;THREE.BufferGeometry.prototype.clone=function(){if(this.userData&&this.userData.geo48&&attrs(this).some(a=>a.__geo48)){V.stat.cloneWarn=(V.stat.cloneWarn||0)+1;console.warn('GEO48: clone of freed geometry')}return _cl.call(this)};
+  document.addEventListener('DOMContentLoaded',()=>{const c=document.getElementById('gl');if(!c)return;c.addEventListener('webglcontextrestored',()=>{if(!V.stat.freed)return;try{window.DIAG34&&DIAG34('顯示卡資料遺失，模型需要重新載入，3 秒後重新整理頁面…')}catch(e){}setTimeout(()=>location.reload(),3000)},false)});
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late)return;clearInterval(t);setTimeout(()=>{try{go()}catch(e){console.error('GEO48',e)}},5000)},500);
 })();
 
 </script>
