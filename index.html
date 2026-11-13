@@ -7395,10 +7395,11 @@ var SHOP46P=(function(){
   function build(){if(C)return;C=document.createElement('canvas');C.width=SW;C.height=SH;const g=C.getContext('2d');
     const X=i=>1024+i*CW;drink(g,X(0),0);drink(g,X(1),1);bfast(g,X(2),0);bfast(g,X(3),1);repair(g,X(4),0);repair(g,X(5),1);conv(g,X(6),0);conv(g,X(7),1);for(let v=0;v<4;v++)drinkHi(g,2048+v*256,v)}
   // 夜間自發光：營業中的店（右半新增格、原本的玻璃店面、五金行、小吃）亮，鐵捲門與住家鐵門不亮，門楣只有便利商店與手搖飲亮
-  function buildE(){if(E)return;build();E=document.createElement('canvas');E.width=SW;E.height=SH;const g=E.getContext('2d');g.drawImage(C,0,0);
+  function buildE(){if(E)return;build();E=document.createElement('canvas');E.width=SW;E.height=SH;const g=E.getContext('2d');g.drawImage(C,0,0);   // 先用全尺寸畫遮罩，最後縮成一半（夜間發光不需要細節，顯示卡省 3 MB）
+    const _fin=()=>{const h=document.createElement('canvas');h.width=SW/2;h.height=SH/2;const hg=h.getContext('2d');hg.imageSmoothingQuality='high';hg.drawImage(E,0,0,SW/2,SH/2);E=h};
     for(const i of[0,1,2,7])rr(g,i*CW,0,CW,SH,'#000');for(let i=3;i<16;i++)if(!(i>=8&&(i<=9||i>=14)))rr(g,i*CW,0,CW,40,'#000');
     g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,0,SW,SH);for(const i of[10,11])rr(g,i*CW,40,CW,216,'rgba(0,0,0,.55)');   // 早餐店晚上只開小燈
-    rr(g,12*CW,40,2*CW,216,'rgba(0,0,0,.35)')}
+    rr(g,12*CW,40,2*CW,216,'rgba(0,0,0,.35)');_fin()}
   return{BASE,DPAL,
     shopCanvas(){build();return C},
     shopTex(){if(!T){build();T=new THREE.CanvasTexture(C);T.anisotropy=4}return T},
@@ -9009,8 +9010,12 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
       for(const t of L){if(t===rep)continue;const p=R.properties.get(t);if(p.__webglTexture)continue;   // 已經各自上傳的不動
         p.__webglTexture=rp.__webglTexture;p.__version=t.version;p.__alias47=rep;alias++;px+=img.width*img.height}}
     const s={groups,alias,savedMB:+(px*4*1.33/1048576).toFixed(1),tex:T.size,ms:Math.round(performance.now()-t0)};V.stat[tag]=s;console.log('[tex47]',tag,JSON.stringify(s))}
+  // 天空球貼圖 2048×1024 縮成 1024×512：漸層與雲，縮小後和原圖平均差 0.6／255，看不出來；顯示卡省約 8 MB（含 mipmap）。
+  //  草地、柏油的 1024×1024 不縮（走路時近看得到細節）。
+  function shrinkSky(){let n=0;scene.traverse(o=>{if(!o.isMesh||!o.geometry||o.geometry.type!=='SphereGeometry'||!o.material||!o.material.map)return;const t=o.material.map,img=t.image;if(!img||img.width<2048)return;
+      if(!(img instanceof HTMLCanvasElement))return;const c=document.createElement('canvas');c.width=img.width/2;c.height=img.height/2;const g=c.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(img,0,0,c.width,c.height);t.image=c;t.needsUpdate=true;n++});V.stat.sky=n}
   V.run=run;
-  const _sb=staticBatch;staticBatch=function(){const r=_sb.apply(this,arguments);try{run('batch')}catch(e){console.error('TEX47',e)}return r};
+  const _sb=staticBatch;staticBatch=function(){const r=_sb.apply(this,arguments);try{shrinkSky()}catch(e){console.error('TEX47 sky',e)}try{run('batch')}catch(e){console.error('TEX47',e)}return r};
   // 載入後才建的（hotel41、park42、temple43、haunt43、night44…）再做一次：只處理還沒上傳的
   const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam)return;clearInterval(t);try{run('late')}catch(e){console.error('TEX47 late',e)}},500);
 })();
