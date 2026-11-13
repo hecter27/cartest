@@ -8262,6 +8262,69 @@ function fix32(){
   if(typeof lakeNearest==='function'){const _ln=lakeNearest;lakeNearest=function(){const b=_ln.apply(this,arguments);return b?{d:b.d,o:{name:strip(b.o.name),p:b.o.p}}:b}}
 })();
 
+// 第四十三次：靈隱寺整平。
+//  第二十六次把整座寺從舊址山坡搬到實景位置時，連舊址的坡度一起搬了過來（地坪、台階都順著坡），所以寺內地面從山門 2 m 一路升到後方 12.7 m（約 14%），
+//  大殿、塔、石燈都順著坡擺，看起來整座寺是斜的。實景位置是平地（temple26 的註記）。
+//  做法（載入完成後執行一次）：寺內（temple26 的範圍：大殿座標系 |lx|<34、−42<lz<42）整平到山門前的地面高度，外圍 20 m 平順接回原地形；
+//   大殿整組（LAKE.templeGroup）一起平移到平面上（不拆開、不變形）；寺內其他物件（側殿、塔、石燈、香爐、樹木）各自依位置降到平面；
+//   貼地的鋪面、地形網格逐頂點調整；之後的地面高度（hAt）一併改寫。網址加 ?flat=0 可關掉。
+(function(){
+  const V=window.TEMPLE43={on:!/[?&]flat=0/.test(location.search)&&!window.SAFE34};if(!V.on)return;
+  const HALL=[-870.6,764.8],HLZ=-16,RX=34,RZ0=-42,RZ1=42,BL=20;
+  const dl=Math.hypot(-.2,.98),dir=[-.2/dl,.98/dl],ph1=Math.atan2(dir[0],dir[1]),pos1=[HALL[0]-HLZ*dir[0],HALL[1]-HLZ*dir[1]],c1=Math.cos(ph1),s1=Math.sin(ph1);
+  const toL=(x,z)=>{const ex=x-pos1[0],ez=z-pos1[1];return[ex*c1-ez*s1,ex*s1+ez*c1]};
+  // 權重：寺內 1，外圍 20 m 漸變到 0（正面山門外只漸變 3 m，車道高度不動）
+  // 寺邊緣的建物周圍另外整平（西側紅頂側殿）：半徑 r 內全平，外圍 12 m 漸變
+  const PADS=[[-861.8,731.9,14]];const wPad=(x,z)=>{let w=0;for(const [px,pz,r] of PADS){const d=Math.hypot(x-px,z-pz)-r;const t=d<=0?1:d>=12?0:1-d/12;w=Math.max(w,t*t*(3-2*t))}return w};
+  const wOf=(x,z)=>Math.max(wBox(x,z),wPad(x,z));
+  const wBox=(x,z)=>{const l=toL(x,z);if(l[1]>RZ1)return l[1]<RZ1+3?Math.max(0,1-(l[1]-RZ1)/3)*(Math.abs(l[0])<RX?1:0):0;const ox=Math.max(0,Math.abs(l[0])-RX),oz=Math.max(0,RZ0-l[1]);const d=Math.hypot(ox,oz);if(d<=0)return 1;if(d>=BL)return 0;const t=1-d/BL;return t*t*(3-2*t)};
+  function run(){if(V.done)return;V.done=true;const t0=performance.now();const G=window.LAKE&&LAKE.templeGroup;if(!G){V.err='no group';return}
+    const gate=(window.TEMPLE26&&TEMPLE26.gate)||[HALL[0]+dir[0]*56,HALL[1]+dir[1]*56];const hOld=hAt;const Lc=hOld(gate[0],gate[1])+.05;V.Lc=+Lc.toFixed(2);
+    const dOf=(x,z)=>{const w=wOf(x,z);return w>0?w*(Lc-hOld(x,z)):0};
+    const bb=new THREE.Box3(),c=new THREE.Vector3(),sz=new THREE.Vector3(),v=new THREE.Vector3(),inv=new THREE.Matrix4();let nObj=0,nVert=0,nInst=0,nMesh=0;
+    // ---- 1) 大殿整組：以最大的底座（平台）為準，底面放到平面下 0.1 m ----
+    G.updateMatrixWorld(true);let plat=null,pa=0;G.children.forEach(o=>{bb.setFromObject(o);if(bb.isEmpty())return;bb.getSize(sz);const a=sz.x*sz.z;if(sz.y<3&&a>pa){pa=a;plat=bb.clone()}});
+    if(!plat){V.err='no platform';return}const dG=Lc-.1-plat.min.y;G.position.y+=dG;G.updateMatrixWorld(true);V.dG=+dG.toFixed(2);
+    // 群組裡不在平台範圍內的零件（例如旁邊的小亭）：再各自落到平面
+    const PF=plat.clone().expandByScalar(1);G.children.forEach(o=>{bb.setFromObject(o);if(bb.isEmpty())return;bb.getCenter(c);if(c.x>PF.min.x&&c.x<PF.max.x&&c.z>PF.min.z&&c.z<PF.max.z)return;const extra=Lc-(hOld(c.x,c.z)+dG)+(bb.min.y-(hOld(c.x,c.z)+dG));o.position.y+=Lc-bb.min.y-.05;o.updateMatrixWorld(true);nObj++});
+    // ---- 2) 寺內其他東西 ----
+    const isTerrain=o=>{bb.setFromObject(o);bb.getSize(sz);return sz.x>400||sz.z>400};
+    const shiftVerts=(o,needNormals)=>{let g=o.geometry;if(!g||!g.attributes||!g.attributes.position)return 0;o.updateMatrixWorld(true);const P=g.attributes.position,M=o.matrixWorld;inv.copy(M).invert();let ch=0;
+      for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(M);const d=dOf(v.x,v.z);if(Math.abs(d)<.005)continue;v.y+=d;v.applyMatrix4(inv);P.setXYZ(i,v.x,v.y,v.z);ch++}
+      if(ch){P.needsUpdate=true;if(needNormals){g.deleteAttribute('normal');g.computeVertexNormals()}g.computeBoundingSphere();g.computeBoundingBox();nVert+=ch;nMesh++}return ch};
+    const users=new Map();scene.traverse(o=>{if(o.geometry)users.set(o.geometry,(users.get(o.geometry)||0)+1)});
+    // 順著地面做的網格：八成以上頂點離舊地面 1.2 m 內
+    const hugs=(arr)=>{let n=0,k=0;for(const p of arr){n++;if(Math.abs(p[1]-hOld(p[0],p[2]))<1.2)k++}return n>0&&k/n>=.8};
+    const meshPts=o=>{const P=o.geometry.attributes.position,M=o.matrixWorld,st=Math.max(1,Math.floor(P.count/200)),out=[];for(let i=0;i<P.count;i+=st){v.fromBufferAttribute(P,i).applyMatrix4(M);out.push([v.x,v.y,v.z])}return out};
+    // 靜態合併網格：用 slim34 記下的每個原始物件頂點範圍，分開判斷（建物整體下移、鋪面逐頂點）
+    const done=new Map();
+    try{if(window.SLIM34&&SB&&SB.byMesh)for(const [o] of SB.byMesh){const r=SLIM34.peek(o);if(!r||!r.parts||!r.parts.length)continue;const bs=o.geometry.boundingSphere;if(!bs)continue;c.copy(bs.center).applyMatrix4(r.mw);if(wOf(c.x,c.z)<=0)continue;
+        for(const pt of r.parts){const P=pt.G.attributes.position;let f=done.get(pt.G);if(!f){f=new Uint8Array(P.count);done.set(pt.G,f)}const arr=[];const st=Math.max(1,Math.floor(r.vn/120));for(let i=0;i<r.vn;i+=st){const k=pt.v0+i;arr.push([P.getX(k),P.getY(k),P.getZ(k)])}
+          const hug=hugs(arr),dc=dOf(c.x,c.z);for(let i=0;i<r.vn;i++){const k=pt.v0+i;if(f[k])continue;const d=hug?dOf(P.getX(k),P.getZ(k)):dc;if(Math.abs(d)>.005)P.setY(k,P.getY(k)+d);f[k]=1}P.needsUpdate=true;nVert+=r.vn}nObj++}}catch(e){console.error('TEMPLE43 sb',e)}
+    const near=o=>{bb.setFromObject(o);return !bb.isEmpty()&&!(bb.max.x<HALL[0]-120||bb.min.x>HALL[0]+120||bb.max.z<HALL[1]-120||bb.min.z>HALL[1]+120)};
+    const rigidD=(o,d)=>{o.getWorldPosition(v);const v2=v.clone();v2.y+=d;if(o.parent&&o.parent!==scene){o.parent.worldToLocal(v);o.parent.worldToLocal(v2);o.position.x+=v2.x-v.x;o.position.y+=v2.y-v.y;o.position.z+=v2.z-v.z}else o.position.y+=d;o.updateMatrix();o.updateMatrixWorld(true);nObj++};
+    // 網格分類：大片且相對低平（高度 < 水平 35%）＝順著坡做的鋪面、台階、矮牆 → 逐頂點整平；其餘（建物、塔、石燈、樹）→ 依中心整體下移
+    const proc=o=>{if(o===G||o.isLight||o.isCamera||!near(o))return;
+      if(o.isInstancedMesh){const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3();let ch=0;for(let i=0;i<o.count;i++){o.getMatrixAt(i,m4);m4.decompose(v,q,s);v.applyMatrix4(o.matrixWorld);const d=dOf(v.x,v.z);if(Math.abs(d)<.01)continue;o.getMatrixAt(i,m4);m4.elements[13]+=d;o.setMatrixAt(i,m4);ch++}if(ch){o.instanceMatrix.needsUpdate=true;nInst+=ch;o.geometry.boundingSphere=null}return}
+      if(o.isGroup||(!o.isMesh&&o.children&&o.children.length)){
+        // 整組建物（40 m 以內、3 個網格以上、高 3 m 以上）：扶正（只留水平旋轉），底部放到平面
+        bb.setFromObject(o);bb.getSize(sz);let nm=0;o.traverse(q=>{if(q.isMesh)nm++});bb.getCenter(c);
+        if(Math.max(sz.x,sz.z)<=40&&nm>=3&&sz.y>3&&wOf(c.x,c.z)>.5){const up=new THREE.Vector3(0,1,0).applyQuaternion(o.getWorldQuaternion(new THREE.Quaternion()));if(up.y<.999){o.rotation.x=0;o.rotation.z=0;o.updateMatrixWorld(true);V.unTilt=(V.unTilt||0)+1}
+          bb.setFromObject(o);const d=Lc-.05-bb.min.y;if(Math.abs(d)>.01)rigidD(o,d);return}
+        o.children.slice().forEach(proc);return}
+      if(!o.isMesh)return;bb.setFromObject(o);bb.getSize(sz);bb.getCenter(c);const ext=Math.max(sz.x,sz.z);
+      if(ext>400){shiftVerts(o,true);return}
+      if(o.name==='SB'){const g=o.geometry,f=done.get(g),P=g.attributes.position;if(f){let ch=0;for(let i=0;i<P.count;i++){if(f[i])continue;v.fromBufferAttribute(P,i);const d=dOf(v.x,v.z);if(Math.abs(d)>.005){P.setY(i,v.y+d);ch++}}P.needsUpdate=true;g.computeBoundingSphere();g.computeBoundingBox();nVert+=ch}else shiftVerts(o,false);return}
+      if(ext>8&&(sz.y<1.5||hugs(meshPts(o)))){if(users.get(o.geometry)>1)o.geometry=o.geometry.clone();shiftVerts(o,false);return}
+      const d=dOf(c.x,c.z);if(Math.abs(d)>=.01)rigidD(o,d)};
+    scene.children.slice().forEach(proc);
+    // 停放車輛（三級精細度的合併網格）不在寺內，略過
+    // ---- 3) 之後的地面高度 ----
+    hAt=function(x,z){const h=hOld(x,z),w=wOf(x,z);return w>0?h+w*(Lc-h):h};
+    V.out={Lc:V.Lc,dG:V.dG,obj:nObj,mesh:nMesh,vert:nVert,inst:nInst,ms:Math.round(performance.now()-t0)};console.log('[temple43]',JSON.stringify(V.out))}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.PARK42||!PARK42.done)return;clearInterval(t);try{run()}catch(e){console.error('TEMPLE43',e)}},400);
+})();
+
 </script>
 </body>
 </html>
