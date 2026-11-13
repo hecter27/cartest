@@ -9187,6 +9187,55 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     setTimeout(()=>{try{all()}catch(e){console.error('SBQ50',e)}},1000)},500);
 })();
 
+// 第五十一次（續）（階段 M-5(b) 後半）：遠處的靜態合併網格，資料暫存到 IndexedDB（存在手機儲存空間，不佔記憶體），靠近再讀回來。
+//  合併網格（874 個）的陣列一直留在 JS 記憶體（slim34 還原原物件要用），其中大半在鏡頭看不到的遠處。
+//  第 51 次（續）發現：合併網格 113 MB 裡有 106 MB 是停車場精細車（veh33 拿來做中／遠距簡化模型後就永遠藏起來），這些不論遠近都暫存。
+//  做法：每 1.5 秒看一次鏡頭位置。網格中心離鏡頭超過「視距＋200 m」→ 陣列寫進 IndexedDB、寫好後換成空陣列、顯示卡那份也放掉、網格移出顯示圖層（不改 visible，別的程式照常切換顯示）；
+//   回到「視距＋120 m」以內 → 從 IndexedDB 讀回、放回陣列、重新顯示（three 下一幀自己上傳）。中間 80 m 是緩衝，避免在邊界來回存取。
+//  被暫存的網格裡如果有原物件要「喚醒」（改位置、顯示、材質），先記下來，讀回之後再照做。
+//  每次載入頁面先清空資料庫（不跨次使用）。瀏覽器不能用 IndexedDB（例如無痕模式失敗）就不啟用。網址加 ?park=0 可關掉。
+(function(){
+  const V=window.PARK51={on:!/[?&]park=0/.test(location.search)&&!window.SAFE34&&!!window.indexedDB,stat:{parked:0,loaded:0,bytes:0,peakParked:0,fail:0,defer:0},ready:false};if(!V.on)return;
+  const DBN='cartest_park51';let db=null;const EMPTY=new Map();const empty=C=>{let e=EMPTY.get(C);if(!e){e=new C(0);EMPTY.set(C,e)}return e};
+  try{const del=indexedDB.deleteDatabase(DBN);del.onsuccess=del.onerror=del.onblocked=()=>{const rq=indexedDB.open(DBN,1);rq.onupgradeneeded=()=>rq.result.createObjectStore('g');rq.onsuccess=()=>{db=rq.result;V.ready=true};rq.onerror=()=>{V.on=false}}}catch(e){V.on=false}
+  const ST=new WeakMap();   // grp → {id, parked, busy, vis, wakes:[]}
+  let nid=1;const st=g=>{let s=ST.get(g);if(!s){s={id:nid++,parked:false,busy:false,vis:true,wakes:[]};ST.set(g,s)}return s};
+  const ATTR=['position','normal','uv','color'];
+  function park(grp){const s=st(grp);if(s.parked||s.busy||!db)return;const me=grp.mesh,g=me&&me.geometry;if(!g||!me.parent||(SB.dirty&&SB.dirty.has(grp)))return;
+    const rec={a:{},i:null};let bytes=0;for(const k of ATTR){const a=g.attributes[k];if(!a||!a.array||!a.array.length)continue;rec.a[k]=[a.array.constructor.name,a.array.buffer.slice(a.array.byteOffset,a.array.byteOffset+a.array.byteLength)];bytes+=a.array.byteLength}
+    if(g.index&&g.index.array.length){rec.i=[g.index.array.constructor.name,g.index.array.buffer.slice(g.index.array.byteOffset,g.index.array.byteOffset+g.index.array.byteLength)];bytes+=g.index.array.byteLength}
+    if(!bytes)return;s.busy=true;
+    try{const tx=db.transaction('g','readwrite');tx.objectStore('g').put(rec,s.id);
+      tx.oncomplete=()=>{s.busy=false;// 寫好之後才放掉：中間若有人要用這組（被喚醒、重建）就不放
+        if(SB.dirty&&SB.dirty.has(grp)||grp.mesh!==me||me.geometry!==g)return;
+        for(const k of ATTR){const a=g.attributes[k];if(a&&rec.a[k])a.array=empty(a.array.constructor)}if(rec.i)g.index.array=empty(g.index.array.constructor);
+        try{g.dispose()}catch(e){}me.layers.disableAll();s.parked=true;s.bytes=bytes;V.stat.parked++;V.stat.bytes+=bytes;V.stat.peakParked=Math.max(V.stat.peakParked,V.stat.bytes)};
+      tx.onerror=tx.onabort=()=>{s.busy=false;V.stat.fail++}}catch(e){s.busy=false;V.stat.fail++}}
+  function unpark(grp,cb){const s=st(grp);if(!s.parked){cb&&cb();return}if(s.busy){if(cb)s.wakes.push(cb);return}s.busy=true;if(cb)s.wakes.push(cb);
+    const rq=db.transaction('g','readonly').objectStore('g').get(s.id);
+    rq.onsuccess=()=>{const rec=rq.result,me=grp.mesh,g=me&&me.geometry;s.busy=false;if(!rec||!g){V.stat.fail++;return}
+      for(const k of ATTR){const a=g.attributes[k];if(a&&rec.a[k]){const C=self[rec.a[k][0]];a.array=new C(rec.a[k][1]);a.needsUpdate=true}}
+      if(rec.i&&g.index){const C=self[rec.i[0]];g.index.array=new C(rec.i[1]);g.index.needsUpdate=true}
+      me.layers.set(0);s.parked=false;V.stat.parked--;V.stat.bytes-=s.bytes||0;V.stat.loaded++;
+      const W=s.wakes.splice(0);for(const f of W){try{f()}catch(e){console.error('PARK51 wake',e)}}};
+    rq.onerror=()=>{s.busy=false;V.stat.fail++}}
+  V.park=park;V.unpark=unpark;V.isParked=grp=>{const s=ST.get(grp);return !!(s&&s.parked)};
+  // 喚醒：物件所在的合併網格有被暫存的，先讀回再喚醒
+  if(typeof sbWake==='function'){const _w=sbWake;sbWake=function(o,readd){const gs=SB.byMesh.get(o);if(gs){const P=[...gs].filter(g=>{const s=ST.get(g);return s&&(s.parked||s.busy)});
+        if(P.length){V.stat.defer++;let left=P.length;const go=()=>{if(--left===0)_w(o,readd)};for(const g of P)unpark(g,go);return}}return _w.apply(this,arguments)}}
+  // 每 1.5 秒：遠的暫存（一次最多 8 個）、近的讀回（全部）
+  const cp=new THREE.Vector3(),c=new THREE.Vector3();
+  function tick(){if(!db||!SB.groups)return;try{cam.getWorldPosition(cp)}catch(e){return}if(V.at)cp.set(V.at[0],0,V.at[1]);const FAR=(cam.far||400)+200,NEAR=(cam.far||400)+120;let np=0;const L=[];
+    for(const grp of SB.groups){const me=grp.mesh,g=me&&me.geometry;if(!g||!me.parent)continue;if(!g.boundingSphere)continue;c.copy(g.boundingSphere.center).applyMatrix4(me.matrixWorld);
+      const r=g.boundingSphere.radius*me.matrixWorld.getMaxScaleOnAxis(),d=Math.hypot(c.x-cp.x,c.z-cp.z)-r;const s=st(grp);
+      let vis=true;for(let p=me;p;p=p.parent)if(!p.visible){vis=false;break}
+      // 藏起來的（例如停車場的精細車：載入時拿來做簡化模型後就不再顯示）不論遠近都暫存；顯示中的看距離
+      if(s.parked){if(vis&&d<NEAR)unpark(grp)}else if(!s.busy&&(!vis||d>FAR))L.push([vis?d:1e9,grp])}
+    L.sort((a,b)=>b[0]-a[0]);for(const [,grp] of L){if(np>=8)break;park(grp);np++}}
+  V.tick=tick;
+  const t=setInterval(()=>{if(!V.ready||!window.SBQ50||!SBQ50.finished)return;clearInterval(t);setInterval(()=>{try{tick()}catch(e){console.error('PARK51',e)}},1500);tick()},500);
+})();
+
 </script>
 </body>
 </html>
