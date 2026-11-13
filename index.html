@@ -7941,6 +7941,8 @@ function fix32(){
     M.head.emissiveIntensity=LB.hi+n*1.4;M.tail.emissive.copy(LB.tc).lerp(TR,n*.7);M.tail.emissiveIntensity=LB.ti+n*.6}catch(e){}}
   const dir=new THREE.Vector3();
   function apply(){const s=sample(V.h),h=((V.h%24)+24)%24;
+    // 第四十五次：夜裡依鏡頭所在區域調整（街區有城市光害、比較亮；青草湖比較暗）
+    let am=1,sm=1;try{if(window.NIGHT45&&NIGHT45.ambMul){am=NIGHT45.ambMul(s.night);sm=NIGHT45.skyMul(s.night);if(sm!==1){s.sky.multiplyScalar(sm);if(sm>1)s.sky.lerp(new THREE.Color(.16,.12,.1),Math.min(.5,(sm-1)*1.2)*Math.min(1,s.night))}s.hemiI*=am;if(s.night>.4)s.sunI*=am}}catch(e){}
     try{if(scene.fog)scene.fog.color.copy(s.sky);if(scene.background&&scene.background.isColor)scene.background.copy(s.sky);else scene.background=s.sky.clone()}catch(e){}
     // 太陽：6 點東升、12 點偏南、18 點西落；夜裡同一盞燈當月光（18 點東升）
     const day=h>=5.5&&h<=18.5,a=day?(h-6)/12*Math.PI:(((h-18+24)%24)/12)*Math.PI,el=Math.max(10*Math.PI/180,Math.sin(Math.max(0,Math.min(Math.PI,a)))*(day?65:48)*Math.PI/180);
@@ -8596,6 +8598,66 @@ function fix32(){
     // 載入後才補上的立面（fix30 的 facade30、north30 店面等）：再處理一次（只處理還沒有窗光的材質）
     try{const n0=V.mats.length;setupWindows();V.winLate=V.mats.length-n0;V.winMats=V.mats.length}catch(e){console.error('NIGHT44 win2',e)}
     try{buildLamps()}catch(e){console.error('NIGHT44 lamps',e)}setInterval(()=>{try{update()}catch(e){}},500);update();console.log('[night44]',JSON.stringify({lamps:V.lamps.length,winMats:V.winMats,tex:V.texN,ms:V.winMs}))},400);
+})();
+
+// 第四十五次：夜景分區（使用者要求）
+//  街區晚上要亮：路燈、車燈、機車燈、店家燈光，整體路面比較亮（環境光調高、天空帶城市光害）；
+//  青草湖要暗：只有路燈和車燈（環境光調低）。
+//  1) NIGHT45.zone(x,z)：青草湖範圍（LAKE.loop 的外框，外圍 80 m 漸變）＝1、街區＝0；day39 依鏡頭位置調整夜間環境光與天空
+//  2) 車燈：街上、環湖、駕訓班場內行駛中的車與機車，晚上前方路面一道光束（加法混色的實例網格）＋頭燈光點、紅色尾燈（Points），每幀跟著車更新
+//  3) 店家燈光：街區道路（環湖道路、靈隱寺車道以外）兩側人行道，旁邊有建物（碰撞方盒）的地方灑出暖色／白色店面燈光
+//  4) 路燈光圈：街區亮、青草湖暗（night44 的光圈改用每盞的顏色）
+(function(){
+  const V=window.NIGHT45={on:!/[?&]night=0/.test(location.search)&&!window.SAFE34,veh:[]};if(!V.on)return;
+  let LB=null;const lakeBox=()=>{if(LB)return LB;const L=(window.LAKE&&LAKE.loop)||[];if(!L.length)return null;let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;for(const p of L){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1])}return LB=[x0,x1,z0,z1]};
+  V.zone=(x,z)=>{const b=lakeBox();if(!b)return 0;const dx=Math.max(b[0]-x,0,x-b[1]),dz=Math.max(b[2]-z,0,z-b[3]),d=Math.hypot(dx,dz);return d<=0?1:d>=80?0:1-d/80};
+  // day39 讀這個：夜間環境光倍率、天空亮度倍率（依鏡頭位置平滑變化）
+  let zc=0;V.camZone=()=>zc;
+  V.ambMul=n=>{const k=Math.max(0,Math.min(1,(n-.2)/.6));return 1+k*(.7*(1-zc)-.45*zc)};
+  V.skyMul=n=>{const k=Math.max(0,Math.min(1,(n-.2)/.6));return 1+k*(.35*(1-zc)-.2*zc)};
+  const tex=(draw,w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t};
+  const beamTex=()=>tex((g,w,h)=>{const gr=g.createLinearGradient(0,0,w,0);gr.addColorStop(0,'rgba(255,245,215,.0)');gr.addColorStop(.06,'rgba(255,245,215,.85)');gr.addColorStop(.5,'rgba(255,240,205,.4)');gr.addColorStop(1,'rgba(255,235,200,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);
+    const m=g.getImageData(0,0,w,h);for(let y=0;y<h;y++){const v=Math.abs(y/(h-1)-.5)*2;for(let x=0;x<w;x++){const sp=.35+.65*(x/w),f=Math.max(0,1-Math.pow(v/sp,2));m.data[(y*w+x)*4+3]*=f}}g.putImageData(m,0,0)},128,64);
+  const dotTex=()=>tex((g,w,h)=>{const gr=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.3,'rgba(255,255,255,.5)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h)},64,64);
+  // ---- 車輛 ----
+  function collect(){const out=[];const add=(c,kind,src)=>{if(!c||!c.g||c.parked)return;const g=c.g,r0=g.rotation.clone(),p0=g.position.clone();g.rotation.set(0,0,0);g.position.set(0,0,0);g.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(g);g.rotation.copy(r0);g.position.copy(p0);g.updateMatrixWorld(true);
+      if(b.isEmpty())return;const sc=kind==='scoot';out.push({c,g,sc,front:b.max.x,rear:b.min.x,half:Math.min(1.1,(b.max.z-b.min.z)/2-.15),hy:sc?1.0:.68,src})};
+    try{(LIFE.cars||[]).forEach(c=>add(c,c.kind,'life'))}catch(e){}try{(LAKE.trf||[]).forEach(c=>add(c,c.scoot?'scoot':'car','lake'))}catch(e){}try{(NPC||[]).forEach(c=>add(c,'car','npc'))}catch(e){}return out}
+  function build(){V.veh=collect();const N=V.veh.length;if(!N)return;
+    const bg=new THREE.PlaneGeometry(1,1);bg.rotateX(-Math.PI/2);bg.translate(.5,0,0);
+    V.beam=new THREE.InstancedMesh(bg,new THREE.MeshBasicMaterial({map:beamTex(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-10}),N);V.beam.frustumCulled=false;V.beam.renderOrder=3;V.beam.visible=false;V.beam.name='NIGHT45beam';V.beam.userData.noElev=1;scene.add(V.beam);
+    const mk=(n,col,size)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(n*3),3).setUsage(THREE.DynamicDrawUsage));const p=new THREE.Points(g,new THREE.PointsMaterial({map:dotTex(),color:col,size,sizeAttenuation:true,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0}));p.frustumCulled=false;p.visible=false;p.userData.noElev=1;scene.add(p);return p};
+    V.head=mk(N*2,'#fff4dc',.9);V.tail=mk(N*2,'#ff2a18',.55)}
+  const m4=new THREE.Matrix4(),q=new THREE.Quaternion(),v=new THREE.Vector3(),s=new THREE.Vector3(),fw=new THREE.Vector3(),sd=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),cp=new THREE.Vector3(),Z=new THREE.Matrix4().makeScale(0,0,0),bq=new THREE.Quaternion();
+  function tickVeh(k){if(!V.beam)return;const on=k>0;V.beam.visible=V.head.visible=V.tail.visible=on;if(!on)return;V.beam.material.opacity=.55*k;V.head.material.opacity=k;V.tail.material.opacity=.9*k;if(V.at)cp.set(V.at[0],0,V.at[1]);else try{cam.getWorldPosition(cp)}catch(e){}
+    const hp=V.head.geometry.attributes.position,tp=V.tail.geometry.attributes.position;
+    V.veh.forEach((o,i)=>{const g=o.g;let vis=g.visible&&g.parent;let p=g;while(vis&&p){if(!p.visible)vis=false;p=p.parent}
+      if(!vis||Math.abs(g.position.x-cp.x)>220||Math.abs(g.position.z-cp.z)>220){V.beam.setMatrixAt(i,Z);hp.setXYZ(i*2,0,-999,0);hp.setXYZ(i*2+1,0,-999,0);tp.setXYZ(i*2,0,-999,0);tp.setXYZ(i*2+1,0,-999,0);return}
+      g.getWorldQuaternion(q);fw.set(1,0,0).applyQuaternion(q);fw.y=0;fw.normalize();sd.set(-fw.z,0,fw.x);const gx=g.position.x,gz=g.position.z,gy=g.position.y;
+      const fx=gx+fw.x*o.front,fz=gz+fw.z*o.front,L=o.sc?8:13,W=o.sc?2.6:4.6;bq.setFromUnitVectors(new THREE.Vector3(1,0,0),fw);v.set(fx,hAt(fx,fz)+.09,fz);s.set(L,1,W);m4.compose(v,bq,s);V.beam.setMatrixAt(i,m4);
+      if(o.sc){hp.setXYZ(i*2,fx,gy+o.hy,fz);hp.setXYZ(i*2+1,0,-999,0);const rx=gx+fw.x*o.rear,rz=gz+fw.z*o.rear;tp.setXYZ(i*2,rx,gy+.85,rz);tp.setXYZ(i*2+1,0,-999,0)}
+      else{for(const sg of[-1,1]){hp.setXYZ(i*2+(sg>0?1:0),fx+sd.x*o.half*sg,gy+o.hy,fz+sd.z*o.half*sg);const rx=gx+fw.x*o.rear+sd.x*o.half*sg,rz=gz+fw.z*o.rear+sd.z*o.half*sg;tp.setXYZ(i*2+(sg>0?1:0),rx,gy+.8,rz)}}});
+    V.beam.instanceMatrix.needsUpdate=true;hp.needsUpdate=true;tp.needsUpdate=true}
+  // ---- 店家燈光 ----
+  function buildShops(){const P=[],pts=[];const bx=[];try{for(const o of OBO){if(o&&o.cx!=null&&o.hl>1.5&&o.hw>1.5)bx.push([o.cx,o.cy,Math.max(o.hl,o.hw)])}for(const r of OBR){const w=r.x1-r.x0,d=r.y1-r.y0;if(w>3&&d>3&&w<80&&d<80)bx.push([(r.x0+r.x1)/2,(r.y0+r.y1)/2,Math.max(w,d)/2])}}catch(e){}
+    const near=(x,z)=>bx.some(b=>Math.hypot(b[0]-x,b[1]-z)<b[2]+3.5);
+    for(const r of (RTX.roads||[])){if(/環湖|靈隱|大門出入口|駕訓班/.test(r.name||''))continue;const hw=r.hw||3;let acc=0;for(let i=0;i<r.P.length-1;i++){const a=r.P[i],b=r.P[i+1],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l<.01)continue;const ux=(b[0]-a[0])/l,uz=(b[1]-a[1])/l;
+        for(let t=0;t<l;t+=6){for(const sg of[-1,1]){const x=a[0]+ux*t-uz*sg*(hw+2.3),z=a[1]+uz*t+ux*sg*(hw+2.3);if(V.zone(x,z)>.3)continue;if(!near(x-uz*sg*3,z+ux*sg*3))continue;if(pts.some(p=>Math.abs(p[0]-x)<4&&Math.abs(p[1]-z)<4))continue;pts.push([x,z])}}}}
+    if(!pts.length)return;const pg=new THREE.PlaneGeometry(1,1);pg.rotateX(-Math.PI/2);const pt=tex((g,w,h)=>{const gr=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);gr.addColorStop(0,'rgba(255,255,255,.8)');gr.addColorStop(.5,'rgba(255,255,255,.25)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h)},64,64);
+    const im=new THREE.InstancedMesh(pg,new THREE.MeshBasicMaterial({map:pt,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,opacity:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-9}),pts.length);
+    const col=new THREE.Color();let seed=45;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+    pts.forEach(([x,z],i)=>{const r=6+rnd()*3;v.set(x,hAt(x,z)+.08,z);q.identity();s.set(r,1,r*.8);m4.compose(v,q,s);im.setMatrixAt(i,m4);const u=rnd();col.set(u<.6?'#ffcf8a':u<.85?'#e8f0ff':'#ffd6a0').multiplyScalar(2.1);if(rnd()<.18)col.setRGB(0,0,0);im.setColorAt(i,col)});
+    im.frustumCulled=false;im.visible=false;im.renderOrder=2;im.name='NIGHT45shop';im.userData.noElev=1;scene.add(im);V.shop=im;V.shopN=pts.length}
+  // ---- 路燈光圈依區域著色 ----
+  function tintLamps(){const N4=window.NIGHT44;if(!N4||!N4.pool||!N4.lamps)return;const col=new THREE.Color();N4.lamps.forEach(([x,y,z],i)=>{const k=V.zone(x,z);col.setRGB(1.15-.6*k,1.15-.6*k,1.15-.6*k);N4.pool.setColorAt(i,col)});if(N4.pool.instanceColor)N4.pool.instanceColor.needsUpdate=true}
+  // 測試用：NIGHT45.at=[x,z] 固定位置、NIGHT45.tick(10) 立即套用
+  V.tick=dt=>tick(dt);
+  function tick(dt){const n=(window.DAY39&&DAY39.night)||0,k=Math.max(0,Math.min(1,(n-.2)/.5));try{if(V.at)cp.set(V.at[0],0,V.at[1]);else cam.getWorldPosition(cp);zc+=(V.zone(cp.x,cp.z)-zc)*Math.min(1,dt*1.5)}catch(e){}
+    tickVeh(k);if(V.shop){V.shop.visible=k>0;V.shop.material.opacity=.9*k}}
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT44||!NIGHT44.pool)return;clearInterval(t);
+    try{build()}catch(e){console.error('NIGHT45 veh',e)}try{buildShops()}catch(e){console.error('NIGHT45 shop',e)}try{tintLamps()}catch(e){console.error('NIGHT45 tint',e)}
+    if(typeof updateWorld==='function'){const _uw=updateWorld;updateWorld=function(dt){_uw.apply(this,arguments);try{tick(dt||.016)}catch(e){}}}
+    console.log('[night45]',JSON.stringify({veh:V.veh.length,shops:V.shopN}))},400);
 })();
 
 </script>
