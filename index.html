@@ -7247,6 +7247,145 @@ function seam30(){const out={v:0},v=new THREE.Vector3();scene.traverse(o=>{if(!o
 {const _g=gate11Routes;gate11Routes=function(){const r=_g.apply(this,arguments);let o={};try{o=route30Fix()}catch(e){console.error('ROUTE30',e)}console.log('[路線修正30]',JSON.stringify(o));return r}}
 {const _j=rtInJunction;rtInJunction=function(px,py){const J=window.GATE30_J;if(J&&Math.hypot(px-J[0],py-J[1])<12)return true;return _j(px,py)}}
 
+/* ============ 第四十六次：招牌與開放式店面貼圖（在 north30 之前載入） ============
+   1) SIGN46：一張 2048×1024 的招牌圖集（全區共用，一個材質 → 靜態合併後只多一個 draw call）
+      橫式 256×64 共 96 格：0～63 一般店家、64～75 手搖飲、76～83 早餐店、84～91 機車行、92～95 便利商店（只有條紋配色、不寫店名）
+      直式 64×256 共 32 格（樓面突出的直立招牌、路邊燈箱）
+      台灣街景的「凌亂」：底色／字色從常見組合隨機配、字體（黑體／明體／楷書／圓體）、版型（置中、左字右電話、圓形字號、上下兩行）、描邊、外框、褪色髒污各家不同。
+      只用系統內建字體（網路中文字型一套十幾 MB，不下載）。
+   2) SHOP46P：一樓店面貼圖 2048×256（左半是 north30 原本 8 格，右半新增 8 格：手搖飲 2、早餐 2、機車行 2、便利商店 2），
+      另做一張夜間自發光貼圖（營業中的店面亮、鐵捲門不亮）。north30 的連棟店面與街區自動排的店面共用。 */
+var SIGN46=(function(){
+  let C=null,T=null;const MAT={};const W=2048,H=1024;
+  let sd=4601;const R=()=>(sd=(sd*16807)%2147483647)/2147483647,pick=a=>a[Math.floor(R()*a.length)];
+  const FONT={sans:'"PingFang TC","Heiti TC","Microsoft JhengHei","Noto Sans TC",sans-serif',serif:'"Songti TC","PMingLiU","MingLiU","Noto Serif TC",serif',kai:'"Kaiti TC","BiauKai","DFKai-SB","KaiTi",serif',round:'"Yuanti TC","Microsoft JhengHei UI","PingFang TC",sans-serif'};
+  // 底色、字色、點綴色
+  const PAL=[['#c62828','#ffe14d','#ffffff'],['#ffffff','#c62828','#1f5fb4'],['#1f5fb4','#ffffff','#ffe14d'],['#f2c21a','#1d1d1d','#c62828'],['#1e6b4c','#ffffff','#ffe14d'],['#e0761f','#ffffff','#1d1d1d'],
+    ['#ffffff','#1f5fb4','#c62828'],['#7a2f8a','#ffffff','#ffe14d'],['#151515','#ffd400','#ffffff'],['#fff2b0','#b02a22','#1f5fb4'],['#0b7a75','#ffffff','#ffe14d'],['#d81b60','#ffffff','#ffe14d'],
+    ['#ffffff','#1e6b4c','#e0761f'],['#2b2b2b','#ffffff','#e53935'],['#ffe9d6','#8a3b12','#c62828'],['#0d47a1','#ffeb3b','#ffffff'],['#ffffff','#111111','#c62828'],['#b71c1c','#ffffff','#ffd400']];
+  const PRE=['阿忠','老王','阿珠','金','大同','永和','信義','小林','阿嬤','順發','明湖','東興','長春','建興','好運','鴻','新竹','福星','正記','合興','大眾','阿德','美珍','慶豐','和平','南興','振興','萬福','老張','小陳','阿芳','東香','光復','中正','湖濱','寶山','竹東','阿彬','玉珍','德昌'];
+  const CAT=['便當','自助餐','牛肉麵','麵店','水餃','鹽酥雞','小吃','滷味','豆花','冰店','五金行','水電行','藥局','中醫診所','牙醫診所','眼鏡','洗衣店','文具','電器行','通訊行','美髮','汽車美容','彩券行','茶行','雜貨店','米店','水果行','冷氣行','補習班','寵物美容','銀樓','服飾','鎖匙','印刷','照相館','麵包店','中藥行','花店','快炒','臭豆腐','肉圓','米粉湯','鍋燒意麵','蔥油餅','檢驗所'];
+  const SUB=['冷氣開放','歡迎光臨','專業服務','外送服務','老店','價格公道','在地三十年','營業中','內用外帶','批發零售','現做現賣','誠信經營'];
+  const phone=()=>'03-5'+(100+Math.floor(R()*899))+'-'+(1000+Math.floor(R()*8999));
+  function nameFor(type){
+    if(type==='drink')return{n:pick(['日日','湖畔','清茶','好時','茶心','一口','青草','山嵐','初心','茶語','午後','小確幸','春水','綠光'])+pick(['茶飲','鮮茶','茶坊','手搖','飲品','茶舖']),s:pick(['珍珠奶茶・鮮奶茶・水果茶','現泡茶飲 冷熱皆宜','手搖飲料 外送','鮮奶茶專賣'])};
+    if(type==='bfast')return{n:pick(['晨間','元氣','早安','好日','阿姨','巧味','晨光','麥香','朝陽','美味'])+pick(['早餐店','早點','早午餐','早餐']),s:pick(['漢堡・蛋餅・三明治・奶茶','中西式早點','鐵板麵・蘿蔔糕','早餐 06:00-13:00'])};
+    if(type==='repair')return{n:pick(PRE)+pick(['機車行','車業','機車','輪胎行']),s:pick(['專業維修・保養・輪胎','機車買賣・維修','電瓶・輪胎・機油','山葉・光陽・三陽 維修'])};
+    const c=pick(CAT);return{n:(R()<.75?pick(PRE):'')+c,s:R()<.5?pick(SUB):phone()}}
+  function fit(g,txt,font,size,maxW){g.font=font.replace('%',size);const w=g.measureText(txt).width;return w>maxW?maxW/w:1}
+  function txt(g,s,x,y,font,size,maxW,col,stroke,align){const k=fit(g,s,font,size,maxW);g.save();g.translate(x,y);g.scale(k,1);g.textAlign=align||'center';g.textBaseline='middle';
+    if(stroke){g.lineJoin='round';g.lineWidth=Math.max(2,size*.13);g.strokeStyle=stroke;g.strokeText(s,0,0)}g.fillStyle=col;g.fillText(s,0,0);g.restore()}
+  function age(g,x,y,w,h){const a=R();if(a<.3){g.fillStyle='rgba(255,255,255,'+(.1+R()*.18)+')';g.fillRect(x,y,w,h)}if(a>.55){for(let i=0;i<40;i++){g.fillStyle='rgba(40,30,20,'+(R()*.12)+')';g.fillRect(x+R()*w,y+R()*h,1+R()*3,1+R()*2)}}
+    if(R()<.25){const gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(60,40,20,.22)');g.fillStyle=gr;g.fillRect(x,y,w,h)}}
+  // 橫式招牌
+  function drawH(g,X,Y,type){const w=256,h=64,{n,s}=nameFor(type);let p=pick(PAL);
+    if(type==='drink')p=pick([['#13a89e','#ffffff','#ffe14d'],['#1d1d1d','#d4a64a','#ffffff'],['#ffffff','#13a89e','#e2725b'],['#f6e7c8','#6b3e1e','#13a89e'],['#e2725b','#ffffff','#fff2b0']]);
+    if(type==='bfast')p=pick([['#ffffff','#c62828','#f2c21a'],['#f2c21a','#c62828','#ffffff'],['#e0761f','#ffffff','#ffe14d'],['#fff2b0','#c62828','#1e6b4c']]);
+    if(type==='repair')p=pick([['#1f5fb4','#ffffff','#e53935'],['#ffffff','#1f5fb4','#e53935'],['#e53935','#ffffff','#ffe14d'],['#f2c21a','#1d1d1d','#1f5fb4'],['#151515','#ffd400','#e53935']]);
+    const [bg,fg,ac]=p,F=FONT[pick(type==='drink'?['round','sans','serif']:['sans','sans','serif','kai','round'])],font=(R()<.75?'900 ':'700 ')+'%px '+F;
+    g.fillStyle=bg;g.fillRect(X,Y,w,h);
+    if(R()<.35){g.fillStyle=ac;g.fillRect(X,Y+h-7,w,7)}
+    const lay=Math.floor(R()*4),st=R()<.3?(bg==='#ffffff'?ac:'#ffffff'):null;
+    if(lay===0){txt(g,n,X+w/2,Y+h/2+2,font,44,w-18,fg,st)}
+    else if(lay===1){txt(g,n,X+10,Y+h/2+1,font,40,w*.62,fg,st,'left');txt(g,s.length>9?phone():s,X+w-8,Y+h/2,'700 %px '+FONT.sans,13,w*.32,ac===bg?fg:ac,null,'right')}
+    else if(lay===2){g.fillStyle=ac;g.beginPath();g.arc(X+32,Y+h/2,25,0,Math.PI*2);g.fill();txt(g,n[0],X+32,Y+h/2+1,font,32,40,bg,null);txt(g,n,X+60+(w-68)/2,Y+h/2+2,font,40,w-74,fg,st)}
+    else{txt(g,n,X+w/2,Y+23,font,34,w-14,fg,st);g.fillStyle=ac;g.fillRect(X,Y+43,w,21);txt(g,s,X+w/2,Y+54,'700 %px '+FONT.sans,14,w-10,bg===ac?fg:bg,null)}
+    if(R()<.35){g.strokeStyle=R()<.5?fg:ac;g.lineWidth=3;g.strokeRect(X+4,Y+4,w-8,h-8)}
+    age(g,X,Y,w,h)}
+  // 便利商店（不寫店名：白底＋條紋配色）
+  function drawConv(g,X,Y,k){const w=256,h=64;g.fillStyle='#ffffff';g.fillRect(X,Y,w,h);
+    if(k%2===0){const cs=['#f39200','#008c4a','#e60012'];cs.forEach((c,i)=>{g.fillStyle=c;g.fillRect(X,Y+8+i*16,w,12)})}
+    else{const gr=g.createLinearGradient(X,0,X+w,0);gr.addColorStop(0,'#00a650');gr.addColorStop(1,'#0072bc');g.fillStyle=gr;g.fillRect(X,Y+6,w,30);g.fillStyle='#00a650';g.fillRect(X,Y+42,w,8);g.fillStyle='#0072bc';g.fillRect(X,Y+52,w,5)}
+    g.strokeStyle='#d8dde2';g.lineWidth=2;g.strokeRect(X+1,Y+1,w-2,h-2)}
+  // 直式招牌
+  function drawV(g,X,Y){const w=64,h=256,[bg,fg,ac]=pick(PAL);const raw=nameFor('gen').n;const n=raw.length>5?raw.slice(-4):raw;const F=FONT[pick(['sans','sans','serif','kai'])];
+    g.fillStyle=bg;g.fillRect(X,Y,w,h);if(R()<.4){g.fillStyle=ac;g.fillRect(X,Y,w,14);g.fillRect(X,Y+h-14,w,14)}
+    const sz=Math.min(48,(h-36)/n.length*.92),st=R()<.25?(bg==='#ffffff'?ac:'#ffffff'):null;[...n].forEach((ch,i)=>txt(g,ch,X+w/2,Y+22+sz*.55+i*(h-44)/n.length,'900 %px '+F,sz,w-8,fg,st));
+    if(R()<.4){g.strokeStyle=fg;g.lineWidth=3;g.strokeRect(X+4,Y+4,w-8,h-8)}age(g,X,Y,w,h)}
+  function build(){if(C)return;C=document.createElement('canvas');C.width=W;C.height=H;const g=C.getContext('2d');
+    for(let i=0;i<96;i++){const X=(i%8)*256,Y=Math.floor(i/8)*64;if(i<64)drawH(g,X,Y,'gen');else if(i<76)drawH(g,X,Y,'drink');else if(i<84)drawH(g,X,Y,'bfast');else if(i<92)drawH(g,X,Y,'repair');else drawConv(g,X,Y,i-92)}
+    for(let i=0;i<32;i++)drawV(g,i*64,768);
+    T=new THREE.CanvasTexture(C);T.anisotropy=4}
+  const RNG={gen:[0,64],drink:[64,12],bfast:[76,8],repair:[84,8],conv:[92,4]};
+  const rectH=i=>{const c=i%8,r=Math.floor(i/8),e=1.5;return{u0:(c*256+e)/W,u1:((c+1)*256-e)/W,v1:1-(r*64+e)/H,v0:1-((r+1)*64-e)/H}};
+  const rectV=i=>{const e=1.5;return{u0:(i*64+e)/W,u1:((i+1)*64-e)/W,v1:1-(768+e)/H,v0:1-(1024-e)/H}};
+  return{FONT,tex(){build();return T},canvas(){build();return C},
+    cell(type,rnd){const r=RNG[type]||RNG.gen;return r[0]+Math.floor((rnd||R)()*r[1])},rectH,rectV,
+    h(type,rnd){return rectH(this.cell(type,rnd))},v(rnd){return rectV(Math.floor((rnd||R)()*32))},
+    // 招牌材質：白天受光照，晚上自發光（燈箱）
+    mat(double){const k=double?'d':'s';if(MAT[k])return MAT[k];const t=this.tex();const m=new THREE.MeshLambertMaterial({map:t,emissive:'#ffffff',emissiveMap:t,emissiveIntensity:0,side:double?THREE.DoubleSide:THREE.FrontSide});m.userData.sign46=1;return MAT[k]=m},
+    mats(){return Object.values(MAT)}}})();
+
+var SHOP46P=(function(){
+  let C=null,E=null,T=null,TE=null,M=null;const SW=2048,SH=256,CW=128;
+  // 新增的 8 格（從 x=1024 開始）：0 手搖飲 A、1 手搖飲 B、2 早餐 A、3 早餐 B、4 機車行 A、5 機車行 B、6 便利商店 A、7 便利商店 B
+  const BASE={drink:8,bfast:10,repair:12,conv:14};
+  let sd=4646;const R=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  const rr=(g,x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+  function lintel(g,x,c1,c2){rr(g,x,0,CW,40,c1);if(c2)rr(g,x,30,CW,5,c2)}
+  function drink(g,x,v){const br=v?'#1d1d1d':'#13a89e',ac=v?'#d4a64a':'#ffffff';lintel(g,x,br,ac);
+    rr(g,x,40,CW,216,'#f6f1e6');
+    // 燈箱菜單
+    rr(g,x+6,46,CW-12,64,v?'#262626':'#fffdf4');rr(g,x+6,46,CW-12,10,v?'#d4a64a':'#13a89e');
+    for(let c=0;c<3;c++)for(let r=0;r<6;r++){rr(g,x+10+c*38,60+r*8,22,3,v?'#e9d9b4':'#5a4a3a');rr(g,x+34+c*38,60+r*8,6,3,v?'#d4a64a':'#c62828')}
+    // 杯架、封口機、茶桶
+    for(let i=0;i<9;i++){rr(g,x+8+i*12,124,8,14,'#ffffff');rr(g,x+8+i*12,124,8,3,'#dfe8ea')}
+    for(let i=0;i<4;i++){rr(g,x+10+i*28,144,18,22,['#c7a46a','#8a5a2b','#e9e0cf','#6b8f4e'][i]);rr(g,x+10+i*28,144,18,3,'#9aa0a6')}
+    // 店員
+    rr(g,x+70,150,16,26,v?'#d4a64a':'#13a89e');g.fillStyle='#e8c4a0';g.beginPath();g.arc(x+78,144,7,0,7);g.fill();rr(g,x+71,136,14,4,'#222')
+    // 櫃台
+    rr(g,x,176,CW,80,br);rr(g,x,176,CW,6,'#e8e2d4');g.fillStyle=ac;g.beginPath();g.arc(x+CW/2,214,15,0,7);g.fill();rr(g,x,238,CW,18,'#4a4a4a')}
+  function bfast(g,x,v){const br=v?'#e0761f':'#c62828';lintel(g,x,br,'#ffe14d');
+    rr(g,x,40,CW,216,'#f3e3c8');
+    rr(g,x+6,46,CW-12,56,'#ffffff');rr(g,x+6,46,CW-12,9,'#ffe14d');for(let c=0;c<2;c++)for(let r=0;r<5;r++){rr(g,x+10+c*56,59+r*8,36,3,'#c62828');rr(g,x+50+c*56,59+r*8,8,3,'#1d1d1d')}
+    // 冰箱
+    rr(g,x+94,62,30,170,'#e9ecef');rr(g,x+97,66,24,160,'#bfe0ef');for(let r=0;r<6;r++)for(let i=0;i<3;i++)rr(g,x+99+i*7,72+r*26,5,16,['#f2c21a','#c62828','#ffffff','#5aa05a'][(r+i)%4]);
+    // 煎台、蒸籠、餐點
+    rr(g,x+4,150,86,8,'#2b2b2b');rr(g,x+4,158,86,70,'#c9ced3');for(let i=0;i<3;i++){rr(g,x+10+i*26,128,20,22,'#d9c49a');rr(g,x+10+i*26,128,20,4,'#b89c66')}
+    g.fillStyle='#e8c4a0';g.beginPath();g.arc(x+40,118,7,0,7);g.fill();rr(g,x+32,125,16,25,'#ffffff');
+    // 地磚
+    for(let i=0;i<8;i++)rr(g,x+i*16,232,16,24,i%2?'#d8d2c6':'#c4bdb0')}
+  function repair(g,x,v){lintel(g,x,v?'#2b2b2b':'#1f5fb4',v?'#ffd400':'#e53935');
+    const gr=g.createLinearGradient(0,40,0,256);gr.addColorStop(0,'#5b5e62');gr.addColorStop(1,'#3a3c3f');g.fillStyle=gr;g.fillRect(x,40,CW,216);
+    rr(g,x+10,44,48,4,'#f4f8ff');rr(g,x+70,44,48,4,'#f4f8ff');
+    // 工具牆
+    rr(g,x+6,56,70,64,'#8a7a62');for(let i=0;i<10;i++)rr(g,x+10+(i%5)*13,62+Math.floor(i/5)*28,4,18+R()*6,'#2a2a2a');
+    // 掛輪胎
+    for(let i=0;i<3;i++){g.fillStyle='#151515';g.beginPath();g.arc(x+96,66+i*26,13,0,7);g.fill();g.fillStyle='#6a6e72';g.beginPath();g.arc(x+96,66+i*26,6,0,7);g.fill()}
+    // 機油架
+    rr(g,x+6,128,116,4,'#9aa0a6');for(let i=0;i<14;i++)rr(g,x+8+i*8,134,6,12,['#e53935','#ffd400','#1f5fb4','#2e7d4f'][i%4]);
+    // 工具車、地面油漬
+    rr(g,x+8,170,34,44,'#c62828');for(let i=0;i<4;i++)rr(g,x+10,174+i*10,30,2,'#7a1010');
+    rr(g,x,214,CW,42,'#4b4d50');g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x+80,236,26,8,0,0,7);g.fill()}
+  function conv(g,x,v){// 玻璃店面：白亮、貨架、自動門、海報
+    if(v===0){rr(g,x,0,CW,40,'#ffffff');['#f39200','#008c4a','#e60012'].forEach((c,i)=>rr(g,x,6+i*10,CW,7,c))}else{rr(g,x,0,CW,40,'#ffffff');const gr=g.createLinearGradient(x,0,x+CW,0);gr.addColorStop(0,'#00a650');gr.addColorStop(1,'#0072bc');g.fillStyle=gr;g.fillRect(x,6,CW,22)}
+    rr(g,x,40,CW,216,'#5b6168');rr(g,x+4,44,CW-8,200,'#f7f9fb');
+    for(let r=0;r<5;r++){rr(g,x+6,70+r*30,CW-12,3,'#b8c0c8');for(let i=0;i<16;i++)rr(g,x+7+i*7.4,56+r*30,5,13,['#e53935','#1e88e5','#fdd835','#43a047','#fb8c00','#8e24aa','#ffffff'][Math.floor(R()*7)])}
+    rr(g,x+CW/2-1,44,3,200,'#5b6168');rr(g,x+4,140,CW-8,2,'#7d858d');
+    rr(g,x+10,150,22,30,v?'#00a650':'#e60012');rr(g,x+96,152,22,28,'#fdd835');rr(g,x,244,CW,12,'#3d4248')}
+  function build(){if(C)return;C=document.createElement('canvas');C.width=SW;C.height=SH;const g=C.getContext('2d');
+    const X=i=>1024+i*CW;drink(g,X(0),0);drink(g,X(1),1);bfast(g,X(2),0);bfast(g,X(3),1);repair(g,X(4),0);repair(g,X(5),1);conv(g,X(6),0);conv(g,X(7),1)}
+  // 夜間自發光：營業中的店（右半新增格、原本的玻璃店面、五金行、小吃）亮，鐵捲門與住家鐵門不亮，門楣只有便利商店與手搖飲亮
+  function buildE(){if(E)return;build();E=document.createElement('canvas');E.width=SW;E.height=SH;const g=E.getContext('2d');g.drawImage(C,0,0);
+    for(const i of[0,1,2,7])rr(g,i*CW,0,CW,SH,'#000');for(let i=3;i<16;i++)if(!(i>=8&&(i<=9||i>=14)))rr(g,i*CW,0,CW,40,'#000');
+    g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,0,SW,SH);for(const i of[10,11])rr(g,i*CW,40,CW,216,'rgba(0,0,0,.55)');   // 早餐店晚上只開小燈
+    rr(g,12*CW,40,2*CW,216,'rgba(0,0,0,.35)')}
+  return{BASE,
+    shopCanvas(){build();return C},
+    shopTex(){if(!T){build();T=new THREE.CanvasTexture(C);T.anisotropy=4}return T},
+    shopMat(){if(!M){buildE();TE=new THREE.CanvasTexture(E);M=new THREE.MeshLambertMaterial({map:this.shopTex(),emissive:'#ffffff',emissiveMap:TE,emissiveIntensity:0});M.userData.shop46=1}return M},
+    // 每種店兩種變化；回傳 16 格中的格號
+    cellOf(type,rnd){return BASE[type]+((rnd||R)()<.5?0:1)},
+    rect(cell){const e=1;return{u0:(cell*CW+e)/SW,u1:((cell+1)*CW-e)/SW}},
+    slots:[],
+    // north30 連棟店面：決定這一戶開什麼店（另用自己的亂數，不影響 north30 原本的排列）
+    _rec:[],pickN30(U){const r=R(),last=this._rec.slice(-3);let t=null;
+      if(U.w>=4.8&&(r<.03||(U.fx>250&&!this.slots.some(s=>s.type==='conv')))&&!this.slots.some(s=>s.type==='conv'&&Math.hypot(s.x-U.fx,s.z-U.fz)<250))t='conv';
+      else if(r<.17)t='drink';else if(r<.30)t='bfast';else if(r<.41)t='repair';
+      if(t&&last.includes(t))t=null;this._rec.push(t);if(!t)return null;
+      this.slots.push({src:'n30',type:t,x:U.fx,z:U.fz,ux:U.ux,uz:U.uz,nx:-U.m.nx,nz:-U.m.nz,w:U.w});return t},
+    R}})();
+
 /* ============ 第三十次（待辦 2）：明湖路北段東側改成連棟透天店面 ============
    實景（Google 衛星圖 19z＋415 巷街景）：大門以北到 x≈420，明湖路東側臨路是一整排緊密相連的 3～5 層透天店面
    （每戶寬約 4～6 m、深 13～16 m，一樓鐵捲門／店面＋招牌，樓上陽台、頂樓水塔與鐵皮加蓋），只被巷口切開：
@@ -7290,7 +7429,7 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
     const cyl=(x,y,z,r,h,col,seg=10)=>{for(let i=0;i<seg;i++){const a=i/seg*Math.PI*2,b=(i+1)/seg*Math.PI*2,c1=Math.cos(a),s1=Math.sin(a),c2=Math.cos(b),s2=Math.sin(b);quad(MP,MN,null,MC,[x+c1*r,y,z+s1*r],[x+c2*r,y,z+s2*r],[x+c2*r,y+h,z+s2*r],[x+c1*r,y+h,z+s1*r],[(c1+c2)/2,0,(s1+s2)/2],col);
       MP.push(x,y+h,z,x+c2*r,y+h,z+s2*r,x+c1*r,y+h,z+s1*r);MN.push(0,1,0,0,1,0,0,1,0);MC.push(col.r,col.g,col.b,col.r,col.g,col.b,col.r,col.g,col.b)}};
     // 一樓店面貼圖（8 格：鐵捲門藍／銀／綠、玻璃店面暖光／冷光、機車行、小吃攤、住家鐵門）＋招牌貼圖（8 色，白色字塊）
-    const shopC=document.createElement('canvas');shopC.width=1024;shopC.height=256;{const g=shopC.getContext('2d'),W=128;
+    const shopC=SHOP46P.shopCanvas();{const g=shopC.getContext('2d'),W=128;
       const shutter=(x,c1,c2)=>{g.fillStyle=c1;g.fillRect(x,40,W,216);g.fillStyle=c2;for(let y=44;y<256;y+=7)g.fillRect(x,y,W,2);g.fillStyle='#2b2b2b';g.fillRect(x,236,W,20)};
       const glass=(x,warm)=>{g.fillStyle='#3a3f44';g.fillRect(x,40,W,216);g.fillStyle=warm?'#f3d9a0':'#cfe3ee';g.fillRect(x+8,52,W-16,170);g.fillStyle=warm?'#c98e4a':'#7aa0b4';for(let i=0;i<4;i++)g.fillRect(x+14+i*28,130,18,80);g.fillStyle='#2b2b2b';g.fillRect(x+W/2-2,52,4,170);g.fillRect(x,226,W,30)};
       g.fillStyle='#8b8f92';g.fillRect(0,0,1024,40);
@@ -7298,10 +7437,10 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
       {const x=640;g.fillStyle='#4a4d50';g.fillRect(x,40,W,216);g.fillStyle='#f4f1e8';g.fillRect(x+6,50,W-12,186);for(let r=0;r<4;r++)for(let c=0;c<5;c++){g.fillStyle=['#c2352b','#2f6fb3','#e0a020','#5a8a4a','#8a8f93'][(r+c)%5];g.fillRect(x+12+c*22,64+r*40,16,26)}g.fillStyle='#2b2b2b';g.fillRect(x,236,W,20)}// 五金行（明亮店面、貨架）
       {const x=768;g.fillStyle='#5a4636';g.fillRect(x,40,W,216);g.fillStyle='#f4e6c8';g.fillRect(x+6,120,W-12,30);g.fillStyle='#c0392b';g.fillRect(x,40,W,24);g.fillStyle='#f6f2ea';for(let i=0;i<5;i++)g.fillRect(x+10+i*23,160,14,60)}
       {const x=896;g.fillStyle='#6d6a64';g.fillRect(x,40,W,216);g.fillStyle='#4b4945';for(let i=0;i<8;i++)g.fillRect(x+8+i*15,60,4,176);g.fillStyle='#2b2b2b';g.fillRect(x,236,W,20)}}
-    const shopT=new THREE.CanvasTexture(shopC);shopT.anisotropy=4;
+    const shopT=SHOP46P.shopTex();
     const signC=document.createElement('canvas');signC.width=512;signC.height=64;{const g=signC.getContext('2d'),cols=['#c2352b','#1f5fb4','#f2c21a','#1e6b4c','#ffffff','#e0761f','#7a2f8a','#2b2b2b'];
       cols.forEach((c,i)=>{g.fillStyle=c;g.fillRect(i*64,0,64,64);g.fillStyle=(c==='#ffffff'||c==='#f2c21a')?'#c2352b':'#ffffff';for(let k=0;k<4;k++)g.fillRect(i*64+5+k*14,16,11,32)})}
-    const signT=new THREE.CanvasTexture(signC);
+    
     const SGP=[],SGN=[],SGU=[];
     const fac=new THREE.CanvasTexture(facadeCanvas);fac.wrapS=fac.wrapT=THREE.RepeatWrapping;fac.anisotropy=4;
     const roofC=[CO('#8d8b86'),CO('#9b968c'),CO('#7f8486')],shedC=[CO('#4f7fa6'),CO('#a9b0b4'),CO('#b65642'),CO('#6f8f6a'),CO('#c9c4b6')],tankC=[CO('#cfd3d7'),CO('#2f6fb3'),CO('#d8d4c8')],dk=CO('#3a3c3f'),rail=[CO('#e8e6e0'),CO('#5b5e62'),CO('#9aa2a8')],slab=CO('#d4d0c8'),awC=[CO('#9aa2a8'),CO('#3f6f9e'),CO('#c8c2b4'),CO('#7a2f2a'),CO('#2e7d4f')];
@@ -7318,7 +7457,7 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
       const uw=w/3.4,ud=d/3.4,vh=(h-G)/3.2,vfull=h/3.2;
       // 正面：一樓店面（店面貼圖）＋樓上（外牆貼圖）；側面、背面整面外牆
       if(fl>1)quad(WP,WN,WU,WC,P(1,-1,G),P(-1,-1,G),P(-1,-1,h),P(1,-1,h),[-vx,0,-vz],tc,[[0,0],[uw,0],[uw,vh],[0,vh]]);
-      const sv=Math.floor(R()*8),u0=sv/8+.004,u1=(sv+1)/8-.004,gh=fl===1?h:G;quad(SP,SN,SU,null,P(1,-1,0),P(-1,-1,0),P(-1,-1,gh),P(1,-1,gh),[-vx,0,-vz],null,[[u0,0],[u1,0],[u1,gh/G*.98],[u0,gh/G*.98]]);
+      const sv0=Math.floor(R()*8),_ty=SHOP46P.pickN30(U),sv=_ty?SHOP46P.cellOf(_ty):sv0,u0=sv/16+.002,u1=(sv+1)/16-.002,gh=fl===1?h:G;quad(SP,SN,SU,null,P(1,-1,0),P(-1,-1,0),P(-1,-1,gh),P(1,-1,gh),[-vx,0,-vz],null,[[u0,0],[u1,0],[u1,gh/G*.98],[u0,gh/G*.98]]);
       quad(WP,WN,WU,WC,P(-1,1,0),P(1,1,0),P(1,1,h),P(-1,1,h),[vx,0,vz],tc,[[0,0],[uw,0],[uw,vfull],[0,vfull]]);
       quad(WP,WN,WU,WC,P(1,1,0),P(1,-1,0),P(1,-1,h),P(1,1,h),[ux,0,uz],tc,[[0,0],[ud,0],[ud,vfull],[0,vfull]]);quad(WP,WN,WU,WC,P(-1,-1,0),P(-1,1,0),P(-1,1,h),P(-1,-1,h),[-ux,0,-uz],tc,[[0,0],[ud,0],[ud,vfull],[0,vfull]]);
       const rc=roofC[Math.floor(R()*3)];quad(MP,MN,null,MC,P(-1,1,h),P(1,1,h),P(1,-1,h),P(-1,-1,h),[0,1,0],rc);
@@ -7327,9 +7466,9 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
       for(const[s,t,lw,ld]of[[0,-1,w,.16],[0,1,w,.16],[-1,0,.16,d],[1,0,.16,d]])box(cx+ux*s*(w/2-.08)+vx*t*(d/2-.08),y0+h,cz+uz*s*(w/2-.08)+vz*t*(d/2-.08),ux,uz,lw,.9,ld,rc);
       // 雨遮＋招牌
       const ac=awC[Math.floor(R()*awC.length)];box(fxc-vx*.5,y0+G-.05,fzc-vz*.5,ux,uz,w*.98,.1,1,ac);
-      {const k=Math.floor(R()*8),su0=k/8+.01,su1=(k+1)/8-.01,sy=y0+G+.15,sh=.85,sw=w*.92,ex=fxc-vx*.14,ez=fzc-vz*.14,A=[ex+ux*sw/2,sy,ez+uz*sw/2],B=[ex-ux*sw/2,sy,ez-uz*sw/2];quad(SGP,SGN,SGU,null,A,B,[B[0],sy+sh,B[2]],[A[0],sy+sh,A[2]],[-vx,0,-vz],null,[[su0,0],[su1,0],[su1,1],[su0,1]])}
-      if(fl>2&&R()<.5){const k=Math.floor(R()*8),su0=k/8+.01,su1=(k+1)/8-.01,sx=fxc+ux*(w/2-.45)-vx*.8,sz=fzc+uz*(w/2-.45)-vz*.8,y1=y0+G+1.3,y2=Math.min(y0+h-.6,y1+2.6+R()*2.4),Pa=[sx-vx*.5,y1,sz-vz*.5],Pb=[sx+vx*.5,y1,sz+vz*.5];
-        quad(SGP,SGN,SGU,null,Pa,Pb,[Pb[0],y2,Pb[2]],[Pa[0],y2,Pa[2]],[ux,0,uz],null,[[su0,0],[su1,0],[su1,1],[su0,1]]);quad(SGP,SGN,SGU,null,Pb,Pa,[Pa[0],y2,Pa[2]],[Pb[0],y2,Pb[2]],[-ux,0,-uz],null,[[su0,0],[su1,0],[su1,1],[su0,1]])}
+      {const k=Math.floor(R()*8),_q=SHOP46P.R,_r=SIGN46.h(_ty||'gen',_q),su0=_r.u0,su1=_r.u1,sy=y0+G+.12+_q()*.25,sh=_ty==='conv'?.9:.75+_q()*.55,sw=w*(_ty==='conv'?.98:.7+_q()*.26),ex=fxc-vx*.14,ez=fzc-vz*.14,A=[ex+ux*sw/2,sy,ez+uz*sw/2],B=[ex-ux*sw/2,sy,ez-uz*sw/2];quad(SGP,SGN,SGU,null,A,B,[B[0],sy+sh,B[2]],[A[0],sy+sh,A[2]],[-vx,0,-vz],null,[[su0,_r.v0],[su1,_r.v0],[su1,_r.v1],[su0,_r.v1]])}
+      if(fl>2&&R()<.5){const k=Math.floor(R()*8),_v=SIGN46.v(SHOP46P.R),su0=_v.u0,su1=_v.u1,sx=fxc+ux*(w/2-.45)-vx*.8,sz=fzc+uz*(w/2-.45)-vz*.8,y1=y0+G+1.3,y2=Math.min(y0+h-.6,y1+2.6+R()*2.4),Pa=[sx-vx*.5,y1,sz-vz*.5],Pb=[sx+vx*.5,y1,sz+vz*.5];
+        quad(SGP,SGN,SGU,null,Pa,Pb,[Pb[0],y2,Pb[2]],[Pa[0],y2,Pa[2]],[ux,0,uz],null,[[su0,_v.v0],[su1,_v.v0],[su1,_v.v1],[su0,_v.v1]]);quad(SGP,SGN,SGU,null,Pb,Pa,[Pa[0],y2,Pa[2]],[Pb[0],y2,Pb[2]],[-ux,0,-uz],null,[[su1,_v.v0],[su0,_v.v0],[su0,_v.v1],[su1,_v.v1]])}
       // 陽台（二樓以上，部分戶）
       if(fl>2&&R()<.6){const rcol=rail[Math.floor(R()*rail.length)];for(let f=1;f<fl;f++){const y=y0+G+(f-1)*3.2;if(f===1)continue;box(fxc-vx*.45,y-.06,fzc-vz*.45,ux,uz,w*.9,.12,.9,slab);box(fxc-vx*.86,y+.06,fzc-vz*.86,ux,uz,w*.9,1,.06,rcol)}}
       // 冷氣室外機
@@ -7345,8 +7484,8 @@ function north30Build(){if(NORTH30)return NORTH30;const t0=performance.now(),out
       const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({map:t,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));m.receiveShadow=true;m.userData.isGround=1;scene.add(m)}
     const mk=(P,N,U,C)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));if(C)g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));if(U)g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.computeBoundingSphere();return g};
     const walls=new THREE.Mesh(mk(WP,WN,WU,WC),new THREE.MeshLambertMaterial({map:fac,vertexColors:true}));walls.castShadow=walls.receiveShadow=true;walls.name='north30';scene.add(walls);
-    const shops=new THREE.Mesh(mk(SP,SN,SU),new THREE.MeshLambertMaterial({map:shopT}));shops.receiveShadow=true;shops.name='north30';scene.add(shops);
-    const signs=new THREE.Mesh(mk(SGP,SGN,SGU),new THREE.MeshLambertMaterial({map:signT,side:THREE.DoubleSide}));signs.name='north30';scene.add(signs);
+    const shops=new THREE.Mesh(mk(SP,SN,SU),SHOP46P.shopMat());shops.receiveShadow=true;shops.name='north30';scene.add(shops);
+    const signs=new THREE.Mesh(mk(SGP,SGN,SGU),SIGN46.mat(true));signs.name='north30';scene.add(signs);
     const misc=new THREE.Mesh(mk(MP,MN,null,MC),new THREE.MeshLambertMaterial({vertexColors:true}));misc.castShadow=misc.receiveShadow=true;misc.name='north30';scene.add(misc);
   }catch(e){console.error('north30 build',e)}
   // ---- 3) 西側場地擋土牆（north27 的平面牆）：混凝土砌塊貼圖、牆頂壓頂、平台側金屬欄杆 ----
@@ -8658,6 +8797,126 @@ function fix32(){
     try{build()}catch(e){console.error('NIGHT45 veh',e)}try{buildShops()}catch(e){console.error('NIGHT45 shop',e)}try{tintLamps()}catch(e){console.error('NIGHT45 tint',e)}
     if(typeof updateWorld==='function'){const _uw=updateWorld;updateWorld=function(dt){_uw.apply(this,arguments);try{tick(dt||.016)}catch(e){}}}
     console.log('[night45]',JSON.stringify({veh:V.veh.length,shops:V.shopN}))},400);
+})();
+
+// 第四十六次：開放式店面（手搖飲、早餐店、機車行）、便利商店門面、台灣街景招牌
+//  靜態合併之前（staticBatch 包一層，材質還沒編譯）：
+//   1) 街區自動排的店面（鐵捲門那一片）：抽一部分改成開放式店面（貼圖換成店內景），north30 連棟店面在建造時已決定（sign46 的 SHOP46P.pickN30）
+//   2) 所有店家招牌（橫式、直立突出、路邊燈箱）改用 SIGN46 圖集：字體、配色、版型、大小、高度各家不同；全部共用一個材質（合併後 draw call 變少）
+//  靜態合併之後（預先畫一幀之前）：
+//   3) 店門口的立體擺設（櫃台、封口機、煎台、桌椅、輪胎、工具車、待修機車），每種一個實例網格；只畫鏡頭 170 m 內的
+//   4) 晚上：營業中的店面與燈箱招牌自發光
+//  之後的購買、任務會用到 SHOP46.list（每家開放式店面的種類與位置）。網址加 ?shop=0 可關掉。
+(function(){
+  const V=window.SHOP46={on:!/[?&]shop=0/.test(location.search)&&!window.SAFE34,list:[],stat:{}};if(!V.on||typeof staticBatch!=='function')return;
+  let sd=4677;const R=()=>(sd=(sd*16807)%2147483647)/2147483647;
+  const vis=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true};
+  // ---------- 1) 街區店面 ----------
+  const CONV0=[[-494.4,95],[-1206,1170]];   // hotel27 已經有的兩家便利商店
+  function stripShops(){const out=[];if(typeof BM==='undefined')return out;
+    scene.traverse(o=>{if(!o.isMesh||o.material!==BM.shutter||!o.geometry||o.geometry.type!=='PlaneGeometry'||!vis(o))return;const ry=o.rotation.y,nx=Math.sin(ry),nz=Math.cos(ry);
+      out.push({src:'strip',mesh:o,x:o.position.x-nx*.03,z:o.position.z-nz*.03,nx,nz,ux:nz,uz:-nx,w:o.geometry.parameters.width/.85,y0:o.position.y-1.15})});
+    const all=()=>SHOP46P.slots.concat(out.filter(s=>s.type));
+    for(const s of out){const r=R();let t=null;
+      if(s.w>=4.5&&r<.025&&!all().some(q=>q.type==='conv'&&Math.hypot(q.x-s.x,q.z-s.z)<300)&&!CONV0.some(c=>Math.hypot(c[0]-s.x,c[1]-s.z)<300))t='conv';
+      else if(r<.16)t='drink';else if(r<.28)t='bfast';else if(r<.38)t='repair';
+      if(t&&all().some(q=>q.type===t&&Math.hypot(q.x-s.x,q.z-s.z)<30))t=null;s.type=t}
+    const mat=SHOP46P.shopMat();
+    for(const s of out){if(!s.type)continue;const g=s.mesh.geometry.clone(),uv=g.attributes.uv,rc=SHOP46P.rect(SHOP46P.cellOf(s.type,R));for(let i=0;i<uv.count;i++){uv.setXY(i,rc.u0+uv.getX(i)*(rc.u1-rc.u0),uv.getY(i)*.98)}uv.needsUpdate=true;s.mesh.geometry=g;s.mesh.material=mat}
+    return out.filter(s=>s.type)}
+  // ---------- 2) 招牌 ----------
+  function signs(typed){let nh=0,nv=0;const sm=SIGN46.mat(false),hit=[];
+    scene.traverse(o=>{if(!o.isMesh||!o.geometry)return;const m=o.material,gt=o.geometry.type;
+      if(gt==='PlaneGeometry'&&m&&m.isMeshBasicMaterial&&m.map&&m.map.image&&m.map.image.width===256&&m.map.image.height===64){const h=o.geometry.parameters.height;if(Math.abs(h-.55)>.01&&Math.abs(h-.6)>.01)return;hit.push(['h',o])}
+      else if(gt==='BoxGeometry'&&Array.isArray(m)&&m[0]&&m[0].isMeshBasicMaterial&&m[0].map&&m[0].map.image&&m[0].map.image.width===64&&m[0].map.image.height===256)hit.push(['v',o])});
+    for(const [k,o] of hit){const g=o.geometry.clone(),uv=g.attributes.uv;
+      if(k==='h'){const ry=o.rotation.y,nx=Math.sin(ry),nz=Math.cos(ry),px=o.position.x-nx*.06,pz=o.position.z-nz*.06;let ty=null;for(const s of typed)if(Math.hypot(s.x-px,s.z-pz)<1.3){ty=s.type;break}
+        const rc=SIGN46.h(ty||'gen',R);for(let i=0;i<uv.count;i++)uv.setXY(i,rc.u0+uv.getX(i)*(rc.u1-rc.u0),rc.v0+uv.getY(i)*(rc.v1-rc.v0));
+        if(ty==='conv'){o.scale.set(1.3,1.5,1);o.position.y+=.25}else{o.scale.set(.88+R()*.36,1+R()*.75,1);o.position.y+=R()*.32-.06}o.position.x+=nx*R()*.03;o.position.z+=nz*R()*.03;o.material=sm;nh++}
+      else{const rc=SIGN46.v(R);for(let i=0;i<8;i++)uv.setXY(i,rc.u0+uv.getX(i)*(rc.u1-rc.u0),rc.v0+uv.getY(i)*(rc.v1-rc.v0));const a=o.material.slice();a[0]=a[1]=sm;o.material=a;nv++}
+      uv.needsUpdate=true;o.geometry=g;o.updateMatrix()}
+    V.stat.signH=nh;V.stat.signV=nv}
+  // ---------- 3) 立體擺設 ----------
+  function Kit(){const P=[],N=[],C=[],c=new THREE.Color();
+    const q=(a,b,d,e,n,col)=>{for(const v of[a,b,d,a,d,e]){P.push(v[0],v[1],v[2]);N.push(n[0],n[1],n[2]);C.push(col.r,col.g,col.b)}};
+    const box=(x0,x1,y0,y1,z0,z1,hex)=>{c.set(hex);const col={r:c.r,g:c.g,b:c.b};
+      q([x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1],[0,0,1],col);q([x1,y0,z0],[x0,y0,z0],[x0,y1,z0],[x1,y1,z0],[0,0,-1],col);
+      q([x1,y0,z1],[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[1,0,0],col);q([x0,y0,z0],[x0,y0,z1],[x0,y1,z1],[x0,y1,z0],[-1,0,0],col);
+      q([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0],[0,1,0],col)};
+    const cyl=(x,z,y0,h,r,hex,seg=10,top=true)=>{c.set(hex);const col={r:c.r,g:c.g,b:c.b};for(let i=0;i<seg;i++){const a=i/seg*Math.PI*2,b=(i+1)/seg*Math.PI*2,c1=Math.cos(a),s1=Math.sin(a),c2=Math.cos(b),s2=Math.sin(b);
+        q([x+c1*r,y0,z+s1*r],[x+c2*r,y0,z+s2*r],[x+c2*r,y0+h,z+s2*r],[x+c1*r,y0+h,z+s1*r],[(c1+c2)/2,0,(s1+s2)/2],col);if(top){P.push(x,y0+h,z,x+c2*r,y0+h,z+s2*r,x+c1*r,y0+h,z+s1*r);N.push(0,1,0,0,1,0,0,1,0);C.push(col.r,col.g,col.b,col.r,col.g,col.b,col.r,col.g,col.b)}}};
+    const geo=()=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.computeBoundingSphere();return g};
+    return{box,cyl,geo}}
+  const stool=(K,x,z,hex)=>{K.cyl(x,z,0,.42,.15,hex,8);K.cyl(x,z,.42,.03,.17,hex,8)};
+  // 區域座標：x 沿店面、z 朝馬路（0 = 店面牆）、y 往上（人行道面）
+  function kitDrink(){const K=Kit();
+    K.box(-1.35,1.35,0,1.0,.28,.88,'#f4f1ea');K.box(-1.35,1.35,.22,.62,.885,.9,'#13a89e');K.box(-1.42,1.42,1.0,1.05,.24,.94,'#d9d2c4');
+    K.box(-1.05,-.7,1.05,1.48,.38,.72,'#9aa0a6');K.box(-1.0,-.75,1.25,1.3,.72,.76,'#2b2b2b');K.box(-.55,-.2,1.05,1.48,.38,.72,'#9aa0a6');K.box(-.5,-.25,1.25,1.3,.72,.76,'#2b2b2b');
+    for(let i=0;i<5;i++)K.cyl(.05+i*.12,.55,1.05,.28,.045,'#ffffff',8);for(let i=0;i<3;i++)K.cyl(.75+i*.13,.5,1.05,.22,.05,['#c7a46a','#8a5a2b','#6b8f4e'][i],8);
+    K.box(1.0,1.3,1.05,1.25,.4,.68,'#222222');
+    // 立牌菜單、等候椅
+    K.box(1.65,2.25,0,1.0,1.5,1.55,'#1d1d1d');K.box(1.7,2.2,.25,.95,1.555,1.56,'#f4efe2');stool(K,-1.85,1.25,'#c62828');stool(K,-1.85,.75,'#1f5fb4');return K.geo()}
+  function kitBfast(){const K=Kit();
+    // 煎台推車＋防噴玻璃
+    K.box(-1.75,-.15,0,.9,.22,.92,'#c9ced3');K.box(-1.7,-.2,.9,.93,.25,.85,'#1d1d1d');K.box(-1.75,-.15,.93,1.3,.9,.92,'#cfe6ef');K.box(-1.75,-.15,1.3,1.33,.22,.92,'#c9ced3');
+    for(let i=0;i<3;i++){K.cyl(-1.45+i*.32,.42,.93,.18,.13,'#d9c49a',10);K.cyl(-1.45+i*.32,.42,1.11,.04,.14,'#b89c66',10)}
+    K.box(-1.7,-1.3,.0,.04,.95,1.25,'#c62828');
+    // 不鏽鋼桌兩張＋塑膠椅
+    for(const tx of[.45,1.55]){K.box(tx-.42,tx+.42,.72,.76,.65,1.3,'#d5d9dc');for(const[a,b]of[[-.38,.69],[.38,.69],[-.38,1.26],[.38,1.26]])K.box(tx+a-.02,tx+a+.02,0,.72,b-.02,b+.02,'#9aa0a6');
+      stool(K,tx-.55,.98,tx<1?'#c62828':'#1f5fb4');stool(K,tx+.55,.98,'#1f5fb4');stool(K,tx,1.62,'#c62828')}
+    // 飲料冰箱
+    K.box(2.0,2.65,0,1.85,.12,.72,'#eef0f2');K.box(2.04,2.61,.12,1.75,.721,.73,'#bfe0ef');return K.geo()}
+  function kitRepair(){const K=Kit();
+    for(const[tx,tz,n]of[[-1.75,.45,5],[-1.1,.4,4],[-1.45,1.0,3]])for(let i=0;i<n;i++){K.cyl(tx,tz,i*.13,.12,.3,'#1b1b1c',12);K.cyl(tx,tz,i*.13+.121,.002,.13,'#55595d',8)}
+    // 工具車、機油桶、打氣機
+    K.box(1.4,2.1,0,.98,.12,.6,'#c62828');for(let i=0;i<4;i++)K.box(1.42,2.08,.18+i*.2,.2+i*.2,.601,.61,'#7a1010');K.box(1.4,2.1,.98,1.02,.12,.6,'#2b2b2b');
+    K.cyl(1.0,.42,0,.86,.29,'#1f5fb4',12);K.cyl(1.0,.42,.86,.02,.29,'#c9ced3',12);
+    K.cyl(-.35,.35,0,.55,.2,'#e53935',10);K.box(-.55,-.15,.55,.75,.25,.45,'#2b2b2b');
+    // 地上的千斤頂、工具箱
+    K.box(.3,.9,0,.12,.25,.75,'#f2c21a');K.box(-.1,.25,0,.22,1.3,1.5,'#1d1d1d');return K.geo()}
+  function kitConv(){const K=Kit();
+    // 門口的雨傘架、回收桶
+    K.box(-2.0,-1.6,0,.75,.15,.55,'#2e7d32');K.box(-1.55,-1.15,0,.75,.15,.55,'#1565c0');K.cyl(1.9,.35,0,.55,.14,'#9aa0a6',10);return K.geo()}
+  function scooterGeo(){const S=makeScooter('#ffffff');const root=S.root||S;root.updateMatrixWorld(true);const parts=[],P=new THREE.Vector3(),Nn=new THREE.Vector3(),nm=new THREE.Matrix3();
+    root.traverse(o=>{if(!o.isMesh||o.isSprite||!o.geometry||!o.geometry.attributes.position)return;const g=o.geometry,a=g.attributes,M=o.matrixWorld,mt=Array.isArray(o.material)?o.material[0]:o.material,col=mt&&mt.color?mt.color:new THREE.Color(1,1,1);nm.getNormalMatrix(M);
+      parts.push({n:a.position.count,tri:g.index?g.index.array:null,get(i,p,c,nr){p.fromBufferAttribute(a.position,i).applyMatrix4(M);if(a.normal)nr.fromBufferAttribute(a.normal,i).applyMatrix3(nm).normalize();else nr.set(0,1,0);c[0]=col.r;c[1]=col.g;c[2]=col.b;return 0}})});
+    if(!parts.length)return null;let K;try{K=LOD34.cluster(parts,.035)}catch(e){return null}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(K.P,3));g.setAttribute('normal',new THREE.BufferAttribute(K.Nr,3));g.setAttribute('color',new THREE.BufferAttribute(K.C,3));g.setIndex(new THREE.BufferAttribute(K.I,1));g.computeBoundingSphere();V.stat.scootTri=K.I.length/3;return g}
+  const SET={};function addInst(key,m4,col){(SET[key]||(SET[key]={M:[],C:[]})).M.push(m4.clone());SET[key].C.push(col||null)}
+  function props(slots){const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=new THREE.Vector3(),loc=new THREE.Matrix4(),rot=new THREE.Matrix4(),col=new THREE.Color();
+    const SC=['#ffffff','#c62828','#1f5fb4','#2b2b2b','#9aa3a8','#4fb3e0','#f2c21a'];
+    for(const s of slots){Z.set(s.nx,0,s.nz).normalize();X.set(Z.z,0,-Z.x);const gx=s.x+Z.x*1.1,gz=s.z+Z.z*1.1;let y=hAt(gx,gz)+.05;if(s.src==='strip'&&s.y0!=null)y=Math.max(y,s.y0);
+      m4.makeBasis(X,Y,Z).setPosition(s.x,y,s.z);addInst(s.type,m4);V.list.push({type:s.type,x:+s.x.toFixed(1),z:+s.z.toFixed(1),nx:+Z.x.toFixed(3),nz:+Z.z.toFixed(3),w:+s.w.toFixed(1)});
+      // 機車：機車行門口 2～3 台待修，其他店門口偶爾有客人停的
+      const ns=s.type==='repair'?2+(R()<.5?1:0):s.type==='conv'?0:(R()<.45?1:0);
+      for(let i=0;i<ns;i++){const lx=s.type==='repair'?-.2+i*.85:(R()<.5?-1:1)*(1.9+R()*.3),lz=s.type==='repair'?1.25+R()*.2:1.7,ang=Math.PI/2+(R()-.5)*.35+(s.type!=='repair'&&R()<.5?Math.PI:0);
+        rot.makeRotationY(ang);loc.makeTranslation(lx,0,lz).multiply(rot);const w=m4.clone().multiply(loc);addInst('scoot',w,col.set(SC[Math.floor(R()*SC.length)]).clone())}}
+    const G={drink:kitDrink(),bfast:kitBfast(),repair:kitRepair(),conv:kitConv(),scoot:scooterGeo()};const mat=new THREE.MeshLambertMaterial({vertexColors:true});V.inst=[];
+    for(const k in SET){const g=G[k];if(!g)continue;const L=SET[k],n=L.M.length,im=new THREE.InstancedMesh(g,mat,n);im.name='SHOP46_'+k;im.frustumCulled=false;im.userData.noElev=1;im.castShadow=false;im.receiveShadow=true;
+      const all=new Float32Array(n*16),pos=new Float32Array(n*2);L.M.forEach((m,i)=>{m.toArray(all,i*16);pos[i*2]=m.elements[12];pos[i*2+1]=m.elements[14];im.setMatrixAt(i,m)});
+      let allC=null;if(L.C[0]){allC=new Float32Array(n*3);L.C.forEach((c,i)=>{c.toArray(allC,i*3);im.setColorAt(i,c)})}scene.add(im);V.inst.push({im,all,pos,allC,n});V.stat[k]=n}}
+  // 只畫鏡頭附近：位置變動超過 8 m 才重排
+  let lx=1e9,lz=1e9;const cp=new THREE.Vector3();
+  function cull(force){if(V.at)cp.set(V.at[0],0,V.at[1]);else try{cam.getWorldPosition(cp)}catch(e){return}if(!force&&Math.hypot(cp.x-lx,cp.z-lz)<8)return;lx=cp.x;lz=cp.z;const R2=170*170;
+    for(const I of V.inst||[]){const im=I.im;let c=0;for(let i=0;i<I.n;i++){const dx=I.pos[i*2]-cp.x,dz=I.pos[i*2+1]-cp.z;if(dx*dx+dz*dz>R2)continue;
+        im.instanceMatrix.array.set(I.all.subarray(i*16,i*16+16),c*16);if(I.allC)im.instanceColor.array.set(I.allC.subarray(i*3,i*3+3),c*3);c++}
+      im.count=c;im.visible=c>0;im.instanceMatrix.needsUpdate=true;if(I.allC)im.instanceColor.needsUpdate=true}V.near=(V.inst||[]).reduce((s,I)=>s+I.im.count,0)}
+  V.cull=cull;
+  // ---------- 4) 夜間 ----------
+  let lastK=-1;function night(){const n=(window.DAY39&&DAY39.night)||0,k=Math.max(0,Math.min(1,(n-.2)/.5));if(Math.abs(k-lastK)<.01)return;lastK=k;
+    for(const m of SIGN46.mats())m.emissiveIntensity=.75*k;const sm=SHOP46P.shopMat();sm.emissiveIntensity=.95*k}
+  V.night=night;
+  // ---------- 掛上 staticBatch ----------
+  const _sb=staticBatch;staticBatch=function(){let typed=[];const t0=performance.now();
+    try{typed=stripShops();V.stat.strip=typed.length;V.stat.n30=SHOP46P.slots.length}catch(e){console.error('SHOP46 strip',e)}
+    try{signs(SHOP46P.slots.concat(typed))}catch(e){console.error('SHOP46 signs',e)}
+    // 檳榔攤：新竹市只有經國路上多，那條路做到時再做（第 46 次拿掉街區自動排的）
+    try{let nb=0;scene.traverse(o=>{if(o.isGroup&&o.children.length===2){const a=o.children[0],b=o.children[1];if(a.isMesh&&b.isMesh&&b.material&&b.material.isMeshBasicMaterial&&b.material.color&&b.material.color.getHexString()==='ff4fa0'&&a.geometry.type==='BoxGeometry'){o.visible=false;nb++;
+        if(typeof OBC!=='undefined')for(let i=OBC.length-1;i>=0;i--)if(Math.abs(OBC[i].x-o.position.x)<.01&&Math.abs(OBC[i].y-o.position.z)<.01&&OBC[i].r===1)OBC.splice(i,1)}}});V.stat.betel=nb}catch(e){}
+    const r=_sb.apply(this,arguments);
+    try{props(SHOP46P.slots.concat(typed));cull(true)}catch(e){console.error('SHOP46 props',e)}
+    try{night()}catch(e){}V.stat.ms=Math.round(performance.now()-t0);console.log('[shop46]',JSON.stringify(V.stat));
+    setInterval(()=>{try{cull(false);night()}catch(e){}},600);return r};
 })();
 
 </script>
