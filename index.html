@@ -9059,7 +9059,101 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
   // 複製已釋放的幾何會得到空模型：記下來方便查
   const _cl=THREE.BufferGeometry.prototype.clone;THREE.BufferGeometry.prototype.clone=function(){if(this.userData&&this.userData.geo48&&attrs(this).some(a=>a.__geo48)){V.stat.cloneWarn=(V.stat.cloneWarn||0)+1;console.warn('GEO48: clone of freed geometry')}return _cl.call(this)};
   document.addEventListener('DOMContentLoaded',()=>{const c=document.getElementById('gl');if(!c)return;c.addEventListener('webglcontextrestored',()=>{if(!V.stat.freed)return;try{window.DIAG34&&DIAG34('顯示卡資料遺失，模型需要重新載入，3 秒後重新整理頁面…')}catch(e){}setTimeout(()=>location.reload(),3000)},false)});
-  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late)return;clearInterval(t);setTimeout(()=>{try{go()}catch(e){console.error('GEO48',e)}},5000)},500);
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late||(window.INST49&&!INST49.done))return;clearInterval(t);setTimeout(()=>{try{go()}catch(e){console.error('GEO48',e)}},5000)},500);
+})();
+
+// 第四十九次（階段 M-4）：同一個模型、同一個材質重複出現的靜態物件改成實例網格。
+//  原本的靜態合併只看場景最上層的物件，群組裡的（樹、電桿、路燈、寺廟與湖邊的擺設…）全部各畫一次：
+//  湖邊一個視角就有約 2500 次繪製（iPhone 建議幾百次以內）。其中約 2000 個是「同一幾何＋同一材質」的重複物件。
+//  做法（載入後的修正都做完、geo48 釋放陣列之前）：依「幾何＋材質＋陰影設定」分組、再依 120 m 格子切塊，
+//   每塊一個實例網格；實例網格的幾何直接共用原物件的屬性（顯示卡上同一份，不多佔記憶體），包圍球依實例重算（遠的塊照樣被視錐剔除）。
+//   原物件藏起來，並監看它和它的上層群組：之後有人改它的顯示、位置、旋轉、縮放（例如動畫、開關燈），就把那個實例縮成 0、原物件照原樣恢復。
+//  不處理：車、路人、鬼、背景、分級網格、半透明、多重材質、自訂繪製順序。網址加 ?inst=0 可關掉。
+(function(){
+  const V=window.INST49={on:!/[?&]inst=0/.test(location.search)&&!window.SAFE34,stat:{},done:false,woke:0};if(!V.on){V.done=true;return}
+  const CELL=120,_O3=new THREE.Object3D();
+  const okMat=m=>m&&!Array.isArray(m)&&/^Mesh(Lambert|Standard|Phong|Basic)Material$/.test(m.type)&&!m.transparent&&!m.wireframe&&m.visible!==false&&!m.hasOwnProperty('onBeforeCompile');
+  function dynRoots(){const S=new Set();const add=g=>g&&S.add(g);try{(LIFE.cars||[]).forEach(c=>add(c.g))}catch(e){}try{(LAKE.trf||[]).forEach(c=>add(c.g))}catch(e){}try{(NPC||[]).forEach(c=>add(c.g))}catch(e){}try{add(car)}catch(e){}
+    try{if(window.BORROW&&BORROW.list)BORROW.list.forEach(c=>add(c.g||c.root))}catch(e){}return S}
+  const top=o=>{let p=o;while(p.parent&&p.parent!==scene)p=p.parent;return p};
+  // 監看：顯示、位置、縮放（Proxy）、旋轉（onChange）。物件或上層群組一動，就叫醒底下所有被換成實例的原物件
+  const W=new WeakMap();   // 原物件 → {im, i, want}
+  function wakeMesh(o){const w=W.get(o);if(!w)return;W.delete(o);const m4=new THREE.Matrix4().makeScale(0,0,0);w.im.setMatrixAt(w.i,m4);w.im.instanceMatrix.needsUpdate=true;
+    delete o.visible;o.visible=w.want;if(o.geometry&&o.geometry.userData)o.geometry.userData.inst49k=(o.geometry.userData.inst49k||1)-1;V.woke++}
+  function wakeTree(n){n.traverse(q=>{if(W.has(q))wakeMesh(q)})}
+  const watched=new WeakSet();
+  function watch(n){if(watched.has(n))return;watched.add(n);let vis=n.visible;
+    Object.defineProperty(n,'visible',{configurable:true,enumerable:true,get(){const w=W.get(n);return w?w.want:vis},set(x){const w=W.get(n);if(w){if(x!==w.want){w.want=x;wakeTree(n)}return}if(x!==vis){vis=x;wakeTree(n)}}});
+    const px=t=>new Proxy(t,{set(T,k,val){if(T[k]!==val){T[k]=val;if(k==='x'||k==='y'||k==='z')wakeTree(n)}return true}});
+    Object.defineProperty(n,'position',{configurable:true,enumerable:true,value:px(n.position)});Object.defineProperty(n,'scale',{configurable:true,enumerable:true,value:px(n.scale)});
+    const rc=n.rotation._onChangeCallback,qc=n.quaternion._onChangeCallback;n.rotation._onChange(()=>{rc();wakeTree(n)});n.quaternion._onChange(()=>{qc();wakeTree(n)})}
+  function run(){const t0=performance.now(),dyn=dynRoots(),G=new Map();let cand=0;
+    scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.name==='SB'||/^LO3/.test(o.name||'')||o.userData.noBatch)return;
+      for(let p=o;p;p=p.parent)if(!p.visible)return;const r=top(o);if(dyn.has(r)||/HAUNT|BGX|LO3|NIGHT|SHOP46/.test(r.name||''))return;let veh=false;for(let p=o;p;p=p.parent)if(p.userData&&(p.userData.sd||p.userData.tails))veh=true;if(veh)return;
+      if(!okMat(o.material)||o.renderOrder||!o.frustumCulled||o.layers.mask!==1||o.onBeforeRender!==_O3.onBeforeRender)return;const g=o.geometry;if(!g||!g.attributes.position||(g.morphAttributes&&Object.keys(g.morphAttributes).length))return;
+      if(g.attributes.position.__geo48)return;o.updateMatrixWorld();
+      // three r128 的實例網格用 mat3(實例矩陣) 轉法線，不等比縮放的物件光影會偏（變淡），這種不做實例（交給下面的整組合併）
+      {const e=o.matrixWorld.elements,sx=Math.hypot(e[0],e[1],e[2]),sy=Math.hypot(e[4],e[5],e[6]),sz=Math.hypot(e[8],e[9],e[10]),mx=Math.max(sx,sy,sz),mn=Math.min(sx,sy,sz);if(mn<=0||mx/mn>1.02)return}cand++;const k=g.uuid+'|'+o.material.uuid+'|'+(o.castShadow?1:0)+(o.receiveShadow?1:0);let L=G.get(k);if(!L){L=[];G.set(k,L)}L.push(o)});
+    let nIM=0,nInst=0;const sph=new THREE.Sphere(),c=new THREE.Vector3();
+    for(const [k,L] of G){if(L.length<4)continue;const g0=L[0].geometry;if(!g0.boundingSphere)g0.computeBoundingSphere();
+      const cells=new Map();for(const o of L){c.setFromMatrixPosition(o.matrixWorld);const ck=Math.floor(c.x/CELL)+','+Math.floor(c.z/CELL);let a=cells.get(ck);if(!a){a=[];cells.set(ck,a)}a.push(o)}
+      for(const [,A] of cells){if(A.length<2)continue;
+        const g=new THREE.BufferGeometry();for(const nm in g0.attributes)g.setAttribute(nm,g0.attributes[nm]);if(g0.index)g.setIndex(g0.index);g.userData.inst49=1;
+        const im=new THREE.InstancedMesh(g,A[0].material,A.length);im.castShadow=A[0].castShadow;im.receiveShadow=A[0].receiveShadow;im.name='INST49';im.userData.noElev=1;
+        // 包圍球：涵蓋所有實例（實例矩陣是世界座標，物件本身在原點）
+        const pts=[];let cx=0,cy=0,cz=0;A.forEach((o,i)=>{im.setMatrixAt(i,o.matrixWorld);sph.copy(g0.boundingSphere).applyMatrix4(o.matrixWorld);pts.push(sph.clone());cx+=sph.center.x;cy+=sph.center.y;cz+=sph.center.z});
+        const ctr=new THREE.Vector3(cx/A.length,cy/A.length,cz/A.length);let rad=0;for(const s of pts)rad=Math.max(rad,s.center.distanceTo(ctr)+s.radius);g.boundingSphere=new THREE.Sphere(ctr,rad);
+        scene.add(im);nIM++;
+        A.forEach((o,i)=>{W.set(o,{im,i,want:true});o.geometry.userData.inst49k=(o.geometry.userData.inst49k||0)+1;watch(o);for(let p=o.parent;p&&p!==scene;p=p.parent)watch(p);
+          // 藏起原物件（直接設底層值，不觸發叫醒）
+          Object.defineProperty(o,'visible',{configurable:true,enumerable:true,get(){const w=W.get(o);return w?w.want:true},set(x){const w=W.get(o);if(w){if(x!==w.want){w.want=x;wakeMesh(o)}}else{delete o.visible;o.visible=x}}});o.layers.disableAll();nInst++})}}
+    V.stat={cand,groups:G.size,meshes:nIM,inst:nInst,ms:Math.round(performance.now()-t0)};
+    try{mergeGroups(dyn)}catch(e){console.error('INST49 merge',e)}
+    V.done=true;console.log('[inst49]',JSON.stringify(V.stat))}
+  // ---- 第二段：靜態群組（寺廟、圍籬、路燈組、店面擺設…）整組合併 ----
+  //  每個最上層群組裡、還沒被換成實例的網格，依材質（純色材質把顏色烘進頂點色，共用靜態合併的材質）合成幾個網格。
+  //  只挑頂點數 6 萬以內的群組：原物件留在顯示卡上（藏在圖層外），群組一有變動就整組還原，合併網格藏起來；多佔的顯示記憶體約 5 MB。
+  //  合併網格的 JS 陣列由 geo48 在上傳後釋放。
+  const MG=new Map();   // 群組 → {meshes:[合併網格], orig:[原物件]}
+  function unmerge(r){const e=MG.get(r);if(!e)return;MG.delete(r);for(const m of e.meshes)m.visible=false;for(const o of e.orig)o.layers.set(0);V.unmerged=(V.unmerged||0)+1}
+  const _wt=wakeTree;wakeTree=function(n){_wt(n);const r=top(n);if(MG.has(r))unmerge(r)};
+  function mergeGroups(dyn){const t0=performance.now(),_O=new THREE.Object3D();let nG=0,nM=0,nO=0,nV=0;
+    const ok=o=>{const m=o.material;return o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&o.layers.mask===1&&!W.has(o)&&!Array.isArray(m)&&m&&!m.transparent&&/^Mesh(Lambert|Standard|Phong|Basic)Material$/.test(m.type)&&o.onBeforeRender===_O.onBeforeRender&&o.frustumCulled&&!o.renderOrder&&o.geometry&&o.geometry.attributes.position&&!o.geometry.attributes.position.__geo48&&!(o.geometry.morphAttributes&&Object.keys(o.geometry.morphAttributes).length)};
+    const v=new THREE.Vector3(),nm=new THREE.Matrix3();
+    for(const r of scene.children.slice()){if(!r.children||!r.children.length||!r.visible||dyn.has(r)||/HAUNT|BGX|LO3|NIGHT|SHOP|INST/.test(r.name||''))continue;let veh=false,tv=0;const L=[];
+      r.traverse(q=>{if(q.userData&&(q.userData.sd||q.userData.tails))veh=true;if(!q.isMesh)return;for(let p=q;p;p=p.parent)if(!p.visible)return;if(!ok(q))return;L.push(q);tv+=q.geometry.attributes.position.count});
+      if(veh||L.length<6||tv>60000)continue;r.updateMatrixWorld(true);
+      const B=new Map();for(const o of L){const m=o.material,bake=sbBake(m),k=(bake?'B'+sbSig(m):m.uuid)+'#'+(o.castShadow?1:0)+(o.receiveShadow?1:0);let b=B.get(k);if(!b){b={bake,m,L:[],cs:o.castShadow,rs:o.receiveShadow};B.set(k,b)}b.L.push(o)}
+      const meshes=[],orig=[];
+      for(const [,b] of B){if(b.L.length<2)continue;const m=b.m,uv=!b.bake&&!!(m.map||m.normalMap||m.bumpMap||m.alphaMap||m.emissiveMap),col=b.bake||!!m.vertexColors;
+        let nv=0,ni=0;for(const o of b.L){const g=o.geometry;nv+=g.attributes.position.count;ni+=g.index?g.index.count:g.attributes.position.count}
+        const P=new Float32Array(nv*3),N=new Float32Array(nv*3),U=uv?new Float32Array(nv*2):null,C=col?new Float32Array(nv*3):null,I=nv>65535?new Uint32Array(ni):new Uint16Array(ni);let vo=0,io=0;
+        for(const o of b.L){const g=o.geometry,A=g.attributes,M=o.matrixWorld,flip=M.determinant()<0;nm.getNormalMatrix(M);const n=A.position.count,mc=o.material.color;
+          for(let i=0;i<n;i++){v.fromBufferAttribute(A.position,i).applyMatrix4(M);P[(vo+i)*3]=v.x;P[(vo+i)*3+1]=v.y;P[(vo+i)*3+2]=v.z;
+            if(A.normal){v.fromBufferAttribute(A.normal,i).applyMatrix3(nm).normalize();N[(vo+i)*3]=v.x;N[(vo+i)*3+1]=v.y;N[(vo+i)*3+2]=v.z}else N[(vo+i)*3+1]=1;
+            if(U){if(A.uv){U[(vo+i)*2]=A.uv.getX(i);U[(vo+i)*2+1]=A.uv.getY(i)}}
+            if(C){let r0=1,g0=1,b0=1;if(o.material.vertexColors&&A.color){const ks=A.color.normalized?(A.color.array instanceof Uint8Array?1/255:A.color.array instanceof Uint16Array?1/65535:A.color.array instanceof Int16Array?1/32767:1):1;r0=A.color.getX(i)*ks;g0=A.color.getY(i)*ks;b0=A.color.getZ(i)*ks}if(b.bake&&mc){r0*=mc.r;g0*=mc.g;b0*=mc.b}C[(vo+i)*3]=r0;C[(vo+i)*3+1]=g0;C[(vo+i)*3+2]=b0}}
+          const ix=g.index,cnt=ix?ix.count:n;for(let t=0;t+2<cnt;t+=3){const a=ix?ix.getX(t):t,b2=ix?ix.getX(t+1):t+1,c=ix?ix.getX(t+2):t+2;I[io++]=vo+a;if(flip){I[io++]=vo+c;I[io++]=vo+b2}else{I[io++]=vo+b2;I[io++]=vo+c}}vo+=n}
+        const G2=new THREE.BufferGeometry();G2.setAttribute('position',new THREE.BufferAttribute(P,3));G2.setAttribute('normal',new THREE.BufferAttribute(N,3));if(U)G2.setAttribute('uv',new THREE.BufferAttribute(U,2));if(C)G2.setAttribute('color',new THREE.BufferAttribute(C,3));G2.setIndex(new THREE.BufferAttribute(io<I.length?I.slice(0,io):I,1));G2.computeBoundingSphere();G2.computeBoundingBox();
+        let mat=m;if(b.bake){const sg=sbSig(m);mat=SB.bakeM.get(sg);if(!mat){mat=m.clone();mat.color.setRGB(1,1,1);mat.vertexColors=true;SB.bakeM.set(sg,mat)}}
+        const me=new THREE.Mesh(G2,mat);me.name='M49';me.castShadow=b.cs;me.receiveShadow=b.rs;me.matrixAutoUpdate=false;me.userData.noElev=1;scene.add(me);meshes.push(me);nM++;nV+=nv;
+        for(const o of b.L){o.layers.disableAll();orig.push(o);nO++}}
+      if(!meshes.length)continue;MG.set(r,{meshes,orig});nG++;r.traverse(q=>watch(q));
+      // 顏色烘進頂點色的材質：之後有人改顏色（例如號誌燈），用到它的群組整組還原
+      for(const [,b] of B)if(b.bake&&b.L.length>=2)watchMat(b.m,r)}
+    V.stat.mergeGroups=nG;V.stat.merged=nM;V.stat.mergedFrom=nO;V.stat.mergedVerts=nV;V.stat.mergeMs=Math.round(performance.now()-t0)}
+  const MW=new WeakMap();
+  function watchMat(m,r){let L=MW.get(m);if(L){L.add(r);return}L=new Set([r]);MW.set(m,L);const fire=()=>{for(const g of L)unmerge(g);L.clear()};
+    for(const key of['color','emissive']){const c0=m[key];if(!c0||!c0.isColor)continue;const pr=new Proxy(c0,{set(T,k,val){const ch=T[k]!==val;T[k]=val;if(ch&&(k==='r'||k==='g'||k==='b'))fire();return true}});
+      Object.defineProperty(m,key,{configurable:true,enumerable:true,get(){return pr},set(x){c0.copy(x);fire()}})}}
+
+  // 被叫醒的原物件要重新畫：上面藏起來是用 layers（不改 visible，才不會觸發監看），醒來時恢復圖層
+  const _wm=wakeMesh;wakeMesh=function(o){const had=W.has(o);_wm(o);if(had)o.layers.set(0)};
+  V.run=run;
+  // 幾何被卸下（evict39）時，如果還有實例在用它的屬性，不能刪
+  const _dp=THREE.BufferGeometry.prototype.dispose;THREE.BufferGeometry.prototype.dispose=function(){if(this.userData&&(this.userData.inst49k>0||this.userData.inst49))return;return _dp.call(this)};
+  const t=setInterval(()=>{const l=document.getElementById('loading');if(l&&!l.classList.contains('done')&&getComputedStyle(l).display!=='none')return;if(!window.NIGHT45||!NIGHT45.beam||!window.TEX47||!TEX47.stat.late)return;clearInterval(t);
+    setTimeout(()=>{try{run()}catch(e){console.error('INST49',e);V.done=true}},3000)},500);
 })();
 
 </script>
