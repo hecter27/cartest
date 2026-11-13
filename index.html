@@ -9304,6 +9304,40 @@ const m4=new THREE.Matrix4(),X=new THREE.Vector3(),Y=new THREE.Vector3(0,1,0),Z=
     ctx.merge()}});
 })();
 
+// 第五十四次（M-5(c)-2 驗證）：把 tools/osm_region.py 產生的 regions/<id>.json 載入成區域，先用簡單方塊預覽（確認位置、比例對不對）。
+//  網址加 ?city=1 才啟用（還沒有連接道路、地形、正式建構器，一般玩家看不到）。
+//  道路：可開車的灰色帶（寬度照資料），人行道類淺色細帶；建物輪廓：依樓層擠出；店家：彩色柱子（手搖飲青綠、便利商店綠、餐廳橘、其他灰）；公園綠地；鐵路深色。
+//  地面先平的（高度 0），高程之後（(c)-4）。
+(function(){
+  if(!/[?&]city=1/.test(location.search)||!window.REGION)return;
+  const V=window.CITY54={data:{}};
+  function defRegion(id,game){const [x0,z0,x1,z1]=game;REGION.def({id,x0,z0,x1,z1,async build(ctx){
+    const d=V.data[id]||(V.data[id]=await (await fetch('regions/'+id+'.json')).json());const Y=0;
+    const M=c=>{const m=new THREE.MeshLambertMaterial({color:c});return m};
+    const asph=M('#4a4e52'),walk=M('#b9b4aa'),park=M('#6f9a4e'),water=M('#4f7fa6'),railM=M('#3a3530'),gnd=M('#8d8a80');
+    const bm=['#e8e1d4','#d9d2c2','#e6d6b0','#c9c3b5','#d8d0c4'].map(M);
+    const pinC={beverages:'#13a89e',convenience:'#2e9b4f',restaurant:'#e0761f',cafe:'#8a5a2b',fast_food:'#e53935',bank:'#1f5fb4',clothes:'#7a2f8a'},pinM={};
+    // 地面
+    {const g=new THREE.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);ctx.mesh(g,gnd,(x0+x1)/2,Y-.05,(z0+z1)/2).receiveShadow=true}
+    // 帶狀（道路、鐵路）
+    const ribbon=(P,hw,mat,y)=>{const pos=[],idx=[];for(let i=0;i<P.length;i++){const a=P[Math.max(0,i-1)],b=P[Math.min(P.length-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,nx=-dz/l*hw,nz=dx/l*hw;pos.push(P[i][0]+nx,y,P[i][1]+nz,P[i][0]-nx,y,P[i][1]-nz);if(i){const k=(i-1)*2;idx.push(k,k+2,k+1,k+1,k+2,k+3)}}
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();const n=g.attributes.normal;for(let i=0;i<n.count;i++)n.setXYZ(i,0,1,0);ctx.mesh(g,mat).receiveShadow=true};
+    for(const r of d.roads){if(r.tu)continue;if(r.car)ribbon(r.P,r.hw,asph,Y+.02+(r.t==='primary'?.004:0));else ribbon(r.P,Math.min(r.hw,1.2),walk,Y+.015)}
+    for(const r of d.rail)ribbon(r.P,1.6,railM,Y+.03);
+    for(const a of d.areas){if(a.P.length<3)continue;const mat=/park|grass|garden|wood|forest/.test(a.k)?park:/water/.test(a.k)?water:null;if(!mat)continue;
+      const sh=new THREE.Shape(a.P.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ShapeGeometry(sh);g.rotateX(-Math.PI/2);ctx.mesh(g,mat,0,Y+.01,0)}
+    // 建物：依輪廓擠出
+    for(const b of d.buildings){if(b.P.length<3)continue;const h=b.h||(b.lv?b.lv*3.2:9+Math.floor(ctx.rnd()*3)*3.2);
+      try{const sh=new THREE.Shape(b.P.map(p=>new THREE.Vector2(p[0],-p[1])));const g=new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false});g.rotateX(-Math.PI/2);ctx.mesh(g,bm[Math.floor(ctx.rnd()*bm.length)],0,Y,0).castShadow=true;
+        const cx=b.P.reduce((s,p)=>s+p[0],0)/b.P.length,cz=b.P.reduce((s,p)=>s+p[1],0)/b.P.length;let r=0;for(const p of b.P)r=Math.max(r,Math.hypot(p[0]-cx,p[1]-cz));if(r<40)ctx.box(cx,cz,0,r*.7,r*.7)}catch(e){}}
+    // 店家柱子
+    const pg=new THREE.CylinderGeometry(.6,.6,6,8);
+    for(const p of d.pois){const c=pinC[p.v]||'#9aa0a6';const m=pinM[c]||(pinM[c]=M(c));const g=pg.clone();ctx.mesh(g,m,p.x,Y+3,p.z)}
+    for(const r of d.roads)if(r.car)ctx.road({P:r.P,hw:r.hw,center:r.hw>=4,lanes:r.lanes||0,name:r.n||r.t,__city:1});
+    const[n0,n1]=ctx.merge();V.stat={roads:d.roads.length,bld:d.buildings.length,pois:d.pois.length,merged:[n0,n1]}}})}
+  defRegion('xidalu',[1838.8,-406.1,2836.9,554.4]);   // 範圍＝regions/xidalu.json 的 game
+})();
+
 </script>
 </body>
 </html>
